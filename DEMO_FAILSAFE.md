@@ -7,7 +7,7 @@ order automatically:
 2. `ML_MODEL_FALLBACK_URL` — an optional second CropFit or compatible API.
 3. Built-in crop calendar — no model process or GPU required.
 
-The real v0.3 model can also be installed directly from its GitHub Release on a
+The real v0.4 model can also be installed directly from its GitHub Release on a
 MacBook, with no Spark connection:
 
 ```bash

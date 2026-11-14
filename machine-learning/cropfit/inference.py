@@ -24,6 +24,14 @@ class CropFitPredictor:
         self.metadata = bundle["metadata"]
         self.profiles = load_profiles(profiles_path)
 
+    def calibrated_error(self, tree_std: float) -> tuple[float, float]:
+        bins = self.metadata.get("uncertaintyCalibration", {}).get("bins", [])
+        for item in bins:
+            upper = item.get("upperTreeStd")
+            if tree_std >= float(item["lowerTreeStd"]) and (upper is None or tree_std < float(upper)):
+                return float(item["p80AbsoluteError"]), float(item["p90AbsoluteError"])
+        return tree_std, min(100.0, tree_std * 1.5)
+
     @lru_cache(maxsize=512)
     def climate(self, latitude: float, longitude: float) -> list[dict[str, float | str]]:
         response = requests.get(
@@ -86,11 +94,14 @@ class CropFitPredictor:
             component = {name: min(value, establishment[index][name]) for name, value in teacher[index].items()}
             temperature, precipitation_mm_day, solar = seasonal_climate[index]
             score = min(float(predictions[index]), establishment[index]["suitability"])
+            error_p80, error_p90 = self.calibrated_error(float(uncertainty[index]))
             curve.append({
                 "month": str(month["month"]),
                 "monthIndex": index + 1,
                 "score": round(score, 1),
                 "uncertainty": round(float(uncertainty[index]), 1),
+                "expectedAbsoluteErrorP80": round(error_p80, 1),
+                "expectedAbsoluteErrorP90": round(error_p90, 1),
                 "temperatureC": round(temperature, 1),
                 "precipitationMmDay": round(precipitation_mm_day, 2),
                 "solarMjM2Day": round(solar, 1),
@@ -105,7 +116,8 @@ class CropFitPredictor:
             "profile": profile.to_dict(),
             "location": {"latitude": latitude, "longitude": longitude},
             "score": best["score"],
-            "confidence": round(max(0.15, min(.92, 1.0 - float(best["uncertainty"]) / 45.0)), 2),
+            "confidence": round(max(0.15, min(.99, 1.0 - float(best["expectedAbsoluteErrorP80"]) / 50.0)), 2),
+            "expectedAbsoluteError": {"p80": best["expectedAbsoluteErrorP80"], "p90": best["expectedAbsoluteErrorP90"]},
             "bestPlantingMonth": best["month"],
             "suitableMonths": suitable_months,
             "growingDays": {"min": profile.growing_days_min, "max": profile.growing_days_max},

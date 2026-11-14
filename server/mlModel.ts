@@ -26,7 +26,7 @@ export type MlPrediction = {
   notes: string | null;
   source: 'ml' | 'calendar-fallback';
   /** Full model detail when the model provides it (CropFit). Month indexes are 0-11. */
-  curve?: Array<{ month: number; score: number; uncertainty: number | null; components: Record<string, number> | null }>;
+  curve?: Array<{ month: number; score: number; uncertainty: number | null; errorP80: number | null; errorP90: number | null; components: Record<string, number> | null }>;
   suitableMonths?: number[];
   growingDays?: { min: number; max: number } | null;
   limitingFactors?: Array<{ factor: string; score: number }>;
@@ -158,7 +158,7 @@ const monthIndex = (value: unknown) => {
 type CropFitResult = {
   score?: number; bestPlantingMonth?: unknown; suitableMonths?: unknown[]; confidence?: number;
   growingDays?: { min?: number; max?: number }; limitingFactors?: Array<{ factor?: string; score?: number }>;
-  monthlyCurve?: Array<{ month?: unknown; score?: number; uncertainty?: number; components?: Record<string, number> }>;
+  monthlyCurve?: Array<{ month?: unknown; score?: number; uncertainty?: number; expectedAbsoluteErrorP80?: number; expectedAbsoluteErrorP90?: number; components?: Record<string, number> }>;
   profile?: Record<string, unknown>; evidenceGrade?: string;
 };
 const apiKindCache = new Map<string, { kind: 'contract' | 'cropfit'; expires: number }>();
@@ -221,7 +221,7 @@ function fromCropFit(site: MlSite, crop: MlCrop, preferredMonth: number, result:
     source: 'ml',
     curve: (result.monthlyCurve ?? []).flatMap((item) => {
       const month = monthIndex(item.month);
-      return month === null || !Number.isFinite(item.score) ? [] : [{ month, score: Number(item.score), uncertainty: Number.isFinite(item.uncertainty) ? Number(item.uncertainty) : null, components: item.components ?? null }];
+      return month === null || !Number.isFinite(item.score) ? [] : [{ month, score: Number(item.score), uncertainty: Number.isFinite(item.uncertainty) ? Number(item.uncertainty) : null, errorP80: Number.isFinite(item.expectedAbsoluteErrorP80) ? Number(item.expectedAbsoluteErrorP80) : null, errorP90: Number.isFinite(item.expectedAbsoluteErrorP90) ? Number(item.expectedAbsoluteErrorP90) : null, components: item.components ?? null }];
     }).sort((a, b) => a.month - b.month),
     suitableMonths: suitable,
     growingDays: Number.isFinite(minDays) && Number.isFinite(maxDays) ? { min: minDays, max: maxDays } : null,

@@ -7,7 +7,7 @@ revenue, or a buy/sell recommendation.
 
 ## Run the trained model
 
-On macOS or Linux, install the released v0.3 artifact, EcoCrop profiles, and
+On macOS or Linux, install the released v0.4 artifact, EcoCrop profiles, and
 inference dependencies without access to the Spark:
 
 ```bash

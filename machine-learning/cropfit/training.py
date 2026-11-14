@@ -12,7 +12,7 @@ import joblib
 import matplotlib.pyplot as plt
 import numpy as np
 import xgboost as xgb
-from sklearn.ensemble import ExtraTreesRegressor
+from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_absolute_error, r2_score
 from sklearn.model_selection import GroupShuffleSplit
 
@@ -95,7 +95,7 @@ def train(raw: Path, artifact: Path, metadata_path: Path, runs: Path, samples_pe
     inner_train, inner_validation = next(GroupShuffleSplit(n_splits=1, test_size=.15, random_state=seed + 1).split(x[train_validation_indices], y[train_validation_indices], inner_groups))
     train_indices = train_validation_indices[inner_train]
     validation_indices = train_validation_indices[inner_validation]
-    model = ExtraTreesRegressor(
+    model = RandomForestRegressor(
         n_estimators=120,
         min_samples_leaf=1,
         max_features=1.0,
@@ -107,13 +107,29 @@ def train(raw: Path, artifact: Path, metadata_path: Path, runs: Path, samples_pe
     boosted_predictions = booster.predict(xgb.DMatrix(x[test_indices], feature_names=FEATURE_NAMES))
     baseline_predictions = model.predict(x[test_indices])
     validation_predictions = model.predict(x[validation_indices])
+    validation_tree_predictions = np.asarray([tree.predict(x[validation_indices]) for tree in model.estimators_])
+    validation_tree_std = validation_tree_predictions.std(axis=0)
+    validation_residuals = np.abs(validation_predictions - y[validation_indices])
+    uncertainty_bins = []
+    for lower, upper in [(0, .01), (.01, 2), (2, 5), (5, 10), (10, 15), (15, 20), (20, 30), (30, None)]:
+        mask = validation_tree_std >= lower
+        mask &= validation_tree_std < upper if upper is not None else np.ones_like(mask, dtype=bool)
+        bin_residuals = validation_residuals[mask]
+        if len(bin_residuals):
+            uncertainty_bins.append({
+                "lowerTreeStd": lower,
+                "upperTreeStd": upper,
+                "examples": int(len(bin_residuals)),
+                "p80AbsoluteError": round(float(np.quantile(bin_residuals, .8)), 4),
+                "p90AbsoluteError": round(float(np.quantile(bin_residuals, .9)), 4),
+            })
     residuals = np.abs(baseline_predictions - y[test_indices])
     boosted_residuals = np.abs(boosted_predictions - y[test_indices])
     created = datetime.now(timezone.utc)
     run_id = created.strftime("%Y%m%dT%H%M%SZ")
     metadata = {
-        "model": "CropFit EcoCrop surrogate v0.3",
-        "selectedModel": "extraTrees",
+        "model": "CropFit EcoCrop surrogate v0.4",
+        "selectedModel": "randomForest",
         "createdAt": created.isoformat(),
         "runId": run_id,
         "device": device,
@@ -137,13 +153,18 @@ def train(raw: Path, artifact: Path, metadata_path: Path, runs: Path, samples_pe
             "minSamplesLeaf": 1,
             "maxFeatures": 1.0,
         },
-        "selectionEvidence": "Candidate improved held-out MAE on all five seeds in the 20261110-20261114 robustness sweep (7.7% mean improvement).",
+        "uncertaintyCalibration": {
+            "source": "validation crop profiles only",
+            "method": "tree-disagreement bins",
+            "bins": uncertainty_bins,
+        },
+        "selectionEvidence": "Random Forest improved held-out MAE over v0.3 ExtraTrees on all five seeds in the 20261110-20261114 robustness sweep (20.0% mean improvement).",
         "boostedCandidate": {
             "mae": round(float(mean_absolute_error(y[test_indices], boosted_predictions)), 4),
             "r2": round(float(r2_score(y[test_indices], boosted_predictions)), 4),
             "p90AbsoluteError": round(float(np.quantile(boosted_residuals, .9)), 4),
             "promoted": False,
-            "reason": "Held-out crop-profile MAE was worse than ExtraTrees.",
+            "reason": "Held-out crop-profile MAE was worse than the selected Random Forest.",
         },
         "featureNames": FEATURE_NAMES,
         "seed": seed,
