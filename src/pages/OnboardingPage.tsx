@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, Building2, Check, Sprout, Tractor, Warehouse } from 'lucide-react';
 import Wordmark from '../components/Wordmark';
@@ -6,6 +6,7 @@ import {
   ACRE_SQFT, CROPS, MONTH_LONG, MONTH_SHORT, RURAL_REGIONS, URBAN_AREAS,
   formatArea, loadBrief, saveBrief, scaleForArea, type Brief,
 } from '../services/cropPlan';
+import { briefKey, listRuns, savedTime, type SavedRunMeta } from '../services/runs';
 import './OnboardingPage.css';
 
 const SIZE_PRESETS = [
@@ -41,6 +42,15 @@ export default function OnboardingPage() {
   const next = () => setStep((value) => Math.min(STEPS.length - 1, value + 1));
   const back = () => step === 0 ? navigate('/') : setStep((value) => value - 1);
   const start = () => { saveBrief(brief); navigate('/plan', { state: { brief, run: Date.now() } }); };
+  const [savedMatch, setSavedMatch] = useState<SavedRunMeta | null>(null);
+  const key = briefKey(brief);
+  useEffect(() => {
+    if (step !== STEPS.length - 1) return;
+    const controller = new AbortController();
+    listRuns(controller.signal).then((runs) => setSavedMatch(runs.find((item) => item.key === key) ?? null)).catch(() => setSavedMatch(null));
+    return () => controller.abort();
+  }, [step, key]);
+  const openSaved = () => { if (!savedMatch) return; saveBrief(brief); navigate('/plan', { state: { brief, savedId: savedMatch.id } }); };
 
   return <div className="onboarding">
     <header className="onboarding-header">
@@ -120,7 +130,7 @@ export default function OnboardingPage() {
       <span className="mono">{STEPS[step].toUpperCase()} · {step + 1} / {STEPS.length}</span>
       {step < STEPS.length - 1
         ? <button className="onboarding-next" disabled={!ready[step]} onClick={next}>Continue <ArrowRight size={16} /></button>
-        : <button className="onboarding-next" onClick={start}>{scale === 'urban' ? 'Run Deep Agent' : 'Find regions'} <ArrowRight size={16} /></button>}
+        : <div className="onboarding-final">{savedMatch && <button className="onboarding-saved" onClick={openSaved} title="Opens the saved result instantly without re-running">Open saved result · {savedTime(savedMatch.savedAt)}</button>}<button className="onboarding-next" onClick={start}>{scale === 'urban' ? 'Run Deep Agent' : 'Find regions'} <ArrowRight size={16} /></button></div>}
     </footer>
   </div>;
 }

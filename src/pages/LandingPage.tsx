@@ -77,6 +77,7 @@ export default function LandingPage() {
       <header className="landing-header">
         <Wordmark />
         <nav>
+          <button onClick={() => navigate('/model')}>How it works</button>
           <button onClick={() => navigate('/agriculture/urban')}>Urban</button>
           <button onClick={() => navigate('/agriculture/rural')}>Rural</button>
         </nav>

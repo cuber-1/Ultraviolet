@@ -135,7 +135,9 @@ function traceConfig(input: { goal: string; location: string; dates: string[]; t
 
 export function landLensAgentStatus() {
   const model = configuredModel();
-  return { configured: Boolean(model), model: model?.name ?? null, provider: process.env.NRP_API_KEY ? 'NRP' : model ? 'OpenAI-compatible' : null };
+  const tracing = ['true', '1'].includes(String(process.env.LANGSMITH_TRACING ?? process.env.LANGCHAIN_TRACING_V2 ?? '').toLowerCase()) && Boolean(process.env.LANGSMITH_API_KEY || process.env.LANGCHAIN_API_KEY);
+  const project = process.env.LANGSMITH_PROJECT || (process.env.LANGSMITH_AGENT_ID ? `${process.env.LANGSMITH_AGENT_ID}-${process.env.LANGSMITH_AGENT_ENVIRONMENT || 'local'}` : 'default');
+  return { configured: Boolean(model), model: model?.name ?? null, provider: process.env.NRP_API_KEY && !process.env.LANDLENS_AGENT_BASE_URL ? 'NRP' : model ? 'OpenAI-compatible' : null, baseUrl: process.env.LANDLENS_AGENT_BASE_URL || (process.env.NRP_API_KEY ? 'https://ellm.nrp-nautilus.io/v1' : null), tracing: { enabled: tracing, project } };
 }
 
 export async function runLandLensAgent(input: {

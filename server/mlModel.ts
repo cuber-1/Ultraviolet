@@ -38,6 +38,20 @@ export function mlModelStatus() {
   return { configured: Boolean(url), url, fallback: 'calendar' };
 }
 
+/** Ping the model's /health endpoint and time it. */
+export async function mlModelHealth() {
+  const url = modelUrl();
+  if (!url) return { configured: false, online: false, latencyMs: null, model: null, error: 'ML_MODEL_URL is not set.' };
+  const started = Date.now();
+  try {
+    const response = await fetch(`${url}/health`, { signal: AbortSignal.timeout(4_000) });
+    const payload = await response.json().catch(() => ({})) as { model?: { name?: string; version?: string } };
+    return { configured: true, online: response.ok, latencyMs: Date.now() - started, model: payload.model ?? null, error: response.ok ? null : `HTTP ${response.status}` };
+  } catch (reason) {
+    return { configured: true, online: false, latencyMs: null, model: null, error: reason instanceof Error ? reason.message : 'Unreachable.' };
+  }
+}
+
 /** Transparent crop-calendar estimate used when the trained model is unavailable. */
 export function calendarPrediction(site: MlSite, crop: MlCrop, preferredMonth: number): MlPrediction {
   const temperatures = site.climate?.temperatureC ?? null;
@@ -155,6 +169,7 @@ function isCrop(value: unknown): value is MlCrop {
 /** POST /api/ml/predict: browser-facing proxy so the model URL stays server-side. */
 export async function handleMlRoute(pathname: string, req: IncomingMessage, res: ServerResponse) {
   if (pathname === '/api/ml/status') { res.setHeader('Content-Type', 'application/json'); res.end(JSON.stringify(mlModelStatus())); return true; }
+  if (pathname === '/api/ml/health') { res.setHeader('Content-Type', 'application/json'); res.end(JSON.stringify(await mlModelHealth())); return true; }
   if (pathname !== '/api/ml/predict' || req.method !== 'POST') return false;
   const input = await readJson(req);
   const crops = (Array.isArray(input.crops) ? input.crops : []).filter(isCrop).slice(0, 8);
