@@ -7,6 +7,17 @@ revenue, or a buy/sell recommendation.
 
 ## Run the trained model
 
+On macOS or Linux, install the released v0.3 artifact, EcoCrop profiles, and
+inference dependencies without access to the Spark:
+
+```bash
+./scripts/installCropFitModel.sh
+npm run ml:serve
+```
+
+The release bundle is checksum-verified before extraction. To train a fresh
+artifact instead, use the full setup below.
+
 ```bash
 python3 -m venv machine-learning/.venv
 machine-learning/.venv/bin/pip install -r machine-learning/requirements.txt
