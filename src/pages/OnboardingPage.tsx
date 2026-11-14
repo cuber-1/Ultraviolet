@@ -39,6 +39,8 @@ export default function OnboardingPage() {
   const cropOptions = CROPS.filter((crop) => crop.scale === 'both' || crop.scale === scale);
   const chosenCrops = crops.filter((id) => cropOptions.some((crop) => crop.id === id) && !strictBlocked(id));
   const ready = [areaSqft > 0, chosenCrops.length > 0, scale === 'urban' ? Boolean(urbanArea) : ruralRegions.length > 0, true, true];
+  // Each completed step fills a full share; answering the current step fills most of its share.
+  const progress = step === STEPS.length - 1 ? 1 : Math.min(1, (step + (ready[step] ? .75 : .2)) / STEPS.length);
 
   const brief: Brief = { scale, areaSqft, crops: chosenCrops, urbanArea: scale === 'urban' ? urbanArea : undefined, ruralRegions: scale === 'rural' ? ruralRegions : undefined, preferredMonth };
   const unitValue = unit === 'acres' ? +(areaSqft / ACRE_SQFT).toFixed(2) : Math.round(areaSqft);
@@ -52,7 +54,7 @@ export default function OnboardingPage() {
   useEffect(() => {
     if (step !== STEPS.length - 1) return;
     const controller = new AbortController();
-    listRuns(controller.signal).then((runs) => setSavedMatch(runs.find((item) => item.key === key) ?? null)).catch(() => setSavedMatch(null));
+    listRuns(controller.signal).then((runs) => setSavedMatch(runs.find((item) => item.key === key && item.demo) ?? runs.find((item) => item.key === key) ?? null)).catch(() => setSavedMatch(null));
     return () => controller.abort();
   }, [step, key]);
   const openSaved = () => { if (!savedMatch) return; saveBrief(brief); navigate('/plan', { state: { brief, savedId: savedMatch.id } }); };
@@ -65,6 +67,10 @@ export default function OnboardingPage() {
         {STEPS.map((label, index) => <li key={label} className={index === step ? 'current' : index < step ? 'done' : ''}><button disabled={index > step && !ready.slice(0, index).every(Boolean)} onClick={() => setStep(index)}>{index < step ? <Check size={11} /> : String(index + 1).padStart(2, '0')}<span>{label}</span></button></li>)}
       </ol>
     </header>
+    <div className="onboarding-progress" role="progressbar" aria-label="Onboarding progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress * 100)}>
+      <i style={{ width: `${progress * 100}%` }} />
+      <span>{Math.round(progress * 100)}% · {step < STEPS.length - 1 ? `${STEPS.length - 1 - step} ${STEPS.length - 1 - step === 1 ? 'step' : 'steps'} left` : 'Ready to search'}</span>
+    </div>
 
     <main className="onboarding-body" key={step}>
       {step === 0 && <section>
@@ -136,7 +142,7 @@ export default function OnboardingPage() {
       <span className="mono">{STEPS[step].toUpperCase()} · {step + 1} / {STEPS.length}</span>
       {step < STEPS.length - 1
         ? <button className="onboarding-next" disabled={!ready[step]} onClick={next}>Continue <ArrowRight size={16} /></button>
-        : <div className="onboarding-final">{savedMatch && <button className="onboarding-saved" onClick={openSaved} title="Opens the saved result instantly without re-running">Open saved result · {savedTime(savedMatch.savedAt)}</button>}<button className="onboarding-next" onClick={start}>{scale === 'urban' ? 'Run Deep Agent' : 'Find regions'} <ArrowRight size={16} /></button></div>}
+        : <div className="onboarding-final">{savedMatch && <button className="onboarding-saved" onClick={openSaved} title="Opens the saved result instantly without re-running">{savedMatch.demo ? 'Open demo result' : `Open saved result · ${savedTime(savedMatch.savedAt)}`}</button>}<button className="onboarding-next" onClick={start}>{scale === 'urban' ? 'Run Deep Agent' : 'Find regions'} <ArrowRight size={16} /></button></div>}
     </footer>
   </div>;
 }

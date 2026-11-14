@@ -1,0 +1,97 @@
+.das { --pad: clamp(16px, 3vw, 40px); min-height: 100vh; background: var(--off-white); }
+.das-header { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 18px; padding: 16px var(--pad); background: var(--white); border-bottom: 1px solid var(--gray-100); }
+.das-back { display: inline-flex; align-items: center; gap: 7px; padding: 9px 14px; border: 1px solid var(--gray-200); border-radius: 999px; background: var(--white); color: var(--gray-600); font-size: 12px; }
+.das-back:hover { border-color: var(--earth); color: var(--earth); }
+.das-title .mono { color: var(--earth); font-size: 9px; letter-spacing: .14em; }
+.das-title h1 { margin: 4px 0 2px; font-size: clamp(22px, 2.6vw, 30px); letter-spacing: -.035em; }
+.das-title p { display: flex; align-items: center; gap: 5px; color: var(--gray-500); font-size: 12px; }
+.das-class { display: inline-flex; align-items: center; gap: 7px; padding: 7px 12px; border: 1.5px solid; border-radius: 999px; font-size: 12px; font-weight: 600; }
+.das-class i { width: 9px; height: 9px; border-radius: 50%; }
+
+.das-tabs { position: sticky; z-index: 30; top: 0; display: flex; gap: 4px; padding: 8px var(--pad); background: rgba(247, 243, 237, .95); backdrop-filter: blur(8px); border-bottom: 1px solid var(--gray-100); overflow-x: auto; }
+.das-tabs button { display: inline-flex; align-items: center; gap: 7px; padding: 9px 16px; border: 0; border-radius: 999px; background: transparent; color: var(--gray-600); font-size: 13px; white-space: nowrap; }
+.das-tabs button:hover { color: var(--black); }
+.das-tabs button.active { background: var(--black); color: var(--white); }
+
+.das-body { display: grid; gap: 14px; width: min(1240px, 100%); margin: 0 auto; padding: 22px var(--pad) 60px; animation: fadeIn .25s ease both; }
+.das-overview { grid-template-columns: minmax(0, .95fr) minmax(0, 1.05fr); align-items: start; }
+.das-overview > img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 16px; background: var(--gray-100); }
+.das-overview > section { display: grid; gap: 14px; }
+.das-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.das-stat { display: grid; gap: 5px; padding: 16px; border: 1px solid var(--gray-200); border-radius: 14px; background: var(--white); }
+.das-stat .mono, .das-card > .mono { color: var(--gray-400); font-size: 9px; letter-spacing: .12em; }
+.das-stat strong { font-size: 24px; letter-spacing: -.03em; }
+.das-stat small { color: var(--gray-500); font-size: 12px; }
+.das-card { display: grid; gap: 10px; padding: 18px; border: 1px solid var(--gray-200); border-radius: 14px; background: var(--white); }
+.das-card p { color: var(--gray-600); font-size: 13px; line-height: 1.55; }
+.das-card h2 { font-size: 22px; letter-spacing: -.03em; }
+.das-card .muted, .das-crops .muted { color: var(--gray-400); }
+.das-crops { display: grid; gap: 8px; list-style: none; }
+.das-crops li { display: grid; grid-template-columns: 10px auto 1fr; align-items: center; gap: 9px; font-size: 13px; }
+.das-crops i { width: 10px; height: 10px; border-radius: 3px; }
+.das-crops span { color: var(--gray-600); text-align: right; }
+.das-dl { display: grid; gap: 0; }
+.das-dl div { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--gray-100); font-size: 13px; }
+.das-dl dt { color: var(--gray-500); }
+.das-dl dd { font-weight: 600; text-align: right; text-transform: none; }
+.das-note { padding: 10px 12px; border-radius: 8px; background: var(--orange-soft); color: var(--earth-dark) !important; }
+
+.das-sun { display: grid; }
+.das-sun-strip { display: flex; flex-wrap: wrap; gap: 10px; padding: 12px var(--pad); background: var(--white); }
+.das-sun-strip > div { display: grid; gap: 3px; min-width: 170px; padding: 10px 14px; border: 1px solid var(--gray-200); border-radius: 12px; }
+.das-sun-strip .mono { color: var(--gray-400); font-size: 9px; letter-spacing: .1em; }
+.das-sun-strip strong { font-size: 18px; }
+.das-sun-strip small { color: var(--gray-500); font-size: 11px; }
+.das-sun-total { border-color: var(--earth) !important; background: var(--orange-soft); }
+
+.das-model-head { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 12px; }
+.das-model-head .mono { color: var(--earth); font-size: 9px; letter-spacing: .12em; }
+.das-model-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.das-score { display: flex; align-items: baseline; gap: 10px; }
+.das-score strong { font-size: 44px; letter-spacing: -.05em; }
+.das-score span { color: var(--gray-500); font-size: 13px; }
+.das-card.wide { grid-column: 1 / -1; }
+.das-steps { display: grid; gap: 10px; padding-left: 0; list-style: none; }
+.das-steps li { display: grid; grid-template-columns: 110px 1fr; gap: 4px 14px; padding-bottom: 10px; border-bottom: 1px solid var(--gray-100); font-size: 13px; }
+.das-steps strong { color: var(--earth-dark); }
+.das-steps span { color: var(--gray-600); }
+.das-steps small { grid-column: 2; color: var(--gray-400); font-size: 12px; }
+
+@media (max-width: 900px) {
+  .das-overview, .das-model-grid { grid-template-columns: 1fr; }
+  .das-header { grid-template-columns: auto 1fr; }
+  .das-class { grid-column: 1 / -1; justify-self: start; }
+}
+
+/* App-like pass: larger type, sentence-case labels, fewer boxes. */
+.das { font-size: 16px; }
+.das-header { padding: 20px var(--pad); background: var(--off-white); border-bottom: 0; }
+.das-eyebrow { color: var(--earth); font-size: 15px; font-weight: 600; }
+.das-title h1 { font-size: clamp(30px, 3.4vw, 44px); letter-spacing: -.045em; }
+.das-title p { font-size: 15px; }
+.das-class { font-size: 15px; padding: 9px 16px; background: var(--white); }
+.das-tabs { padding: 10px var(--pad); border-bottom: 1px solid #e6ddd2; }
+.das-tabs button { padding: 11px 20px; font-size: 16px; font-weight: 500; }
+.das-body { width: min(1400px, 100%); gap: 22px; padding-top: 30px; }
+.das-label { color: var(--gray-500); font-size: 15px; font-weight: 600; }
+.das-stat, .das-card { border: 0; border-radius: 18px; background: #fffdfa; box-shadow: 0 1px 0 rgba(40, 35, 31, .04); }
+.das-stats { gap: 14px; }
+.das-stat { padding: 20px 22px; }
+.das-stat strong { font-size: 34px; letter-spacing: -.045em; }
+.das-stat small { font-size: 15px; }
+.das-card { padding: 22px 24px; gap: 14px; }
+.das-card p { font-size: 16px; }
+.das-card h2 { font-size: 28px; letter-spacing: -.04em; }
+.das-crops li, .das-dl div { font-size: 16px; }
+.das-overview > img { border-radius: 22px; }
+.das-sun-strip { background: var(--off-white); padding: 14px var(--pad); }
+.das-sun-strip > div { border: 0; background: #fffdfa; border-radius: 16px; padding: 14px 18px; }
+.das-sun-strip strong { font-size: 24px; }
+.das-sun-strip small { font-size: 14px; }
+.das-steps li { font-size: 16px; }
+.das-score strong { font-size: 60px; }
+.das-score span { font-size: 16px; }
+.das .viz-components span, .das .viz-components strong { font-size: 15px; }
+.das .viz-timeline-row > span { font-size: 15px; }
+.das .viz-timeline-row .cell { height: 38px; }
+.das .viz-timeline-row.head em { font-family: var(--font-sans); font-size: 13px; }

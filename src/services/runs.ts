@@ -1,7 +1,7 @@
 // Saved search results (server: /api/runs) so a demo can reopen a finished search instantly.
 import { briefCrops, formatArea, MONTH_SHORT, RURAL_REGIONS, urbanAreaLabel, type Brief } from './cropPlan';
 
-export type SavedRunMeta = { id: string; key: string; kind: 'urban' | 'rural'; label: string; savedAt: string };
+export type SavedRunMeta = { id: string; key: string; kind: 'urban' | 'rural'; label: string; savedAt: string; demo?: boolean; source?: 'database' | 'file' };
 
 /** Same answers -> same key. */
 export function briefKey(brief: Brief) {
@@ -23,9 +23,14 @@ export async function saveRun(brief: Brief, outcome: unknown) {
 }
 
 export async function listRuns(signal?: AbortSignal) {
+  return (await listRunsWithStore(signal)).runs;
+}
+
+export async function listRunsWithStore(signal?: AbortSignal): Promise<{ runs: SavedRunMeta[]; store: 'database' | 'database-unavailable' | 'files' }> {
   const response = await fetch('/api/runs', { signal });
-  if (!response.ok) return [] as SavedRunMeta[];
-  return ((await response.json()) as { runs: SavedRunMeta[] }).runs;
+  if (!response.ok) return { runs: [], store: 'files' };
+  const payload = await response.json() as { runs: SavedRunMeta[]; store?: 'database' | 'database-unavailable' | 'files' };
+  return { runs: payload.runs, store: payload.store ?? 'files' };
 }
 
 export async function getRun<T>(id: string, signal?: AbortSignal) {

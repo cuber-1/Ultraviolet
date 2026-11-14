@@ -1,13 +1,18 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, CalendarDays, CircleAlert, Droplets, MapPin, RotateCcw, Sun, ThermometerSun } from 'lucide-react';
+import { ArrowLeft, ArrowRight, CalendarDays, CircleAlert, Droplets, Map as MapIcon, MapPin, RotateCcw, Sun, ThermometerSun } from 'lucide-react';
 import Wordmark from '../components/Wordmark';
 import SearchGlobe from '../components/SearchGlobe';
-import DeepAgentLoader, { type LoaderStage } from '../components/DeepAgentLoader';
-import { SiteWorkspace } from './AgriculturePage';
-import { runAgentComparison, type AgentComparison, type CropModelInfo, type CropPrediction, type SearchResult } from '../services/vexcel';
+import { type LoaderStage } from '../components/DeepAgentLoader';
+import MapStage from '../components/MapStage';
+import DeepAgentSite from './DeepAgentSite';
+import ResultsApp from './results/ResultsApp';
+import { AgentConsole } from './results/AgentTrace';
+import '../pages/results/ResultsApp.css';
+import { OptimalPointsChart, PlantingCurveChart, SunCoverageChart } from '../components/charts/DeepAgentCharts';
+import { runAgentComparison, type AgentComparison, type AgentTraceEvent, type CropModelInfo, type CropPrediction, type SearchResult } from '../services/vexcel';
 import {
-  MONTH_LONG, MONTH_SHORT, applyModel, briefCrops, cropProfiles, fetchMlCapabilities, fetchMonthlyClimate, fetchRegionPredictions, formatArea, loadBrief, planForLocation, ruralPlaces, saveBrief,
+  MONTH_LONG, MONTH_SHORT, applyModel, briefCrops, briefFocus, cropProfiles, fetchMlCapabilities, fetchMonthlyClimate, fetchRegionPredictions, formatArea, loadBrief, planForLocation, ruralPlaces, saveBrief,
   urbanAgentCriteria, urbanAreaLabel, type Brief, type CropTiming, type LocationPlan,
 } from '../services/cropPlan';
 import { getRun, saveRun, savedTime } from '../services/runs';
@@ -57,6 +62,9 @@ export default function PlanPage() {
   const [log, setLog] = useState<string[]>([]);
   const [startedAt, setStartedAt] = useState(Date.now());
   const [climatePlan, setClimatePlan] = useState<LocationPlan | null>(null);
+  const [liveTrace, setLiveTrace] = useState<AgentTraceEvent[]>([]);
+  const [discovered, setDiscovered] = useState<Array<{ lat: number; lon: number }>>([]);
+  const [reveal, setReveal] = useState(false);
   const requestRef = useRef<AbortController | null>(null);
 
   const run = useCallback(async (input: Brief) => {
@@ -67,7 +75,7 @@ export default function PlanPage() {
     const live = () => requestRef.current === controller && !controller.signal.aborted;
     const push = (message: string) => { if (live()) setLog((items) => [...items, message]); };
     const advance = (stages: LoaderStage[], key: string) => { if (live()) setStageIndex((current) => Math.max(current, stages.findIndex((stage) => stage.key === key))); };
-    setRunning(true); setError(null); setOutcome(null); setSavedAt(null); setLog([]); setStageIndex(0); setStartedAt(Date.now()); setClimatePlan(null);
+    setRunning(true); setError(null); setOutcome(null); setSavedAt(null); setLog([]); setStageIndex(0); setStartedAt(Date.now()); setClimatePlan(null); setLiveTrace([]); setDiscovered([]); setReveal(false);
     try {
       if (input.scale === 'urban') {
         push(`Reading NASA monthly climate for ${urbanAreaLabel(input)}`);
@@ -82,12 +90,14 @@ export default function PlanPage() {
           goal: criteria.goal, location: input.urbanArea ?? 'All available Vexcel coverage', lat: 0, lon: 0, radiusM: 20_000,
           dates: criteria.dates, targetHours: criteria.targetHours, targetAreaSqft: criteria.targetAreaSqft,
           crops: briefCrops(input).map((crop) => crop.name), cropProfiles: cropProfiles(input), preferredMonth: input.preferredMonth, source: 'guided',
-        }, (event) => { advance(URBAN_STAGES, event.stage); push(event.message); }, controller.signal);
+        }, (event) => {
+          advance(URBAN_STAGES, event.stage); push(event.message);
+        }, controller.signal, (event) => { if (live()) setLiveTrace((items) => [...items, event]); });
         if (!live()) return;
         const byId = new Map(comparison.candidates.map((candidate) => [candidate.id, candidate]));
         const top = comparison.simulations.flatMap((simulation) => byId.get(simulation.candidateId) ?? []).slice(0, TOP_N);
         const next: UrbanOutcome = { kind: 'urban', brief: input, plan, criteria, comparison, top };
-        setOutcome(next); saveOutcome(next); void saveRun(input, next).catch(() => undefined);
+        setOutcome(next); saveOutcome(next); void saveRun(input, next).catch(() => undefined); setReveal(true);
         navigate('/plan', { replace: true, state: { brief: input } });
       } else {
         const places = ruralPlaces(input);
@@ -104,7 +114,7 @@ export default function PlanPage() {
         advance(RURAL_STAGES, 'ranking'); push('Ranking by crop fit');
         if (!live()) return;
         const next: RuralOutcome = { kind: 'rural', brief: input, plans, errors: climate.errors, model: model?.model ?? null };
-        setOutcome(next); saveOutcome(next); void saveRun(input, next).catch(() => undefined);
+        setOutcome(next); saveOutcome(next); void saveRun(input, next).catch(() => undefined); setReveal(true);
         navigate('/plan', { replace: true, state: { brief: input } });
       }
     } catch (reason) {
@@ -141,40 +151,62 @@ export default function PlanPage() {
     return () => { document.body.style.overflow = previous; };
   }, [running]);
 
-  const openSite = useCallback((id: string) => navigate(`/plan?site=${encodeURIComponent(id)}`), [navigate]);
+  // Remember the results view (deck position, tab) so closing Details returns to the same place.
+  const openSite = useCallback((id: string) => navigate(`/plan?site=${encodeURIComponent(id)}&back=${encodeURIComponent(location.search)}`), [location.search, navigate]);
+  const backSearch = new URLSearchParams(location.search).get('back') ?? '';
 
   if (!brief) return <Navigate to="/start" replace />;
 
   const selectedId = new URLSearchParams(location.search).get('site');
   if (outcome?.kind === 'urban' && selectedId) {
-    const result = outcome.top.find((item) => item.id === selectedId);
-    if (result) return <SiteWorkspace result={result} onClose={() => navigate('/plan')} backLabel="Top 5" initialDate={outcome.criteria.dates[0]} initialTargetHours={outcome.criteria.targetHours} targetAreaSqft={outcome.criteria.targetAreaSqft} />;
+    const order = rankedIds(outcome);
+    const result = outcome.top.find((item) => item.id === selectedId) ?? outcome.comparison.candidates.find((item) => item.id === selectedId);
+    if (result) return <DeepAgentSite result={result} rank={order.indexOf(result.id) + 1} total={outcome.top.length}
+      simulation={outcome.comparison.simulations.find((item) => item.candidateId === result.id) ?? null}
+      predictions={(outcome.comparison.predictions ?? []).filter((item) => item.siteId === result.id)}
+      crops={briefCrops(outcome.brief).map(({ id, name }) => ({ id, name }))}
+      criteria={outcome.criteria} preferredMonth={outcome.brief.preferredMonth}
+      explanation={outcome.comparison.narrative?.explanations.find((item) => item.candidateId === result.id)?.explanation ?? null}
+      mlModel={outcome.comparison.mlModel ?? null} onClose={() => navigate(`/plan${backSearch}`)} />;
   }
 
   const cancel = () => { requestRef.current?.abort(); setRunning(false); navigate('/start'); };
   const urban = brief.scale === 'urban';
 
+  const focus = briefFocus(brief);
+  const loaderNode = running && <MapStage mode="loading" focus={focus} discovered={discovered} pins={[]}
+    title={urban ? 'Finding your roof' : 'Finding your region'}
+    subtitle={urban
+      ? `Searching ${urbanAreaLabel(brief)} for ${formatArea(brief.areaSqft)} of roof that suits ${cropList(brief)}.`
+      : `Comparing ${ruralPlaces(brief).length} farming towns for ${cropList(brief)} on ${formatArea(brief.areaSqft)}.`}
+    stages={urban ? URBAN_STAGES : RURAL_STAGES} activeIndex={stageIndex} message={log.at(-1) ?? 'Starting'} startedAt={startedAt}
+    feed={urban && liveTrace.length ? <AgentConsole events={liveTrace} /> : undefined}
+    ctaLabel="" onContinue={() => undefined} onCancel={cancel} />;
+  if (outcome && reveal && !running && !error) {
+    const pins = outcome.kind === 'urban'
+      ? outcome.top.map((result, index) => ({ id: result.id, lat: result.lat, lon: result.lon, rank: index + 1, label: result.costar?.buildingName || (result.property?.roofAreaSqft ? `${Math.round(result.property.roofAreaSqft / 1000)}k ft² roof` : `Roof ${index + 1}`) }))
+      : outcome.plans.slice(0, TOP_N).map((plan, index) => ({ id: plan.climate.query, lat: plan.climate.lat, lon: plan.climate.lon, rank: index + 1, label: plan.climate.name }));
+    const bestSun = outcome.kind === 'urban' ? Math.max(0, ...outcome.comparison.simulations.slice(0, TOP_N).map((item) => item.sharedAreaSqft ?? 0)) : 0;
+    return <MapStage mode="done" focus={focus} discovered={[]} pins={pins}
+      title={outcome.kind === 'urban' ? `${pins.length} roofs found` : `${pins.length} regions found`}
+      subtitle={outcome.kind === 'urban' ? `Best roof keeps ${new Intl.NumberFormat('en-US').format(Math.round(bestSun))} ft² in ${outcome.criteria.targetHours}+ hours of sun.` : `Top match: ${pins[0]?.label ?? '—'}.`}
+      stages={urban ? URBAN_STAGES : RURAL_STAGES} activeIndex={(urban ? URBAN_STAGES : RURAL_STAGES).length} message="" startedAt={startedAt}
+      summary={outcome.kind === 'urban' ? `${outcome.comparison.candidates.length} roofs checked in ${urbanAreaLabel(brief)}` : `${outcome.plans.length} towns compared`}
+      ctaLabel={outcome.kind === 'urban' ? 'See your top 5' : 'See your top regions'} onContinue={() => setReveal(false)} onCancel={() => setReveal(false)} onHome={() => navigate('/')} />;
+  }
+  if (outcome?.kind === 'urban' && !error) return <>{loaderNode}<ResultsApp brief={outcome.brief} criteria={outcome.criteria} comparison={outcome.comparison} top={outcome.top}
+    insights={<UrbanInsights outcome={outcome} onOpen={openSite} />} savedAt={savedAt} onEdit={() => navigate('/start')} onRerun={() => void run(brief)} onOpen={openSite} onMap={() => setReveal(true)} onHome={() => navigate('/')} /></>;
+
   return <div className="plan-page">
-    {running && <DeepAgentLoader
-      kicker={urban ? 'DEEP AGENT · LIVE' : 'CLIMATE MATCH · LIVE'}
-      title={urban ? 'Finding your roof' : 'Finding your region'}
-      subtitle={urban
-        ? `Searching ${urbanAreaLabel(brief)} for ${formatArea(brief.areaSqft)} of roof that suits ${cropList(brief)}.`
-        : `Comparing ${ruralPlaces(brief).length} farming towns for ${cropList(brief)} on ${formatArea(brief.areaSqft)}.`}
-      stages={urban ? URBAN_STAGES : RURAL_STAGES}
-      activeIndex={stageIndex}
-      message={log.at(-1) ?? 'Starting'}
-      log={log}
-      startedAt={startedAt}
-      expected={urban ? 'USUALLY 1–3 MIN' : 'A FEW SECONDS'}
-      insight={urban && climatePlan ? <TimingInsight plan={climatePlan} brief={brief} /> : undefined}
-      onCancel={cancel}
-    />}
+    {loaderNode}
 
     <header className="plan-header">
       <button className="plan-back" onClick={() => navigate('/start')}><ArrowLeft size={16} /> Edit answers</button>
-      <Wordmark />
-      <button className="plan-rerun" onClick={() => void run(brief)} disabled={running}><RotateCcw size={14} /> Run again</button>
+      <button className="plan-home" onClick={() => navigate('/')} title="Back to the home page"><Wordmark /></button>
+      <div className="plan-header-actions">
+        {outcome && <button className="plan-rerun" onClick={() => setReveal(true)}><MapIcon size={14} /> Map</button>}
+        <button className="plan-rerun" onClick={() => void run(brief)} disabled={running}><RotateCcw size={14} /> Run again</button>
+      </div>
     </header>
 
     {savedAt && outcome && !running && <div className="saved-banner"><span className="mono">SAVED RESULT</span><span>From {savedTime(savedAt)}. Opened instantly; nothing was re-run.</span><button onClick={() => void run(brief)}><RotateCcw size={13} /> Run live now</button></div>}
@@ -225,6 +257,8 @@ function UrbanResults({ outcome, onOpen }: { outcome: UrbanOutcome; onOpen: (id:
         <div><dt>Sun checked on</dt><dd>{criteria.dates.map(shortDate).join(' + ')}</dd></div>
       </dl>
     </section>
+
+    <UrbanInsights outcome={outcome} onOpen={onOpen} />
 
     <section className="plan-grid">
       <ol className="roof-list">
@@ -331,4 +365,43 @@ function ModelCard({ model }: { model: CropModelInfo }) {
       : 'The trained crop model is not connected, so suitability and timing come from NASA monthly temperatures and each crop’s growing range.'}</p>
     {model.error && <p className="model-error">{model.error}</p>}
   </div>;
+}
+
+/** Roof ids in final rank order (server already sorted simulations). */
+function rankedIds(outcome: UrbanOutcome) {
+  return outcome.comparison.simulations.map((item) => item.candidateId);
+}
+
+function UrbanInsights({ outcome, onOpen }: { outcome: UrbanOutcome; onOpen: (id: string) => void }) {
+  const { brief, criteria, comparison } = outcome;
+  const crops = briefCrops(brief).map(({ id, name }) => ({ id, name }));
+  const byId = new Map(comparison.candidates.map((item) => [item.id, item]));
+  const roofs = comparison.simulations.flatMap((simulation, index) => {
+    const result = byId.get(simulation.candidateId);
+    if (!result) return [];
+    const hours = simulation.perDate.map((item) => item.meanHours).filter((value): value is number => value !== null);
+    const label = result.costar?.buildingName || result.costar?.address?.split(',')[0] || (result.property?.roofAreaSqft ? `${Math.round(result.property.roofAreaSqft / 1000)}k ft² roof` : 'Rooftop');
+    return [{ id: result.id, rank: index + 1, label, sunlitSqft: simulation.sharedAreaSqft, roofSqft: result.property?.roofAreaSqft ?? null, meanHours: hours.length ? hours.reduce((a, b) => a + b, 0) / hours.length : null }];
+  });
+  const predictions = comparison.predictions ?? [];
+  const fitPoints = roofs.map((roof) => ({ ...roof, fitByCrop: Object.fromEntries(crops.map((crop) => { const p = predictions.find((item) => item.siteId === roof.id && item.cropId === crop.id && item.source === 'ml'); return [crop.id, p ? p.suitability * 100 : null]; })) }));
+  const reference = roofs[0] ? predictions.filter((item) => item.siteId === roofs[0].id) : [];
+  const series = crops.flatMap((crop) => { const p = reference.find((item) => item.cropId === crop.id); return p?.curve?.length === 12 ? [{ id: crop.id, name: crop.name, curve: p.curve, plantMonth: p.plantMonth, harvestMonth: p.harvestMonth, suitableMonths: p.suitableMonths ?? [] }] : []; });
+  const best = roofs.reduce<typeof roofs[number] | null>((top, roof) => (roof.sunlitSqft ?? -1) > (top?.sunlitSqft ?? -1) ? roof : top, null);
+  const meeting = roofs.filter((roof) => (roof.sunlitSqft ?? 0) >= criteria.targetAreaSqft).length;
+  const firstStart = series.filter((item) => item.plantMonth !== null).sort((a, b) => ((a.plantMonth! - brief.preferredMonth + 12) % 12) - ((b.plantMonth! - brief.preferredMonth + 12) % 12))[0];
+  return <section className="insights">
+    <article className="insight-card">
+      <header><span className="mono">01 · SUN COVERAGE</span><h2>{best?.sunlitSqft ? `Up to ${new Intl.NumberFormat('en-US').format(Math.round(best.sunlitSqft))} ft² gets ${criteria.targetHours} h of sun.` : 'Sun coverage'}</h2><p>{meeting} of {roofs.length} roofs checked have enough area in {criteria.targetHours}+ hours of direct sun on every date.</p></header>
+      <SunCoverageChart rows={roofs} targetAreaSqft={criteria.targetAreaSqft} targetHours={criteria.targetHours} onSelect={onOpen} />
+    </article>
+    <article className="insight-card">
+      <header><span className="mono">02 · OPTIMAL POINTS</span><h2>Where sun and crop fit meet.</h2><p>Each roof by sunlit area and the crop model’s fit for your crops. Prime roofs clear both lines.</p></header>
+      {predictions.some((item) => item.source === 'ml') ? <OptimalPointsChart points={fitPoints} crops={crops} targetAreaSqft={criteria.targetAreaSqft} onSelect={onOpen} /> : <p className="viz-empty">The crop model did not score this search{comparison.mlModel?.error ? `: ${comparison.mlModel.error}` : ''}.</p>}
+    </article>
+    <article className="insight-card wide">
+      <header><span className="mono">03 · WHEN TO START</span><h2>{firstStart ? `Start ${firstStart.name.toLowerCase()} in ${['January','February','March','April','May','June','July','August','September','October','November','December'][firstStart.plantMonth!]}.` : 'When to start'}</h2><p>Crop-model fit for each planting month in {urbanAreaLabel(brief)}, with the model’s uncertainty. Circles mark the recommended start on or after your chosen month.</p></header>
+      <PlantingCurveChart series={series} preferredMonth={brief.preferredMonth} />
+    </article>
+  </section>;
 }

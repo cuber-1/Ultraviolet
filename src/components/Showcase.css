@@ -1,0 +1,52 @@
+.sc { --pad: clamp(18px, 4vw, 52px); position: relative; display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); gap: clamp(24px, 5vw, 80px); padding: 0 var(--pad); background: var(--off-white); }
+
+.sc-steps { padding: 10vh 0 20vh; }
+.sc-step { display: grid; align-content: center; gap: 16px; min-height: 92vh; opacity: .28; transition: opacity .5s ease, transform .5s ease; transform: translateY(16px); }
+.sc-step.active { opacity: 1; transform: none; }
+.sc-kicker { display: inline-flex; align-items: center; gap: 10px; color: var(--earth-dark); font-size: 16px; font-weight: 600; }
+.sc-kicker b { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: var(--orange-soft); color: var(--earth); font-size: 14px; }
+.sc-step h2 { font-size: clamp(38px, 5vw, 72px); font-weight: 700; line-height: .98; letter-spacing: -.055em; }
+.sc-step p { max-width: 30rem; color: var(--gray-600); font-size: 19px; line-height: 1.55; }
+.sc-end { display: grid; place-items: start; min-height: 40vh; align-content: center; }
+.sc-end button { display: inline-flex; align-items: center; gap: 10px; padding: 18px 30px; border: 0; border-radius: 999px; background: var(--earth); color: var(--white); font-size: 19px; font-weight: 700; box-shadow: 0 16px 36px rgba(232, 93, 4, .32); }
+
+.sc-stage { position: sticky; top: 8vh; height: 84vh; display: grid; align-content: center; gap: 18px; }
+.sc-frame { position: relative; height: min(76vh, 720px); border-radius: 28px; background: #fffdfa; box-shadow: 0 30px 80px rgba(40, 35, 31, .1); overflow: hidden; }
+.sc-layer { position: absolute; inset: 0; display: grid; place-items: center; opacity: 0; transform: scale(.97) translateY(14px); transition: opacity .6s ease, transform .6s cubic-bezier(.2, .8, .2, 1); pointer-events: none; }
+.sc-layer.on { opacity: 1; transform: none; pointer-events: auto; }
+.sc-layer .roof-preview { width: 100%; height: 100%; aspect-ratio: auto; border-radius: 0; }
+.sc-caption { position: absolute; left: 22px; bottom: 20px; padding: 9px 14px; border-radius: 999px; background: rgba(255, 255, 255, .92); color: var(--black); font-size: 15px; }
+.sc-wait { color: var(--gray-500); font-size: 17px; }
+.sc-chart { padding: 28px; }
+.sc-chart img { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 16px; }
+.sc-chart .viz { width: 100%; }
+
+.sc-deck { perspective: 1200px; }
+.sc-card { position: absolute; width: min(56%, 360px); aspect-ratio: 3 / 4; margin: 0; border-radius: 22px; overflow: hidden; background: #1d1a17; box-shadow: 0 24px 50px rgba(40, 35, 31, .22); transition: transform .8s cubic-bezier(.2, .8, .2, 1); }
+.sc-card img { width: 100%; height: 100%; object-fit: cover; }
+.sc-card figcaption { position: absolute; inset: auto 0 0; display: grid; gap: 4px; padding: 60px 20px 20px; background: linear-gradient(to top, rgba(0, 0, 0, .78), transparent); color: #fff; }
+.sc-card figcaption span { font-size: 14px; opacity: .8; }
+.sc-card figcaption strong { font-size: 30px; letter-spacing: -.04em; }
+.sc-card figcaption small { font-size: 15px; font-weight: 500; letter-spacing: 0; }
+.sc-card figcaption em { font-size: 15px; font-style: normal; }
+.sc-deck .c3 { transform: translate(18%, 4%) rotate(9deg) scale(.92); }
+.sc-deck .c2 { transform: translate(-18%, 3%) rotate(-8deg) scale(.95); }
+.sc-deck .c1 { transform: none; }
+.sc-deck.on .c1 { animation: scSwipe 4.5s 1s ease-in-out infinite; }
+@keyframes scSwipe { 0%, 30% { transform: none; } 45% { transform: translateX(26%) rotate(10deg); } 60%, 100% { transform: none; } }
+.sc-deck-actions { position: absolute; bottom: 26px; display: flex; gap: 18px; }
+.sc-deck-actions span { display: grid; place-items: center; width: 60px; height: 60px; border-radius: 50%; background: #fff; box-shadow: 0 10px 24px rgba(40, 35, 31, .18); }
+.sc-deck-actions .pass { color: #c8432b; }
+.sc-deck-actions .save { background: var(--earth); color: #fff; }
+
+.sc-dots { display: flex; justify-content: center; gap: 8px; }
+.sc-dots i { width: 30px; height: 4px; border-radius: 4px; background: #e2d8cc; transition: background .3s; }
+.sc-dots i.on { background: var(--earth); }
+
+@media (max-width: 900px) {
+  .sc { grid-template-columns: 1fr; }
+  .sc-stage { order: -1; top: 0; z-index: 2; height: 52vh; padding-top: 12px; background: var(--off-white); }
+  .sc-frame { height: 46vh; }
+  .sc-step { min-height: 70vh; }
+}
+@media (prefers-reduced-motion: reduce) { .sc-layer, .sc-step { transition: none; } .sc-deck.on .c1 { animation: none; } }

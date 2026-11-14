@@ -54,6 +54,14 @@ export type LandLensAgentServices = {
   simulate: (candidate: AgentCandidate, dates: string[], targetHours: number, targetAreaSqft: number) => Promise<SunlightEvidence>;
 };
 
+/** What the agent saw and did, streamed to the UI and saved with the run. */
+export type AgentTraceEvent =
+  | { kind: 'prompt'; role: 'system' | 'user'; title: string; text: string; at: number }
+  | { kind: 'llm'; text: string; toolCalls: Array<{ name: string; args: string }>; ms: number; tokens: number | null; at: number }
+  | { kind: 'tool'; name: string; args: string; result: string; ms: number; ok: boolean; at: number };
+
+const clip = (value: unknown, max = 600) => { const text = typeof value === 'string' ? value : JSON.stringify(value); return text && text.length > max ? `${text.slice(0, max)}…` : text ?? ''; };
+
 export type AgentProgress = { stage: 'planning' | 'imagery' | 'property' | 'geometry' | 'sunlight' | 'model' | 'ranking'; message: string };
 
 /** Build model inputs for roof candidates from the evidence already gathered (climate is fetched per ~0.1° cell). */
@@ -151,7 +159,10 @@ export async function runLandLensAgent(input: {
   cropProfiles?: MlCrop[];
   preferredMonth?: number;
   source?: 'guided' | 'search' | 'photon-watch';
-}, services: LandLensAgentServices, progress: (event: AgentProgress) => void) {
+}, services: LandLensAgentServices, progress: (event: AgentProgress) => void, onTrace: (event: AgentTraceEvent) => void = () => {}) {
+  const trace: AgentTraceEvent[] = [];
+  const started = Date.now();
+  const emit = (event: AgentTraceEvent) => { trace.push(event); onTrace(event); };
   const model = configuredModel();
   if (!model) throw new Error('Agent model access is not configured. Set NRP_API_KEY or LANDLENS_AGENT_API_KEY.');
 
@@ -285,18 +296,47 @@ export async function runLandLensAgent(input: {
   const useModel = cropProfiles.length > 0;
 
   progress({ stage: 'planning', message: 'Planning the site comparison' });
+  const systemPrompt = `You compare real urban rooftops for growing goals. Call search_rooftop_imagery exactly once. Then, for every candidate ID it returns, call lookup_property_record and simulate_rooftop_sunlight (it resolves geometry itself; call resolve_roof_geometry only if you need height details). Batch independent tool calls in the same turn. Do not repeat a call you already made. ${useModel ? `After the sunlight runs, call predict_crop_suitability once with every candidate ID. Its "sites" list is already in final rank order (sunlit area and crop suitability combined); use that order as-is and do not recompute scores. Mention each roof's planting window. ` : 'Rank only by sharedAreaSqft returned by the sunlight tool. '}A verified Matterport tour may break a near tie but can never outrank materially greater suitable area. Never estimate missing geometry, listing status, or sunlight; list them under unknowns. Crop-model scores are agroclimatic screening: never present them as yield, revenue, or purchase advice. Write the summary, explanations, and unknowns in plain, friendly language for a grower: refer to sites by rank or address rather than coordinates, round numbers, and never include tool or field names, code identifiers, or URLs. Write explanations only for the five best-ranked roofs, one or two sentences each about why that roof ranks where it does.`;
   const agent = createDeepAgent({
     model: model.client,
     tools: useModel ? [searchImagery, lookupProperty, resolveGeometry, simulateSunlight, predictSuitability] : [searchImagery, lookupProperty, resolveGeometry, simulateSunlight],
     responseFormat: toolStrategy(responseSchema),
-    systemPrompt: `You compare real urban rooftops for growing goals. Call search_rooftop_imagery exactly once. Then, for every candidate ID it returns, call lookup_property_record and simulate_rooftop_sunlight (it resolves geometry itself; call resolve_roof_geometry only if you need height details). Batch independent tool calls in the same turn. Do not repeat a call you already made. ${useModel ? `After the sunlight runs, call predict_crop_suitability once with every candidate ID. Its "sites" list is already in final rank order (sunlit area and crop suitability combined); use that order as-is and do not recompute scores. Mention each roof's planting window. ` : 'Rank only by sharedAreaSqft returned by the sunlight tool. '}A verified Matterport tour may break a near tie but can never outrank materially greater suitable area. Never estimate missing geometry, listing status, or sunlight; list them under unknowns. Crop-model scores are agroclimatic screening: never present them as yield, revenue, or purchase advice. Write the summary, explanations, and unknowns in plain, friendly language for a grower: refer to sites by rank or address rather than coordinates, round numbers, and never include tool or field names, code identifiers, or URLs. Write explanations only for the five best-ranked roofs, one or two sentences each about why that roof ranks where it does.`,
+    systemPrompt,
   });
 
+  const userMessage = `${input.goal}\nLocation: ${input.location}\nRepresentative dates: ${input.dates.join(', ')}\nDirect sun target: ${input.targetHours} hours\nGrowing area target: ${input.targetAreaSqft} square feet.${input.followUp ? `\nFollow-up: ${input.followUp}` : ''}`;
+  emit({ kind: 'prompt', role: 'system', title: 'Ultraviolet instructions (added to the Deep Agents planning prompt)', text: systemPrompt, at: 0 });
+  emit({ kind: 'prompt', role: 'user', title: 'Request sent to the agent', text: userMessage, at: 0 });
+  // LangChain callbacks: every model turn and tool call becomes a trace event.
+  const llmStarts = new Map<string, number>();
+  const toolStarts = new Map<string, { name: string; args: string; at: number }>();
+  const traceHandler = {
+    handleChatModelStart: (_llm: unknown, _messages: unknown, runId: string) => { llmStarts.set(runId, Date.now()); },
+    handleLLMEnd: (output: { generations?: Array<Array<{ text?: string; message?: { content?: unknown; tool_calls?: Array<{ name: string; args: unknown }>; usage_metadata?: { total_tokens?: number } } }>> }, runId: string) => {
+      const generation = output.generations?.[0]?.[0];
+      const message = generation?.message;
+      const content = typeof message?.content === 'string' ? message.content : Array.isArray(message?.content) ? message!.content.map((part: { text?: string }) => part.text ?? '').join('') : generation?.text ?? '';
+      const begun = llmStarts.get(runId) ?? Date.now();
+      emit({ kind: 'llm', text: clip(content.trim(), 1200), toolCalls: (message?.tool_calls ?? []).map((call) => ({ name: call.name, args: clip(call.args, 300) })), ms: Date.now() - begun, tokens: message?.usage_metadata?.total_tokens ?? null, at: begun - started });
+    },
+    handleToolStart: (tool: { name?: string; id?: string[] }, input: string, runId: string, _parent?: string, _tags?: string[], _metadata?: unknown, runName?: string) => {
+      toolStarts.set(runId, { name: runName ?? tool.name ?? tool.id?.at(-1) ?? 'tool', args: clip(input, 300), at: Date.now() });
+    },
+    handleToolEnd: (output: unknown, runId: string) => {
+      const begun = toolStarts.get(runId); if (!begun) return;
+      const value = output && typeof output === 'object' && 'content' in (output as object) ? (output as { content: unknown }).content : output;
+      emit({ kind: 'tool', name: begun.name, args: begun.args, result: clip(value, 500), ms: Date.now() - begun.at, ok: true, at: begun.at - started });
+    },
+    handleToolError: (error: unknown, runId: string) => {
+      const begun = toolStarts.get(runId); if (!begun) return;
+      emit({ kind: 'tool', name: begun.name, args: begun.args, result: clip(error instanceof Error ? error.message : error, 300), ms: Date.now() - begun.at, ok: false, at: begun.at - started });
+    },
+  };
   let narrative: z.infer<typeof responseSchema> | null = null;
   try {
     const result = await agent.invoke({
-      messages: [{ role: 'user', content: `${input.goal}\nLocation: ${input.location}\nRepresentative dates: ${input.dates.join(', ')}\nDirect sun target: ${input.targetHours} hours\nGrowing area target: ${input.targetAreaSqft} square feet.${input.followUp ? `\nFollow-up: ${input.followUp}` : ''}` }],
-    } as never, { recursionLimit: AGENT_RECURSION_LIMIT, signal: AbortSignal.timeout(AGENT_TIMEOUT_MS), ...traceConfig(input, model.name) });
+      messages: [{ role: 'user', content: userMessage }],
+    } as never, { recursionLimit: AGENT_RECURSION_LIMIT, signal: AbortSignal.timeout(AGENT_TIMEOUT_MS), ...traceConfig(input, model.name), callbacks: [traceHandler] } as never);
     narrative = result.structuredResponse ?? null;
   } catch (reason) {
     progress({ stage: 'ranking', message: `Model planning ended; ranking completed tool evidence directly` });
@@ -311,5 +351,6 @@ export async function runLandLensAgent(input: {
     simulations: [...new Map([...simulations.values()].map((item) => [item.candidateId, item])).values()],
     predictions: [...predictions.values()],
     mlModel: modelInfo as MlResponse['model'] | null,
+    trace,
   };
 }

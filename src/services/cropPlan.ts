@@ -38,18 +38,18 @@ export const CROPS: Crop[] = [
 ];
 
 export const URBAN_AREAS = [
-  { id: 'houston', label: 'Houston', detail: 'Texas Gulf Coast', value: 'Houston, Texas' },
-  { id: 'los-angeles', label: 'Los Angeles', detail: 'Southern California', value: 'Los Angeles, California' },
-  { id: 'stockton', label: 'Stockton', detail: 'Central Valley, California', value: 'Stockton, California' },
+  { id: 'houston', label: 'Houston', detail: 'Texas Gulf Coast', value: 'Houston, Texas', lat: 29.76, lon: -95.37 },
+  { id: 'los-angeles', label: 'Los Angeles', detail: 'Southern California', value: 'Los Angeles, California', lat: 34.05, lon: -118.24 },
+  { id: 'stockton', label: 'Stockton', detail: 'Central Valley, California', value: 'Stockton, California', lat: 37.96, lon: -121.29 },
 ] as const;
 
 export const RURAL_REGIONS = [
-  { id: 'central-valley', label: 'Central Valley', detail: 'California', places: ['Fresno, California', 'Bakersfield, California', 'Modesto, California', 'Salinas, California'] },
-  { id: 'southwest', label: 'Desert Southwest', detail: 'Arizona · New Mexico', places: ['Yuma, Arizona', 'Las Cruces, New Mexico', 'El Centro, California'] },
-  { id: 'texas', label: 'Texas', detail: 'Rio Grande · Plains', places: ['McAllen, Texas', 'Lubbock, Texas', 'Waco, Texas'] },
-  { id: 'midwest', label: 'Corn Belt', detail: 'Iowa · Illinois · Nebraska', places: ['Des Moines, Iowa', 'Champaign, Illinois', 'Lincoln, Nebraska'] },
-  { id: 'southeast', label: 'Southeast', detail: 'Georgia · Carolinas · Florida', places: ['Tifton, Georgia', 'Raleigh, North Carolina', 'Gainesville, Florida'] },
-  { id: 'northwest', label: 'Pacific Northwest', detail: 'Washington · Oregon · Idaho', places: ['Yakima, Washington', 'Salem, Oregon', 'Boise, Idaho'] },
+  { id: 'central-valley', label: 'Central Valley', detail: 'California', lat: 36.6, lon: -120.2, places: ['Fresno, California', 'Bakersfield, California', 'Modesto, California', 'Salinas, California'] },
+  { id: 'southwest', label: 'Desert Southwest', detail: 'Arizona · New Mexico', lat: 32.6, lon: -112.3, places: ['Yuma, Arizona', 'Las Cruces, New Mexico', 'El Centro, California'] },
+  { id: 'texas', label: 'Texas', detail: 'Rio Grande · Plains', lat: 30.4, lon: -99.1, places: ['McAllen, Texas', 'Lubbock, Texas', 'Waco, Texas'] },
+  { id: 'midwest', label: 'Corn Belt', detail: 'Iowa · Illinois · Nebraska', lat: 40.8, lon: -92.8, places: ['Des Moines, Iowa', 'Champaign, Illinois', 'Lincoln, Nebraska'] },
+  { id: 'southeast', label: 'Southeast', detail: 'Georgia · Carolinas · Florida', lat: 32.3, lon: -81.5, places: ['Tifton, Georgia', 'Raleigh, North Carolina', 'Gainesville, Florida'] },
+  { id: 'northwest', label: 'Pacific Northwest', detail: 'Washington · Oregon · Idaho', lat: 45.0, lon: -119.9, places: ['Yakima, Washington', 'Salem, Oregon', 'Boise, Idaho'] },
 ] as const;
 
 export type Brief = {
@@ -207,4 +207,10 @@ export function applyModel(plan: LocationPlan, predictions: CropPrediction[], pr
 export type MlCapabilities = { strict: boolean; configured: boolean; api: 'contract' | 'cropfit' | null; supportedCrops: string[] | null };
 export async function fetchMlCapabilities(signal?: AbortSignal): Promise<MlCapabilities | null> {
   try { const response = await fetch('/api/ml/capabilities', { signal }); return response.ok ? await response.json() as MlCapabilities : null; } catch { return null; }
+}
+
+/** Where the loading map should look for a brief: a city, or the chosen farming regions. */
+export function briefFocus(brief: Brief): Array<{ lat: number; lon: number }> {
+  if (brief.scale === 'urban') { const area = URBAN_AREAS.find((item) => item.value === brief.urbanArea); return area ? [{ lat: area.lat, lon: area.lon }] : []; }
+  return (brief.ruralRegions ?? []).flatMap((id) => { const region = RURAL_REGIONS.find((item) => item.id === id); return region ? [{ lat: region.lat, lon: region.lon }] : []; });
 }
