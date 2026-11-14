@@ -1,0 +1,165 @@
+{
+  "model": "CropFit EcoCrop surrogate v0.4",
+  "evaluation": "external observed county yield; not used in training or model selection",
+  "years": [
+    2018,
+    2019,
+    2020,
+    2021,
+    2022
+  ],
+  "scope": "California counties",
+  "assumptions": {
+    "soilPh": 6.5,
+    "irrigated": true,
+    "minimumHarvestedAcres": 100,
+    "score": "best planting month"
+  },
+  "sources": {
+    "yield": {
+      "2018": "https://www.nass.usda.gov/sites/default/files/Statistics_by_State/California/Publications/AgComm/2018/2018cactbsErrata.csv",
+      "2019": "https://www.nass.usda.gov/sites/default/files/Statistics_by_State/California/Publications/AgComm/2019/201908cropyear.csv",
+      "2020": "https://www.nass.usda.gov/sites/default/files/Statistics_by_State/California/Publications/AgComm/2020/main_data_table.csv",
+      "2021": "https://www.nass.usda.gov/sites/default/files/Statistics_by_State/California/Publications/AgComm/2021/CAC_2021_data_by_commodity_20240417.csv",
+      "2022": "https://www.nass.usda.gov/sites/default/files/Statistics_by_State/California/Publications/AgComm/2022/County_Ag_Commissioner_Report_2022_data_by_commodity.csv"
+    },
+    "countyCoordinates": "https://www2.census.gov/geo/docs/maps-data/data/gazetteer/2022_Gazetteer/2022_Gaz_counties_national.zip",
+    "weather": "https://power.larc.nasa.gov/api/temporal/monthly/regional"
+  },
+  "pooledWithinCrop": {
+    "observations": 238,
+    "spearman": -0.0276,
+    "bootstrap95": [
+      -0.2015,
+      0.1462
+    ]
+  },
+  "gate": {
+    "passed": false,
+    "rule": "pooled Spearman >= 0.30, bootstrap lower bound > 0, >=4 crops with >=6 observations, at least half of eligible crops positive, and at least 3 of 5 years positive"
+  },
+  "perCrop": [
+    {
+      "crop": "corn",
+      "observations": 49,
+      "spearman": 0.1436,
+      "bootstrap95": [
+        -0.0384,
+        0.2717
+      ],
+      "medianScore": 92.9,
+      "medianYieldTonsPerAcre": 5.26
+    },
+    {
+      "crop": "cucumber",
+      "observations": 6,
+      "spearman": 0.5429,
+      "bootstrap95": [
+        0.5429,
+        0.8
+      ],
+      "medianScore": 89.4,
+      "medianYieldTonsPerAcre": 8.145
+    },
+    {
+      "crop": "lettuce",
+      "observations": 26,
+      "spearman": 0.2256,
+      "bootstrap95": [
+        -0.1808,
+        0.6343
+      ],
+      "medianScore": 80.95,
+      "medianYieldTonsPerAcre": 14.975
+    },
+    {
+      "crop": "pepper",
+      "observations": 33,
+      "spearman": -0.3569,
+      "bootstrap95": [
+        -0.7507,
+        0.1042
+      ],
+      "medianScore": 92.6,
+      "medianYieldTonsPerAcre": 22.11
+    },
+    {
+      "crop": "potato",
+      "observations": 27,
+      "spearman": -0.1006,
+      "bootstrap95": [
+        -0.5695,
+        0.2953
+      ],
+      "medianScore": 91.2,
+      "medianYieldTonsPerAcre": 22.45
+    },
+    {
+      "crop": "strawberry",
+      "observations": 8,
+      "spearman": 0.119,
+      "bootstrap95": [
+        -0.7368,
+        0.8421
+      ],
+      "medianScore": 96.5,
+      "medianYieldTonsPerAcre": 40.53
+    },
+    {
+      "crop": "tomato",
+      "observations": 28,
+      "spearman": 0.1215,
+      "bootstrap95": [
+        -0.3039,
+        0.3667
+      ],
+      "medianScore": 93.15,
+      "medianYieldTonsPerAcre": 21.24
+    },
+    {
+      "crop": "wheat",
+      "observations": 61,
+      "spearman": -0.2435,
+      "bootstrap95": [
+        -0.5475,
+        0.0953
+      ],
+      "medianScore": 86.5,
+      "medianYieldTonsPerAcre": 2.7
+    }
+  ],
+  "perYear": [
+    {
+      "year": 2018,
+      "observations": 57,
+      "spearman": 0.0697
+    },
+    {
+      "year": 2019,
+      "observations": 54,
+      "spearman": -0.0407
+    },
+    {
+      "year": 2020,
+      "observations": 46,
+      "spearman": 0.0896
+    },
+    {
+      "year": 2021,
+      "observations": 35,
+      "spearman": 0.0526
+    },
+    {
+      "year": 2022,
+      "observations": 33,
+      "spearman": 0.1062
+    }
+  ],
+  "protocolHistory": "The multi-year gate was declared after the initial 2022-only exploratory gate failed; 2018-2021 results were not inspected first.",
+  "limitations": [
+    "County yield reflects cultivar, management, irrigation, soil, pests, economics, and reporting\u2014not climate alone.",
+    "One state across five years is an external face-validity test, not sufficient yield calibration.",
+    "Confidence intervals resample county-crop groups, but one state still limits geographic independence.",
+    "Suppressed or unreported county-crop combinations are absent rather than treated as zero yield."
+  ]
+}

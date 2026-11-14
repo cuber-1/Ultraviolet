@@ -36,3 +36,11 @@ EcoCrop profile.
 This version is not trained on observed parcel yields. It must not be presented
 as expected production, revenue, agronomic advice, or a property purchase
 recommendation. USDA NASS and DSSAT calibration is the next evidence gate.
+
+## Observed-outcome gate
+
+The first external test uses 238 California county-crop yield observations from
+2018–2022, actual-year NASA POWER weather, and a gate declared before inspecting
+the 2018–2021 results. The gate did not pass: pooled within-crop Spearman was
+-0.0276 with a grouped-bootstrap interval crossing zero. CropFit remains an
+agroclimatic screening model. See `evaluation/observed-validation-v0.4.md`.

@@ -75,6 +75,15 @@ supplies a 12-month `climate` array in the prediction request.
 
 ## Next evidence gate
 
-Version 0.2 will calibrate crop outputs against USDA NASS county yield history
-and DSSAT simulations. Until that gate passes, the UI must retain the
-`agroclimatic-screening` evidence label.
+External observed-outcome validation is reproducible with:
+
+```bash
+npm run ml:download:observed
+npm run ml:evaluate:observed
+```
+
+This compares CropFit with California's 2018–2022 county agricultural
+commissioner yield reports using actual-year NASA POWER weather. The data are
+not used for training or model selection. The current gate did not pass, so the
+UI must retain the `agroclimatic-screening` evidence label until independent,
+broader-state evidence supports a new claim.

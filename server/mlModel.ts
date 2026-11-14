@@ -64,10 +64,10 @@ export async function mlModelHealth() {
     const started = Date.now();
     try {
       const response = await fetch(`${url}/health`, { signal: AbortSignal.timeout(4_000) });
-      const payload = await response.json().catch(() => ({})) as { model?: string | { name?: string; version?: string }; metrics?: Record<string, number> };
+      const payload = await response.json().catch(() => ({})) as { model?: string | { name?: string; version?: string }; metrics?: Record<string, number>; evidence?: unknown };
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const model = typeof payload.model === 'string' ? { name: payload.model } : payload.model ?? null;
-      return { configured: true, online: true, latencyMs: Date.now() - started, model, metrics: payload.metrics ?? null, error: null, url, role: index === 0 ? 'primary' : 'backup', primaryError: index ? errors[0] : null };
+      return { configured: true, online: true, latencyMs: Date.now() - started, model, metrics: payload.metrics ?? null, evidence: payload.evidence ?? null, error: null, url, role: index === 0 ? 'primary' : 'backup', primaryError: index ? errors[0] : null };
     } catch (reason) {
       errors.push(`${index === 0 ? 'primary' : 'backup'}: ${reason instanceof Error ? reason.message : 'unreachable'}`);
     }

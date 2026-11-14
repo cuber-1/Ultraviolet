@@ -8,7 +8,11 @@ import { getRun, listRunsWithStore, savedTime, type SavedRunMeta } from '../serv
 import './PlanPage.css';
 import './ModelPage.css';
 
-type Health = { configured: boolean; online: boolean; latencyMs: number | null; model: { name?: string; version?: string } | null; metrics?: Record<string, number> | null; error: string | null };
+type Health = {
+  configured: boolean; online: boolean; latencyMs: number | null; model: { name?: string; version?: string } | null;
+  metrics?: Record<string, number> | null; error: string | null;
+  evidence?: { grade?: string; observedOutcomeGate?: { passed: boolean; observations: number; spearman: number; bootstrap95: [number, number] } | null } | null;
+};
 type Status = { agent?: { configured: boolean; model: string | null; provider: string | null; baseUrl?: string | null; tracing?: { enabled: boolean; project: string } }; ml?: { configured: boolean; url: string | null } };
 
 const PLACES = [
@@ -117,7 +121,7 @@ function ModelExplorer({ health }: { health: Health | null }) {
 
   return <section className="model-section">
     <header><div><span className="mono">02 / MODEL EXPLORER</span><h2>Ask the crop model directly</h2></div>
-      <div className="model-pill-group"><span className={`model-pill ${health?.online ? 'live' : ''}`}>{health?.online ? `● ${health.model?.name ?? 'Model'} online` : '○ Crop calendar fallback'}</span>{health?.metrics && <span className="model-metrics mono">{Object.entries(health.metrics).map(([key, value]) => `${({ mae: 'MAE', r2: 'R²', p90AbsoluteError: 'P90 ERR' } as Record<string, string>)[key] ?? key.toUpperCase()} ${Number(value).toFixed(key === 'r2' ? 2 : 1)}`).join(' · ')}</span>}</div></header>
+      <div className="model-pill-group"><span className={`model-pill ${health?.online ? 'live' : ''}`}>{health?.online ? `● ${health.model?.name ?? 'Model'} online` : '○ Crop calendar fallback'}</span>{health?.metrics && <span className="model-metrics mono">{Object.entries(health.metrics).map(([key, value]) => `${({ mae: 'MAE', r2: 'R²', p90AbsoluteError: 'P90 ERR' } as Record<string, string>)[key] ?? key.toUpperCase()} ${Number(value).toFixed(key === 'r2' ? 2 : 1)}`).join(' · ')}</span>}{health?.evidence?.observedOutcomeGate && <span className={`model-evidence mono ${health.evidence.observedOutcomeGate.passed ? 'passed' : ''}`}>{health.evidence.observedOutcomeGate.passed ? 'OBSERVED-OUTCOME GATE PASSED' : `SCREENING ONLY · YIELD GATE NOT PASSED · N=${health.evidence.observedOutcomeGate.observations}`}</span>}</div></header>
     <div className="explorer-controls">
       <div><small className="mono">CROPS (UP TO 5)</small><div className="chip-row">{CROPS.map((crop) => <button key={crop.id} className={crops.includes(crop.id) ? 'chip active' : 'chip'} onClick={() => toggle(crops, setCrops, crop.id, 5)}>{crop.name}</button>)}</div></div>
       <div><small className="mono">PLACES (UP TO 8)</small><div className="chip-row">{PLACES.map((place) => <button key={place.value} className={places.includes(place.value) ? 'chip active' : 'chip'} onClick={() => toggle(places, setPlaces, place.value, 8)}>{place.label}<em>{place.kind}</em></button>)}</div></div>

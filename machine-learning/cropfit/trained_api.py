@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 from functools import lru_cache
+import json
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
@@ -31,10 +32,27 @@ def predictor() -> CropFitPredictor:
     )
 
 
+@lru_cache(maxsize=1)
+def observed_evidence() -> dict:
+    path = ROOT / "evaluation/observed-validation-v0.4.json"
+    if not path.exists():
+        return {"grade": "agroclimatic-screening", "observedOutcomeGate": None}
+    report = json.loads(path.read_text())
+    return {
+        "grade": "agroclimatic-screening",
+        "observedOutcomeGate": {
+            "passed": report["gate"]["passed"],
+            "observations": report["pooledWithinCrop"]["observations"],
+            "spearman": report["pooledWithinCrop"]["spearman"],
+            "bootstrap95": report["pooledWithinCrop"]["bootstrap95"],
+        },
+    }
+
+
 @app.get("/health")
 def health():
     model = predictor()
-    return {"status": "ok", "mode": "trained", "model": model.metadata["model"], "metrics": model.metadata["metrics"]}
+    return {"status": "ok", "mode": "trained", "model": model.metadata["model"], "metrics": model.metadata["metrics"], "evidence": observed_evidence()}
 
 
 @app.post("/predict")
