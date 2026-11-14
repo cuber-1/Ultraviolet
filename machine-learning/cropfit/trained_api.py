@@ -34,7 +34,9 @@ def predictor() -> CropFitPredictor:
 
 @lru_cache(maxsize=1)
 def observed_evidence() -> dict:
-    path = ROOT / "evaluation/observed-validation-v0.4.json"
+    path = ROOT / "evaluation/national-observed-validation-v0.4.json"
+    if not path.exists():
+        path = ROOT / "evaluation/observed-validation-v0.4.json"
     if not path.exists():
         return {"grade": "agroclimatic-screening", "observedOutcomeGate": None}
     report = json.loads(path.read_text())
@@ -42,9 +44,10 @@ def observed_evidence() -> dict:
         "grade": "agroclimatic-screening",
         "observedOutcomeGate": {
             "passed": report["gate"]["passed"],
-            "observations": report["pooledWithinCrop"]["observations"],
-            "spearman": report["pooledWithinCrop"]["spearman"],
-            "bootstrap95": report["pooledWithinCrop"]["bootstrap95"],
+            "scope": report["scope"],
+            "observations": (report.get("pooledWithinCropYear") or report["pooledWithinCrop"])["observations"],
+            "spearman": (report.get("pooledWithinCropYear") or report["pooledWithinCrop"])["spearman"],
+            "bootstrap95": (report.get("pooledWithinCropYear") or report["pooledWithinCrop"])["bootstrap95"],
         },
     }
 

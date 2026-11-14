@@ -80,6 +80,8 @@ External observed-outcome validation is reproducible with:
 ```bash
 npm run ml:download:observed
 npm run ml:evaluate:observed
+npm run ml:download:observed:national
+npm run ml:evaluate:observed:national
 ```
 
 This compares CropFit with California's 2018–2022 county agricultural
@@ -87,3 +89,8 @@ commissioner yield reports using actual-year NASA POWER weather. The data are
 not used for training or model selection. The current gate did not pass, so the
 UI must retain the `agroclimatic-screening` evidence label until independent,
 broader-state evidence supports a new claim.
+
+The national command streams USDA NASS Quick Stats into a small filtered cache
+and evaluates 17,857 county-year yields outside California. That independent
+gate also did not pass; its committed report is the primary observed-outcome
+evidence for v0.4.

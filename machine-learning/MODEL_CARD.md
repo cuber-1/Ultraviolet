@@ -44,3 +44,11 @@ The first external test uses 238 California county-crop yield observations from
 the 2018–2021 results. The gate did not pass: pooled within-crop Spearman was
 -0.0276 with a grouped-bootstrap interval crossing zero. CropFit remains an
 agroclimatic screening model. See `evaluation/observed-validation-v0.4.md`.
+
+A second protocol was declared before inspecting nationwide results. It tested
+17,857 published 2018–2022 county-year yields for corn, soybeans, and winter
+wheat across the contiguous U.S., excluding California. The independent gate
+also did not pass. Pooled within-crop-year Spearman was 0.0644 (grouped 95%
+interval 0.0428–0.0856): statistically detectable at this sample size but far
+below the predeclared 0.30 threshold. Corn was slightly negative and 2019 was
+negative. See `evaluation/national-observed-validation-v0.4.md`.

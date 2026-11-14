@@ -11,7 +11,7 @@ import './ModelPage.css';
 type Health = {
   configured: boolean; online: boolean; latencyMs: number | null; model: { name?: string; version?: string } | null;
   metrics?: Record<string, number> | null; error: string | null;
-  evidence?: { grade?: string; observedOutcomeGate?: { passed: boolean; observations: number; spearman: number; bootstrap95: [number, number] } | null } | null;
+  evidence?: { grade?: string; observedOutcomeGate?: { passed: boolean; scope?: string; observations: number; spearman: number; bootstrap95: [number, number] } | null } | null;
 };
 type Status = { agent?: { configured: boolean; model: string | null; provider: string | null; baseUrl?: string | null; tracing?: { enabled: boolean; project: string } }; ml?: { configured: boolean; url: string | null } };
 

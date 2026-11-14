@@ -38,7 +38,7 @@ def number(value: str | None) -> float | None:
         return None
 
 
-def county_points(path: Path) -> dict[str, tuple[float, float, str]]:
+def county_points(path: Path, state: str | None = "CA") -> dict[str, tuple[float, float, str]]:
     with zipfile.ZipFile(path) as archive:
         name = next(item for item in archive.namelist() if item.endswith(".txt"))
         with archive.open(name) as raw:
@@ -46,7 +46,7 @@ def county_points(path: Path) -> dict[str, tuple[float, float, str]]:
             normalized = ({str(key).strip(): str(value).strip() for key, value in row.items()} for row in rows)
             return {
                 row["GEOID"]: (float(row["INTPTLAT"]), float(row["INTPTLONG"]), row["NAME"])
-                for row in normalized if row["USPS"] == "CA"
+                for row in normalized if state is None or row["USPS"] == state
             }
 
 
@@ -79,11 +79,12 @@ def climate(grids: dict[str, list[tuple[float, float, dict[str, float]]]], latit
 
 def bootstrap_interval(scores: np.ndarray, yields: np.ndarray, groups: np.ndarray, seed: int = 20261114) -> tuple[float, float]:
     random = np.random.default_rng(seed)
-    unique_groups = np.unique(groups)
+    unique_groups, inverse = np.unique(groups, return_inverse=True)
+    group_indices = [np.flatnonzero(inverse == index) for index in range(len(unique_groups))]
     estimates = []
     for _ in range(2000):
-        sampled_groups = random.choice(unique_groups, len(unique_groups), replace=True)
-        indices = np.concatenate([np.flatnonzero(groups == group) for group in sampled_groups])
+        sampled_groups = random.integers(0, len(unique_groups), len(unique_groups))
+        indices = np.concatenate([group_indices[index] for index in sampled_groups])
         if len(np.unique(scores[indices])) > 1 and len(np.unique(yields[indices])) > 1:
             estimates.append(float(spearmanr(scores[indices], yields[indices]).statistic))
     return tuple(round(float(value), 4) for value in np.quantile(estimates, [.025, .975])) if estimates else (math.nan, math.nan)
