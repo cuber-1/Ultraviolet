@@ -43,12 +43,52 @@ function RoofPolygonSurface({
   const sourceTexture = useTexture(imageryUrl);
   const texture = useMemo(() => {
     const next = sourceTexture.clone();
-    next.colorSpace = THREE.SRGBColorSpace;
+    next.colorSpace = isInfrared ? THREE.NoColorSpace : THREE.SRGBColorSpace;
     next.anisotropy = 8;
     next.needsUpdate = true;
     return next;
-  }, [sourceTexture]);
+  }, [isInfrared, sourceTexture]);
+  const infraredMaterial = useMemo(() => {
+    if (!isInfrared) return null;
+    const image = sourceTexture.image as { width?: number; height?: number };
+    return new THREE.ShaderMaterial({
+      side: THREE.DoubleSide,
+      uniforms: {
+        map: { value: texture },
+        texelSize: { value: new THREE.Vector2(1 / (image.width || 800), 1 / (image.height || 800)) },
+      },
+      vertexShader: `
+        varying vec2 vUv;
+        void main() {
+          vUv = uv;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: `
+        uniform sampler2D map;
+        uniform vec2 texelSize;
+        varying vec2 vUv;
+
+        void main() {
+          float nir = texture2D(map, vUv).r * 0.4;
+          nir += texture2D(map, vUv + vec2(texelSize.x, 0.0)).r * 0.15;
+          nir += texture2D(map, vUv - vec2(texelSize.x, 0.0)).r * 0.15;
+          nir += texture2D(map, vUv + vec2(0.0, texelSize.y)).r * 0.15;
+          nir += texture2D(map, vUv - vec2(0.0, texelSize.y)).r * 0.15;
+          float value = smoothstep(0.08, 0.92, nir);
+          vec3 cream = vec3(0.972, 0.956, 0.925);
+          vec3 orange = vec3(0.933, 0.467, 0.165);
+          vec3 umber = vec3(0.412, 0.133, 0.035);
+          vec3 color = value < 0.62
+            ? mix(cream, orange, value / 0.62)
+            : mix(orange, umber, (value - 0.62) / 0.38);
+          gl_FragColor = vec4(color, 1.0);
+        }
+      `,
+    });
+  }, [isInfrared, sourceTexture.image, texture]);
   useEffect(() => () => texture.dispose(), [texture]);
+  useEffect(() => () => infraredMaterial?.dispose(), [infraredMaterial]);
 
   const shape = useMemo(() => {
     const next = new THREE.Shape();
@@ -101,9 +141,12 @@ function RoofPolygonSurface({
     </mesh>}
     <mesh geometry={roofGeometry} rotation={[Math.PI / 2, 0, 0]} position={[0, .025, 0]} receiveShadow>
       {isInfrared
-        ? <meshBasicMaterial map={texture} side={THREE.DoubleSide} toneMapped={false} />
+        ? <primitive object={infraredMaterial!} attach="material" />
         : <meshStandardMaterial map={texture} roughness={.72} metalness={.02} side={THREE.DoubleSide} />}
     </mesh>
+    {isInfrared && <mesh geometry={roofGeometry} rotation={[Math.PI / 2, 0, 0]} position={[0, .04, 0]} receiveShadow>
+      <shadowMaterial color="#2b211b" transparent opacity={.22} depthWrite={false} />
+    </mesh>}
   </>;
 }
 
@@ -125,16 +168,14 @@ function Scene({ props }: { props: Roof3DVisualizerProps }) {
     -Math.cos(azimuth) * Math.cos(altitude),
   );
   const sunPosition = sunDirection.clone().multiplyScalar(span * 2.3);
-  const cellSizeX = props.cells.length ? Math.max(.35, props.roofBounds.width / 22) : 0;
-  const cellSizeZ = props.cells.length ? Math.max(.35, props.roofBounds.height / 22) : 0;
   const outlineRings = props.roofGeometry.flatMap((polygon) => [polygon.outer, ...polygon.holes]);
 
   return <>
-    <ambientLight intensity={.72} color="#fff8ee" />
+    <ambientLight intensity={.78} color="#ffffff" />
     {props.sun.altitude > 0 && <directionalLight
       position={sunPosition.toArray()}
       intensity={2.2}
-      color="#fff1bd"
+      color="#fff7ef"
       castShadow
       shadow-mapSize-width={2048}
       shadow-mapSize-height={2048}
@@ -146,7 +187,7 @@ function Scene({ props }: { props: Roof3DVisualizerProps }) {
       shadow-camera-far={span * 6}
       shadow-bias={-.0004}
     />}
-    <hemisphereLight intensity={.65} color="#fffaf3" groundColor="#d8d0c3" />
+    <hemisphereLight intensity={.6} color="#ffffff" groundColor="#d7d2cc" />
 
     <group position={[0, buildingHeight, 0]}>
       <RoofSurface
@@ -178,40 +219,22 @@ function Scene({ props }: { props: Roof3DVisualizerProps }) {
         receiveShadow
       >
         <boxGeometry args={[obstruction.width * .94, obstruction.heightM, obstruction.depth * .94]} />
-        <meshStandardMaterial color="#f47b20" emissive="#c84a0a" emissiveIntensity={.12} roughness={.42} metalness={.08} transparent opacity={isInfrared ? .08 : .3} depthWrite={false} />
-        <Edges color={isInfrared ? '#ff8a3d' : '#e85d04'} threshold={12} />
-      </mesh>)}
-      {props.cells.map((cell, index) => <mesh
-        key={index}
-        position={[cell.x - centerX, .12, cell.y - centerY]}
-        receiveShadow
-      >
-        <boxGeometry args={[cellSizeX, .08, cellSizeZ]} />
-        <meshStandardMaterial
-          color={cell.sunlit ? '#ffad33' : '#53616a'}
-          emissive={cell.sunlit ? '#d96b00' : '#26343c'}
-          emissiveIntensity={isInfrared ? .05 : cell.sunlit ? .32 : .08}
-          transparent
-          opacity={isInfrared ? (cell.sunlit ? .22 : .28) : cell.sunlit ? .76 : .7}
-          depthWrite={!isInfrared}
-          roughness={.78}
-        />
+        <meshStandardMaterial color="#d9d2ca" roughness={.68} metalness={.02} transparent opacity={.48} depthWrite={false} />
+        <Edges color="#e85d04" threshold={12} />
       </mesh>)}
     </group>
 
     <mesh position={[0, -.05, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
       <planeGeometry args={[span * 3.2, span * 3.2]} />
-      <shadowMaterial color="#51606a" transparent opacity={.26} />
+      <shadowMaterial color="#292522" transparent opacity={.2} />
     </mesh>
-    {props.buildingHeightM !== null && <gridHelper args={[span * 3, 30, '#e3a36f', '#ded8ce']} position={[0, 0, 0]} />}
 
     {props.sun.altitude > 0 && <>
       <mesh position={sunPosition.toArray()}>
         <sphereGeometry args={[Math.max(.8, span * .035), 24, 24]} />
-        <meshBasicMaterial color="#fff2a0" />
+        <meshBasicMaterial color="#f36b16" />
       </mesh>
-      <Line points={[sunPosition.toArray(), [0, buildingHeight, 0]]} color="#ffde65" lineWidth={1.6} dashed dashSize={1.5} gapSize={1.1} transparent opacity={.75} />
-      <pointLight position={sunPosition.toArray()} color="#ffd96b" intensity={20} distance={span * 1.2} />
+      <Line points={[sunPosition.toArray(), [0, buildingHeight, 0]]} color="#e85d04" lineWidth={1.3} dashed dashSize={1.5} gapSize={1.1} transparent opacity={.7} />
     </>}
 
     <OrbitControls
@@ -229,7 +252,6 @@ function Scene({ props }: { props: Roof3DVisualizerProps }) {
 export default function Roof3DVisualizer(props: Roof3DVisualizerProps) {
   const span = Math.max(props.roofBounds.width, props.roofBounds.height, 12);
   const buildingHeight = props.buildingHeightM ?? 0;
-  const shadedCells = props.cells.filter((cell) => !cell.sunlit).length;
 
   return <div className="roof-3d-view">
     <Canvas
@@ -243,8 +265,8 @@ export default function Roof3DVisualizer(props: Roof3DVisualizerProps) {
       gl={{ antialias: true, alpha: false, toneMapping: THREE.ACESFilmicToneMapping }}
       shadows
     >
-      <color attach="background" args={['#f5f2eb']} />
-      <fog attach="fog" args={['#f5f2eb', span * 2.2, span * 6]} />
+      <color attach="background" args={['#f7f5f2']} />
+      <fog attach="fog" args={['#f7f5f2', span * 2.2, span * 6]} />
       <Suspense fallback={null}><Scene props={props} /></Suspense>
     </Canvas>
     <div className="roof-3d-hud roof-3d-hud--left">
@@ -252,14 +274,11 @@ export default function Roof3DVisualizer(props: Roof3DVisualizerProps) {
       <strong>{props.localTime}</strong>
       <small>Drag to orbit · scroll to zoom</small>
     </div>
-    <div className="roof-3d-hud roof-3d-hud--right">
-      <div><small>SURFACE</small><strong>{props.surfaceLabel}</strong></div>
-      <div><small>SUN</small><strong>{props.sun.altitude.toFixed(1)}°</strong></div>
-      <div><small>AZIMUTH</small><strong>{props.sun.azimuth.toFixed(0)}°</strong></div>
-      <div><small>SHADED CELLS</small><strong>{shadedCells}</strong></div>
-      <div><small>ROOF FEATURES</small><strong>{props.obstructions.length}</strong></div>
+    <div className="roof-3d-status">
+      <span>{props.surfaceLabel.startsWith('CIR') ? 'NIR' : 'RGB'}</span>
+      <strong>{props.sun.altitude.toFixed(1)}° sun</strong>
+      <small>{props.sun.azimuth.toFixed(0)}° azimuth · {props.obstructions.length} measured features</small>
     </div>
-    <div className="roof-3d-legend"><span><i className="legend-sun" /> Direct sun</span><span><i className="legend-shade" /> Shade</span><span><i className="legend-height" /> Measured elevation</span></div>
-    {props.surfaceLabel.startsWith('CIR') && <div className="roof-3d-cir-note"><span className="mono">CIR / IRG</span><strong>Red indicates near-infrared reflectance</strong><small>Vegetation is vivid red. Roofing, concrete, and metal may remain gray or pale.</small></div>}
+    {props.surfaceLabel.startsWith('CIR') && <div className="roof-3d-cir-note"><span className="mono">NIR INTENSITY</span><small>Denoised single-spectrum view</small></div>}
   </div>;
 }
