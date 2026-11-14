@@ -45,8 +45,15 @@ used by the interactive roof view. The default NRP configuration is:
 ```bash
 NRP_API_KEY="your-nrp-key"
 LANDLENS_AGENT_BASE_URL="https://ellm.nrp-nautilus.io/v1" # optional default
-LANDLENS_AGENT_MODEL="deepseek-v4-flash"                  # or kimi
+LANDLENS_AGENT_MODEL="qwen3"                              # default; glm-5 or minimax-m2 also work
+LANDLENS_AGENT_TIMEOUT_MS=420000                          # optional, default 420000
+LANDLENS_AGENT_RECURSION_LIMIT=80                         # optional, default 80
 ```
+
+A single agent calls the four tools directly. On NRP, `qwen3` finishes a
+four-site comparison in about 35 seconds of model time; a live 12-candidate
+search takes about 4 minutes because each roof's geometry and sunlight are computed. `kimi` and the `agents` alias did not
+respond in testing, and `deepseek-v4-flash` was several times slower.
 
 If no model key is present, the UI runs the deterministic comparison endpoint
 directly and labels the result accordingly. It does not fabricate an agent

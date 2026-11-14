@@ -70,7 +70,7 @@ function configuredModel() {
   const nrpKey = process.env.NRP_API_KEY;
   const apiKey = process.env.LANDLENS_AGENT_API_KEY || nrpKey || process.env.OPENAI_API_KEY;
   if (!apiKey) return null;
-  const model = process.env.LANDLENS_AGENT_MODEL || (nrpKey ? 'deepseek-v4-flash' : 'gpt-5-mini');
+  const model = process.env.LANDLENS_AGENT_MODEL || (nrpKey ? 'qwen3' : 'gpt-5-mini');
   const baseURL = process.env.LANDLENS_AGENT_BASE_URL || (nrpKey ? 'https://ellm.nrp-nautilus.io/v1' : undefined);
   return {
     name: model,
@@ -82,6 +82,13 @@ function configuredModel() {
     }),
   };
 }
+
+// Measured on NRP (Nov 2026) with a single agent calling the tools directly: qwen3 finished
+// a 4-site comparison in ~35s with a correct ranking. The earlier two-subagent design took
+// 120-150s with qwen3 and ~390s with deepseek-v4-flash, so subagents were removed.
+// A live 12-candidate Houston run took ~225s, mostly Vexcel geometry and sunlight work.
+const AGENT_TIMEOUT_MS = Number(process.env.LANDLENS_AGENT_TIMEOUT_MS) || 420_000;
+const AGENT_RECURSION_LIMIT = Number(process.env.LANDLENS_AGENT_RECURSION_LIMIT) || 80;
 
 export function landLensAgentStatus() {
   const model = configuredModel();
@@ -178,32 +185,18 @@ export async function runLandLensAgent(input: {
   });
 
   progress({ stage: 'planning', message: 'Planning the site comparison' });
-  const siteResearcher = {
-    name: 'site-researcher',
-    description: 'Finds rooftop candidates and checks property, listing, imagery, and Matterport evidence.',
-    systemPrompt: 'Use search_rooftop_imagery first. Then inspect property evidence for every candidate. Report IDs and unknowns without inventing facts.',
-    tools: [searchImagery, lookupProperty],
-  };
-  const solarAnalyst = {
-    name: 'solar-analyst',
-    description: 'Resolves roof height geometry and runs comparable seasonal sunlight calculations.',
-    systemPrompt: 'For every candidate ID provided, call resolve_roof_geometry and then simulate_rooftop_sunlight. Keep missing geometry visible as not assessed.',
-    tools: [resolveGeometry, simulateSunlight],
-  };
-
   const agent = createDeepAgent({
     model: model.client,
     tools: [searchImagery, lookupProperty, resolveGeometry, simulateSunlight],
-    subagents: [siteResearcher, solarAnalyst],
     responseFormat: toolStrategy(responseSchema),
-    systemPrompt: `You compare real urban rooftops for growing goals. Delegate candidate research to site-researcher and sunlight work to solar-analyst. Use the in-memory filesystem for working notes and a comparison plan. Rank only by sharedAreaSqft returned by the sunlight tool. A verified Matterport tour may break a near tie but can never outrank materially greater suitable area. Link evidence with the candidate URL. Never estimate missing geometry, listing status, or sunlight.`,
+    systemPrompt: `You compare real urban rooftops for growing goals. Call search_rooftop_imagery exactly once. Then, for every candidate ID it returns, call lookup_property_record and simulate_rooftop_sunlight (it resolves geometry itself; call resolve_roof_geometry only if you need height details). Batch independent tool calls in the same turn. Do not repeat a call you already made. Rank only by sharedAreaSqft returned by the sunlight tool. A verified Matterport tour may break a near tie but can never outrank materially greater suitable area. Link evidence with the candidate URL. Never estimate missing geometry, listing status, or sunlight; list them under unknowns.`,
   });
 
   let narrative: z.infer<typeof responseSchema> | null = null;
   try {
     const result = await agent.invoke({
       messages: [{ role: 'user', content: `${input.goal}\nLocation: ${input.location}\nRepresentative dates: ${input.dates.join(', ')}\nDirect sun target: ${input.targetHours} hours\nGrowing area target: ${input.targetAreaSqft} square feet.${input.followUp ? `\nFollow-up: ${input.followUp}` : ''}` }],
-    } as never, { recursionLimit: 32, signal: AbortSignal.timeout(120_000) });
+    } as never, { recursionLimit: AGENT_RECURSION_LIMIT, signal: AbortSignal.timeout(AGENT_TIMEOUT_MS) });
     narrative = result.structuredResponse ?? null;
   } catch (reason) {
     progress({ stage: 'ranking', message: `Model planning ended; ranking completed tool evidence directly` });
