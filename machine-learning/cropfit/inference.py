@@ -14,6 +14,9 @@ from .profiles import load_profiles, resolve_profile
 
 
 MONTHS = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"]
+CLIMATE_HISTORY_START_YEAR = 2016
+CLIMATE_HISTORY_END_YEAR = 2025
+CLIMATE_HISTORY_YEARS = tuple(range(CLIMATE_HISTORY_START_YEAR, CLIMATE_HISTORY_END_YEAR + 1))
 
 
 class CropFitPredictor:
@@ -39,7 +42,7 @@ class CropFitPredictor:
             params={
                 "parameters": "T2M,PRECTOTCORR,ALLSKY_SFC_SW_DWN",
                 "community": "AG", "longitude": longitude, "latitude": latitude, "format": "JSON",
-                "start": "2015", "end": "2024",
+                "start": str(CLIMATE_HISTORY_START_YEAR), "end": str(CLIMATE_HISTORY_END_YEAR),
             },
             timeout=25,
             verify=certifi.where(),
@@ -52,7 +55,7 @@ class CropFitPredictor:
             "temperatureC": float(parameters["T2M"][f"{year}{index + 1:02d}"]),
             "precipitationMmDay": float(parameters["PRECTOTCORR"][f"{year}{index + 1:02d}"]),
             "solarMjM2Day": float(parameters["ALLSKY_SFC_SW_DWN"][f"{year}{index + 1:02d}"]),
-        } for index, month in enumerate(MONTHS)] for year in range(2015, 2025)]
+        } for index, month in enumerate(MONTHS)] for year in CLIMATE_HISTORY_YEARS]
         baseline = [{
             "month": month,
             "temperatureC": float(np.mean([year[index]["temperatureC"] for year in history])),
@@ -204,5 +207,5 @@ class CropFitPredictor:
             "monthlyCurve": curve,
             "model": self.metadata,
             "evidenceGrade": "agroclimatic-screening",
-            "disclaimer": "EcoCrop screening estimate. Historical bands use NASA POWER 2015–2024 weather; they are not a yield forecast or purchase recommendation.",
+            "disclaimer": f"EcoCrop screening estimate. Historical bands use NASA POWER {CLIMATE_HISTORY_START_YEAR}–{CLIMATE_HISTORY_END_YEAR} weather; they are not a yield forecast or purchase recommendation.",
         }

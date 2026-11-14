@@ -9,7 +9,7 @@ from fastapi import HTTPException
 from pydantic import ValidationError
 
 from .features import FEATURE_NAMES
-from .inference import MONTHS, CropFitPredictor
+from .inference import CLIMATE_HISTORY_END_YEAR, CLIMATE_HISTORY_START_YEAR, CLIMATE_HISTORY_YEARS, MONTHS, CropFitPredictor
 from .profiles import resolve_profile
 from .yield_atlas import haversine_km, load_atlas, nearest_evidence
 
@@ -24,11 +24,13 @@ def climate(temperature: float) -> list[dict]:
 
 
 def verify(artifact: Path, profiles: Path) -> None:
+    assert (CLIMATE_HISTORY_START_YEAR, CLIMATE_HISTORY_END_YEAR, len(CLIMATE_HISTORY_YEARS)) == (2016, 2025, 10)
     predictor = CropFitPredictor(artifact, profiles)
     assert predictor.model.n_features_in_ == len(FEATURE_NAMES), "artifact and feature code disagree"
     history = [climate(18.0 + offset) for offset in (-3, -2, -1, 0, 0, 1, 1, 2, 3, 5)]
     result = predictor.predict("tomato", 29.76, -95.37, 6.5, True, climate(20.0), history)
     assert result["plantingReliability"]["years"] == 10
+    assert "2016–2025" in result["disclaimer"]
     assert result["bestReliablePlantingMonth"] in MONTHS
     assert len(result["monthlyCurve"]) == 12
     for month in result["monthlyCurve"]:

@@ -57,6 +57,7 @@ climate = [{"month": month, "temperatureC": 22, "precipitationMmDay": 3, "solarM
 payload = {"crop": "corn", "latitude": 29.76, "longitude": -95.37, "soilPh": 6.5, "irrigated": True, "climate": climate, "climateHistory": [climate] * 10}
 health = requests.get(f"{base}/health", timeout=10).json()
 assert health["status"] == "ok" and health["requestLimits"]["historyYearsMax"] == 20
+assert health["climateHistory"] == {"source": "NASA POWER Agroclimatology", "startYear": 2016, "endYear": 2025, "years": 10}
 prediction = requests.post(f"{base}/predict", json=payload, timeout=30)
 prediction.raise_for_status()
 assert prediction.json()["observedYieldEvidence"]["county"] == "Fort Bend County"
@@ -74,5 +75,5 @@ for crop, scientific_name in representatives.items():
     assert response.json()["profile"]["scientific_name"] == scientific_name
 invalid = requests.post(f"{base}/predict", json={**payload, "climate": climate[:11]}, timeout=10)
 assert invalid.status_code == 422
-print(f'CropFit HTTP verified: API {health["apiVersion"]}, 16-choice coverage, USDA evidence, input bounds')
+print(f'CropFit HTTP verified: API {health["apiVersion"]}, 2016-2025 climate window, 16-choice coverage, USDA evidence, input bounds')
 PY

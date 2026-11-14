@@ -13,7 +13,7 @@
 > remain excluded in strict mode.
 > Optional: `ML_SOIL_PH` (default 6.5), `ML_IRRIGATED` (default true).
 
-For corn, soybean, and wheat, CropFit API v0.5.8 also returns optional
+For corn, soybean, and wheat, CropFit API v0.5.9 also returns optional
 `observedYieldEvidence` from the nearest USDA reporting county within 100 km.
 Atlas v2 includes 2010–2025 history plus a calibrated observed-yield percentile
 prior with 80% and 90% uncertainty intervals. It does not modify the underlying
@@ -31,14 +31,14 @@ to rank corn, soybean, and wheat locations while retaining CropFit suitability
 for planting timing and unsupported crops. The validated blend was not used;
 urban roof ranking remains based on sunlit area and agroclimatic suitability.
 
-The app supplies a 2015–2024 NASA POWER monthly history. CropFit scores every
+The app supplies a 2016–2025 NASA POWER monthly history. CropFit scores every
 planting month in every year and returns p10/median/p90 suitability plus the
 fraction of years scoring at least 55. `bestReliablePlantingMonth` maximizes the
 historical downside (p10) before median fit. If the caller omits climate data,
 the standalone CropFit service fetches the same history itself, so Mac-only
 inference returns the same fields when the Spark is offline. Growing cycles
-crossing December continue into the following historical year; the fixed 2024
-start year uses the ten-year baseline for its 2025 continuation.
+crossing December continue into the following historical year; the final 2025
+start year uses the ten-year baseline for its 2026 continuation.
 
 Ultraviolet calls the crop-suitability model over HTTP from its server. Implement
 these two endpoints and set `ML_MODEL_URL` (or `CROPFIT_URL`) in the app's `.env`.
@@ -105,8 +105,8 @@ Return `200` with any JSON body, for example `{"ok": true}`.
 | `targetAreaSqft` | Growing area the user needs. Rural sites send the land size. |
 | `targetSunHours` | The most demanding crop's daily sun need. |
 | `sites[].kind` | `"roof"` for urban rooftops, `"region"` for rural farming towns. |
-| `sites[].climate` | NASA POWER 2015–2024 monthly mean, 12 values each, January first. `null` if the lookup failed. |
-| `sites[].climate.history` | Ten annual monthly series (2015–2024), used for planting reliability and p10–p90 bands. |
+| `sites[].climate` | NASA POWER 2016–2025 monthly mean, 12 values each, January first. `null` if the lookup failed. |
+| `sites[].climate.history` | Ten annual monthly series (2016–2025), used for planting reliability and p10–p90 bands. |
 | `sites[].climate.temperatureC` | Monthly mean air temperature at 2 m, °C. |
 | `sites[].climate.solarMjM2Day` | Monthly mean all-sky surface shortwave, MJ/m²/day. |
 | `sites[].climate.precipitationMmDay` | Monthly mean precipitation, mm/day. |

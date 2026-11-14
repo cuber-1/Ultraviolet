@@ -9,13 +9,13 @@ from typing import Annotated
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
-from .inference import CropFitPredictor
+from .inference import CLIMATE_HISTORY_END_YEAR, CLIMATE_HISTORY_START_YEAR, CLIMATE_HISTORY_YEARS, CropFitPredictor
 from .yield_atlas import load_atlas, nearest_evidence
 
 
 ROOT = Path(__file__).resolve().parents[1]
 YIELD_ATLAS = ROOT / "evaluation/yield-atlas-v2.json"
-app = FastAPI(title="Ultraviolet CropFit", version="0.5.8")
+app = FastAPI(title="Ultraviolet CropFit", version="0.5.9")
 
 ClimateSeries = Annotated[list[dict], Field(min_length=12, max_length=24)]
 ClimateYear = Annotated[list[dict], Field(min_length=12, max_length=12)]
@@ -80,6 +80,12 @@ def health():
         "status": "ok", "mode": "trained", "apiVersion": app.version,
         "model": model.metadata["model"], "metrics": model.metadata["metrics"],
         "requestLimits": {"climateMonths": [12, 24], "historyYearsMax": 20},
+        "climateHistory": {
+            "source": "NASA POWER Agroclimatology",
+            "startYear": CLIMATE_HISTORY_START_YEAR,
+            "endYear": CLIMATE_HISTORY_END_YEAR,
+            "years": len(CLIMATE_HISTORY_YEARS),
+        },
         "evidence": observed_evidence(),
     }
 

@@ -4,6 +4,8 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 // POST /api/climate/monthly { locations: string[] } -> { results, errors }
 
 const MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'] as const;
+const CLIMATE_HISTORY_START_YEAR = 2016;
+const CLIMATE_HISTORY_END_YEAR = 2025;
 const cache = new Map<string, { expires: number; value: MonthlyClimate }>();
 
 export type MonthlyClimate = {
@@ -44,13 +46,13 @@ const pointCache = new Map<string, { expires: number; value: Promise<ClimateSeri
 async function fetchNasaMonthly(lat: number, lon: number, label: string): Promise<ClimateSeries> {
   const params = new URLSearchParams({
     parameters: 'T2M,ALLSKY_SFC_SW_DWN,PRECTOTCORR', community: 'AG',
-    longitude: String(lon), latitude: String(lat), format: 'JSON', start: '2015', end: '2024',
+    longitude: String(lon), latitude: String(lat), format: 'JSON', start: String(CLIMATE_HISTORY_START_YEAR), end: String(CLIMATE_HISTORY_END_YEAR),
   });
   const response = await fetch(`https://power.larc.nasa.gov/api/temporal/monthly/point?${params}`);
   if (!response.ok) throw new Error(`NASA POWER climate lookup failed for ${label}.`);
   const payload = await response.json() as { properties?: { parameter?: Record<string, Record<string, number>> } };
   const values = payload.properties?.parameter ?? {};
-  const years = Array.from({ length: 10 }, (_, index) => 2015 + index);
+  const years = Array.from({ length: CLIMATE_HISTORY_END_YEAR - CLIMATE_HISTORY_START_YEAR + 1 }, (_, index) => CLIMATE_HISTORY_START_YEAR + index);
   const series = (name: string, year: number) => MONTHS.map((_month, index) => Number(values[name]?.[`${year}${String(index + 1).padStart(2, '0')}`]));
   const history = years.map((year) => ({ year, temperatureC: series('T2M', year), solarMjM2Day: series('ALLSKY_SFC_SW_DWN', year), precipitationMmDay: series('PRECTOTCORR', year) }));
   const mean = (name: 'temperatureC' | 'solarMjM2Day' | 'precipitationMmDay') => MONTHS.map((_month, index) => history.reduce((sum, year) => sum + year[name][index], 0) / history.length);
@@ -65,7 +67,7 @@ async function fetchNasaMonthly(lat: number, lon: number, label: string): Promis
       solarMjM2Day: solarMjM2Day.reduce((sum, value) => sum + value, 0) / 12,
       precipitationMmDay: precipitationMmDay.reduce((sum, value) => sum + value, 0) / 12,
     },
-    source: 'NASA POWER Agroclimatology 2015–2024 monthly history',
+    source: `NASA POWER Agroclimatology ${CLIMATE_HISTORY_START_YEAR}–${CLIMATE_HISTORY_END_YEAR} monthly history`,
   };
 }
 
