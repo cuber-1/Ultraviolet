@@ -133,3 +133,6 @@
   .ra-round { width: 62px; height: 62px; }
 }
 .agent-console small { color: var(--gray-400); font-size: 13px; }
+.ra-home { display: inline-flex; align-items: center; gap: 8px; padding: 6px 10px 6px 8px; border: 0; border-radius: 999px; background: transparent; color: var(--black); }
+.ra-home:hover { background: #ece5dc; }
+.ra-home svg { color: var(--gray-500); }

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { ArrowRight, Heart, Layers, LineChart, Pencil, RotateCcw, Sparkles, Star, Trash2, X } from 'lucide-react';
+import { ArrowRight, Heart, Home, Layers, LineChart, Map as MapIcon, Pencil, RotateCcw, Sparkles, Star, Trash2, X } from 'lucide-react';
 import Wordmark from '../../components/Wordmark';
 import { AgentTrace } from './AgentTrace';
 import { CLASSES, CROP_COLORS, classify } from '../../components/charts/DeepAgentCharts';
@@ -24,9 +24,11 @@ type Props = {
   onEdit: () => void;
   onRerun: () => void;
   onOpen: (id: string) => void;
+  onMap?: () => void;
+  onHome?: () => void;
 };
 
-export default function ResultsApp({ brief, criteria, comparison, top, insights, savedAt, onEdit, onRerun, onOpen }: Props) {
+export default function ResultsApp({ brief, criteria, comparison, top, insights, savedAt, onEdit, onRerun, onOpen, onMap, onHome }: Props) {
   const navigate = useNavigate();
   const location = useLocation();
   const params = new URLSearchParams(location.search);
@@ -66,12 +68,13 @@ export default function ResultsApp({ brief, criteria, comparison, top, insights,
 
   return <div className="ra">
     <header className="ra-bar">
-      <div className="ra-brand"><Wordmark /><span>{urbanAreaLabel(brief)} · {crops.map((crop) => crop.name).join(', ')}</span></div>
+      <div className="ra-brand"><button className="ra-home" onClick={onHome} title="Back to the home page"><Home size={18} /><Wordmark /></button><span>{urbanAreaLabel(brief)} · {crops.map((crop) => crop.name).join(', ')}</span></div>
       <nav className="ra-nav" aria-label="Results views">
         {([['deck', 'Roofs', Layers], ['saved', `Saved${favorites.length ? ` ${favorites.length}` : ''}`, Heart], ['insights', 'Insights', LineChart], ['agent', 'Agent', Sparkles]] as const).map(([key, label, Icon]) =>
           <button key={key} className={view === key ? 'active' : ''} onClick={() => go({ view: key })}><Icon size={17} />{label}</button>)}
       </nav>
       <div className="ra-actions">
+        {onMap && <button onClick={onMap}><MapIcon size={16} /> Map</button>}
         {savedAt && <span className="ra-saved-pill" title="Opened from a saved run; nothing was re-run">Saved run</span>}
         <button onClick={onEdit}><Pencil size={16} /> Edit</button>
         <button onClick={onRerun}><RotateCcw size={16} /> Run again</button>

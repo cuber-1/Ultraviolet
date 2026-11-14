@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, CalendarDays, CircleAlert, Droplets, MapPin, RotateCcw, Sun, ThermometerSun } from 'lucide-react';
+import { ArrowLeft, ArrowRight, CalendarDays, CircleAlert, Droplets, Map as MapIcon, MapPin, RotateCcw, Sun, ThermometerSun } from 'lucide-react';
 import Wordmark from '../components/Wordmark';
 import SearchGlobe from '../components/SearchGlobe';
 import { type LoaderStage } from '../components/DeepAgentLoader';
@@ -192,18 +192,21 @@ export default function PlanPage() {
       subtitle={outcome.kind === 'urban' ? `Best roof keeps ${new Intl.NumberFormat('en-US').format(Math.round(bestSun))} ft² in ${outcome.criteria.targetHours}+ hours of sun.` : `Top match: ${pins[0]?.label ?? '—'}.`}
       stages={urban ? URBAN_STAGES : RURAL_STAGES} activeIndex={(urban ? URBAN_STAGES : RURAL_STAGES).length} message="" startedAt={startedAt}
       summary={outcome.kind === 'urban' ? `${outcome.comparison.candidates.length} roofs checked in ${urbanAreaLabel(brief)}` : `${outcome.plans.length} towns compared`}
-      ctaLabel={outcome.kind === 'urban' ? 'See your top 5' : 'See your top regions'} onContinue={() => setReveal(false)} onCancel={() => setReveal(false)} />;
+      ctaLabel={outcome.kind === 'urban' ? 'See your top 5' : 'See your top regions'} onContinue={() => setReveal(false)} onCancel={() => setReveal(false)} onHome={() => navigate('/')} />;
   }
   if (outcome?.kind === 'urban' && !error) return <>{loaderNode}<ResultsApp brief={outcome.brief} criteria={outcome.criteria} comparison={outcome.comparison} top={outcome.top}
-    insights={<UrbanInsights outcome={outcome} onOpen={openSite} />} savedAt={savedAt} onEdit={() => navigate('/start')} onRerun={() => void run(brief)} onOpen={openSite} /></>;
+    insights={<UrbanInsights outcome={outcome} onOpen={openSite} />} savedAt={savedAt} onEdit={() => navigate('/start')} onRerun={() => void run(brief)} onOpen={openSite} onMap={() => setReveal(true)} onHome={() => navigate('/')} /></>;
 
   return <div className="plan-page">
     {loaderNode}
 
     <header className="plan-header">
       <button className="plan-back" onClick={() => navigate('/start')}><ArrowLeft size={16} /> Edit answers</button>
-      <Wordmark />
-      <button className="plan-rerun" onClick={() => void run(brief)} disabled={running}><RotateCcw size={14} /> Run again</button>
+      <button className="plan-home" onClick={() => navigate('/')} title="Back to the home page"><Wordmark /></button>
+      <div className="plan-header-actions">
+        {outcome && <button className="plan-rerun" onClick={() => setReveal(true)}><MapIcon size={14} /> Map</button>}
+        <button className="plan-rerun" onClick={() => void run(brief)} disabled={running}><RotateCcw size={14} /> Run again</button>
+      </div>
     </header>
 
     {savedAt && outcome && !running && <div className="saved-banner"><span className="mono">SAVED RESULT</span><span>From {savedTime(savedAt)}. Opened instantly; nothing was re-run.</span><button onClick={() => void run(brief)}><RotateCcw size={13} /> Run live now</button></div>}

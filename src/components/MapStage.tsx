@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import L, { type LayerGroup, type Map as LeafletMap } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { ArrowRight, Check, LoaderCircle, X } from 'lucide-react';
+import { ArrowRight, Check, Home, LoaderCircle, X } from 'lucide-react';
 import AgentCompanion from './AgentCompanion';
 import './MapStage.css';
 
@@ -24,6 +24,7 @@ type Props = {
   ctaLabel: string;
   onContinue: () => void;
   onCancel: () => void;
+  onHome?: () => void;
 };
 
 const WORLD: [number, number] = [25, -60];
@@ -33,7 +34,7 @@ const WORLD: [number, number] = [25, -60];
  * gradient waves while the agent works, drops each discovered site, then frames the top
  * results with numbered pins and a button into the results.
  */
-export default function MapStage({ mode, focus, discovered, pins, title, subtitle, stages, activeIndex, message, startedAt, feed, summary, ctaLabel, onContinue, onCancel }: Props) {
+export default function MapStage({ mode, focus, discovered, pins, title, subtitle, stages, activeIndex, message, startedAt, feed, summary, ctaLabel, onContinue, onCancel, onHome }: Props) {
   const element = useRef<HTMLDivElement>(null);
   const map = useRef<LeafletMap | null>(null);
   const dots = useRef<LayerGroup | null>(null);
@@ -115,6 +116,7 @@ export default function MapStage({ mode, focus, discovered, pins, title, subtitl
     {mode === 'loading' && <div className="ms-companion"><AgentCompanion message={stages[activeIndex]?.label ? `${stages[activeIndex].label}…` : 'Working on it…'} detail={message} /></div>}
 
     <aside className="ms-panel">
+      {onHome && mode === 'done' && <button className="ms-home" onClick={onHome}><Home size={16} /> Home</button>}
       <span className="ms-kicker">{mode === 'loading' ? <><i /> Searching live</> : <><Check size={15} /> Search complete</>}</span>
       <h1>{title}</h1>
       <p className="ms-sub">{subtitle}</p>
