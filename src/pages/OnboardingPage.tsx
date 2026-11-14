@@ -52,7 +52,7 @@ export default function OnboardingPage() {
   useEffect(() => {
     if (step !== STEPS.length - 1) return;
     const controller = new AbortController();
-    listRuns(controller.signal).then((runs) => setSavedMatch(runs.find((item) => item.key === key) ?? null)).catch(() => setSavedMatch(null));
+    listRuns(controller.signal).then((runs) => setSavedMatch(runs.find((item) => item.key === key && item.demo) ?? runs.find((item) => item.key === key) ?? null)).catch(() => setSavedMatch(null));
     return () => controller.abort();
   }, [step, key]);
   const openSaved = () => { if (!savedMatch) return; saveBrief(brief); navigate('/plan', { state: { brief, savedId: savedMatch.id } }); };
@@ -136,7 +136,7 @@ export default function OnboardingPage() {
       <span className="mono">{STEPS[step].toUpperCase()} · {step + 1} / {STEPS.length}</span>
       {step < STEPS.length - 1
         ? <button className="onboarding-next" disabled={!ready[step]} onClick={next}>Continue <ArrowRight size={16} /></button>
-        : <div className="onboarding-final">{savedMatch && <button className="onboarding-saved" onClick={openSaved} title="Opens the saved result instantly without re-running">Open saved result · {savedTime(savedMatch.savedAt)}</button>}<button className="onboarding-next" onClick={start}>{scale === 'urban' ? 'Run Deep Agent' : 'Find regions'} <ArrowRight size={16} /></button></div>}
+        : <div className="onboarding-final">{savedMatch && <button className="onboarding-saved" onClick={openSaved} title="Opens the saved result instantly without re-running">{savedMatch.demo ? 'Open demo result' : `Open saved result · ${savedTime(savedMatch.savedAt)}`}</button>}<button className="onboarding-next" onClick={start}>{scale === 'urban' ? 'Run Deep Agent' : 'Find regions'} <ArrowRight size={16} /></button></div>}
     </footer>
   </div>;
 }

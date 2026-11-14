@@ -4,7 +4,7 @@ import { Activity, ArrowLeft, ArrowRight, Brain, Building2, CircleAlert, Cpu, Lo
 import Wordmark from '../components/Wordmark';
 import { CROPS, MONTH_LONG, MONTH_SHORT, RURAL_REGIONS, URBAN_AREAS, fetchMonthlyClimate, type Brief, type MonthlyClimate } from '../services/cropPlan';
 import type { CropModelInfo, CropPrediction } from '../services/vexcel';
-import { getRun, listRuns, savedTime, type SavedRunMeta } from '../services/runs';
+import { getRun, listRunsWithStore, savedTime, type SavedRunMeta } from '../services/runs';
 import './PlanPage.css';
 import './ModelPage.css';
 
@@ -24,10 +24,11 @@ export default function ModelPage() {
   const [status, setStatus] = useState<Status | null>(null);
   const [health, setHealth] = useState<Health | null>(null);
   const [runs, setRuns] = useState<SavedRunMeta[]>([]);
+  const [store, setStore] = useState<'database' | 'database-unavailable' | 'files'>('files');
   const refresh = useCallback(() => {
     void fetch('/api/vexcel/status').then((response) => response.json()).then(setStatus).catch(() => setStatus(null));
     void fetch('/api/ml/health').then((response) => response.json()).then(setHealth).catch(() => setHealth(null));
-    void listRuns().then(setRuns).catch(() => setRuns([]));
+    void listRunsWithStore().then((result) => { setRuns(result.runs); setStore(result.store); }).catch(() => setRuns([]));
   }, []);
   useEffect(() => { refresh(); }, [refresh]);
 
@@ -69,11 +70,11 @@ export default function ModelPage() {
       <ModelExplorer health={health} />
 
       <section className="model-section">
-        <header><div><span className="mono">03 / SAVED RUNS</span><h2>Recent searches</h2></div><span>Open any result instantly, without re-running.</span></header>
+        <header><div><span className="mono">03 / SAVED RUNS</span><h2>Recent searches</h2></div><span>{store === 'database' ? 'Stored in Neon Postgres, shared by every copy of the app.' : store === 'database-unavailable' ? 'Database unreachable; showing local saves only.' : 'Stored on this machine.'} Open any result instantly.</span></header>
         {runs.length === 0 ? <p className="model-empty">No saved runs yet. Finish a search from <button onClick={() => navigate('/start')}>Get started</button> and it appears here.</p>
           : <ol className="run-list">{runs.slice(0, 12).map((run) => <li key={run.id}><button onClick={() => void openRun(run.id)}>
             <span className={`run-kind ${run.kind}`}>{run.kind === 'urban' ? <Building2 size={14} /> : <Sprout size={14} />}{run.kind}</span>
-            <strong>{run.label}</strong><span className="mono">{savedTime(run.savedAt)}</span><ArrowRight size={14} />
+            <strong>{run.demo && <em className="run-demo">Demo</em>}{run.label}</strong><span className="mono">{savedTime(run.savedAt)}</span><ArrowRight size={14} />
           </button></li>)}</ol>}
       </section>
     </main>
