@@ -18,7 +18,7 @@ from .download_observed_validation import COUNTIES_URL, PARAMETERS, POWER_URL, d
 
 
 DATASETS_PAGE = "https://www.nass.usda.gov/datasets"
-YEARS = tuple(range(2018, 2023))
+YEARS = tuple(range(2018, 2026))
 LATITUDE_BANDS = ((24, 34), (34, 44), (44, 50))
 LONGITUDE_BANDS = ((-125, -115), (-115, -105), (-105, -95), (-95, -85), (-85, -75), (-75, -66))
 
@@ -103,7 +103,7 @@ def main() -> None:
     args.output.mkdir(parents=True, exist_ok=True)
     session = requests.Session()
     download(session, COUNTIES_URL, args.output / "2022_Gaz_counties_national.zip")
-    filtered = args.output / "quickstats-county-yield-2018-2022.tsv"
+    filtered = args.output / "quickstats-county-yield-2018-2025.tsv"
     metadata_path = args.output / "download-metadata.json"
     if filtered.exists() and metadata_path.exists():
         metadata = json.loads(metadata_path.read_text())

@@ -78,7 +78,7 @@ climate consistency, not observed yield accuracy.
 
 For corn, soybeans, and wheat, the response may also include
 `observedYieldEvidence`: the nearest USDA reporting county within 100 km, its
-2018–2022 within-crop/year percentile range, and published yield history. This
+2018–2025 within-crop/year percentile range, and published yield history. This
 is displayed as historical context and never changes the suitability score.
 
 ## Next evidence gate

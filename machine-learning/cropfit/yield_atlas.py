@@ -11,14 +11,16 @@ from pathlib import Path
 import numpy as np
 from scipy.stats import rankdata, spearmanr
 
-from .national_observed_validation import CROP_NAMES, YEARS
+from .national_observed_validation import CROP_NAMES
 from .observed_validation import bootstrap_interval, county_points, number
+
+YEARS = tuple(range(2018, 2026))
 
 
 def rows_from_quickstats(data: Path) -> list[dict]:
     points = county_points(data / "2022_Gaz_counties_national.zip", state=None)
     rows = []
-    with (data / "quickstats-county-yield-2018-2022.tsv").open(newline="", encoding="utf-8") as source:
+    with (data / "quickstats-county-yield-2018-2025.tsv").open(newline="", encoding="utf-8") as source:
         for row in csv.DictReader(source, delimiter="\t"):
             if row["STATE_ALPHA"] in {"AK", "CA", "HI", "PR"} or not row["COUNTY_CODE"].strip():
                 continue
@@ -106,7 +108,7 @@ def build_atlas(rows: list[dict], validation: dict) -> dict:
         })
     return {
         "name": "USDA county yield atlas v1", "evidenceGrade": "historical-county-context",
-        "scope": "contiguous U.S. counties excluding California; corn, soybean, and wheat; 2018–2022",
+        "scope": "contiguous U.S. counties excluding California; corn, soybean, and wheat; 2018–2025",
         "source": "USDA NASS Quick Stats published county yields",
         "crops": sorted(CROP_NAMES.values()), "years": list(YEARS), "records": records,
         "validation": validation["pooled"],

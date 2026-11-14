@@ -63,11 +63,11 @@ below the predeclared 0.30 threshold. Corn and 2019 were negative. See
 
 CropFit also returns a separate USDA county-history record for corn, soybeans,
 and wheat when a published county centroid is within 100 km. This evidence does
-not alter CropFit suitability or ranking. The atlas contains 4,712 county-crop
-records from 2018–2022.
+not alter CropFit suitability or ranking. The atlas contains 4,878 county-crop
+records from 2018–2025.
 
 Retrospective forward-year validation uses only earlier years for each test
-year. Pooled Spearman was 0.812 over 13,145 covered observations (grouped 95%
-interval 0.802–0.820); 2022 Spearman was 0.832 at 97.4% coverage. This measures
+year. Pooled Spearman was 0.819 over 21,908 covered observations (grouped 95%
+interval 0.811–0.826); the newest 2025 test was 0.828 at 97.3% coverage. This measures
 the persistence of county yield ranks, not parcel yield forecasting. See
 `evaluation/yield-atlas-validation-v1.md`.
