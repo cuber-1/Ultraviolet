@@ -153,3 +153,7 @@ request and model URL. Climate, soil pH, irrigation, coordinate, crop, or
 primary/backup changes cannot reuse a stale prediction. The cache is a bounded
 2,048-entry LRU, and CI checks key sensitivity, model isolation, expiry, and
 least-recently-used eviction.
+
+Transient health failures are not cached as an API type. A recovered Spark is
+reprobed on the next request and immediately resumes as the CropFit primary;
+the failover test covers down → Mac backup → recovered primary → calendar.

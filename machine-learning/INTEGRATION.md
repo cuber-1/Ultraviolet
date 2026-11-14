@@ -53,6 +53,8 @@ Restart Vite after changing these values. If the primary model fails, the app
 tries `ML_MODEL_FALLBACK_URL`. If neither model answers, it falls back to a crop
 calendar (NASA monthly temperature within each crop's range) and labels the
 results "Crop calendar · model offline". The UI and Deep Agent keep working.
+Failed health probes are not cached, so a recovered primary is redetected as
+CropFit on the next request rather than receiving the generic API payload.
 
 CropFit v0.5 (this folder) is the production model; the generic contract below is
 for any other model you want to plug in.

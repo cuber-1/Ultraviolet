@@ -15,7 +15,32 @@ const send = (res: http.ServerResponse, status: number, body: object) => {
   res.end(JSON.stringify(body));
 };
 
-const primary = await start((_req, res) => send(res, 503, { error: 'spark unavailable' }));
+let primaryRecovered = false;
+let recoveredRequests = 0;
+const cropFitResponse = {
+  score: 81, bestPlantingMonth: 'MAR', suitableMonths: ['MAR', 'APR'], confidence: 0.7,
+  growingDays: { min: 60, max: 90 }, limitingFactors: [{ factor: 'water', score: 75 }],
+  monthlyCurve: [{ month: 'MAR', score: 81, uncertainty: 5 }],
+  observedYieldEvidence: {
+    county: 'Fort Bend County', state: 'TX', distanceKm: 46.7, years: [2024, 2025], observations: 2,
+    meanPercentile: .4, p10Percentile: .3, p90Percentile: .5, meanYieldBushelsPerAcre: 140,
+    observedYieldPrior: { expectedPercentile: .4, interval80: [.2, .6], interval90: [.1, .7], historyBucket: '2-3', calibrationExamples: 100 },
+    history: [{ year: 2024, yieldBushelsPerAcre: 140, percentile: .4 }], evidenceGrade: 'observed-county-prior', source: 'USDA', disclaimer: 'County prior.',
+  },
+};
+const primary = await start(async (req, res) => {
+  if (!primaryRecovered) return send(res, 503, { error: 'spark unavailable' });
+  if (req.url === '/health') return send(res, 200, { model: 'CropFit recovered' });
+  if (req.url === '/predict') {
+    const chunks: Buffer[] = [];
+    for await (const chunk of req) chunks.push(Buffer.from(chunk));
+    const body = JSON.parse(Buffer.concat(chunks).toString()) as { crop?: unknown };
+    if (typeof body.crop !== 'string') return send(res, 400, { error: 'expected CropFit request' });
+    recoveredRequests += 1;
+    return send(res, 200, cropFitResponse);
+  }
+  return send(res, 404, {});
+});
 let receivedClimate = false;
 const backup = await start(async (req, res) => {
   if (req.url === '/health') return send(res, 200, { model: 'CropFit backup' });
@@ -24,17 +49,7 @@ const backup = await start(async (req, res) => {
     for await (const chunk of req) chunks.push(Buffer.from(chunk));
     const body = JSON.parse(Buffer.concat(chunks).toString()) as { climate?: unknown[] };
     receivedClimate = body.climate?.length === 12;
-    return send(res, 200, {
-      score: 81, bestPlantingMonth: 'MAR', suitableMonths: ['MAR', 'APR'], confidence: 0.7,
-      growingDays: { min: 60, max: 90 }, limitingFactors: [{ factor: 'water', score: 75 }],
-      monthlyCurve: [{ month: 'MAR', score: 81, uncertainty: 5 }],
-      observedYieldEvidence: {
-        county: 'Fort Bend County', state: 'TX', distanceKm: 46.7, years: [2024, 2025], observations: 2,
-        meanPercentile: .4, p10Percentile: .3, p90Percentile: .5, meanYieldBushelsPerAcre: 140,
-        observedYieldPrior: { expectedPercentile: .4, interval80: [.2, .6], interval90: [.1, .7], historyBucket: '2-3', calibrationExamples: 100 },
-        history: [{ year: 2024, yieldBushelsPerAcre: 140, percentile: .4 }], evidenceGrade: 'observed-county-prior', source: 'USDA', disclaimer: 'County prior.',
-      },
-    });
+    return send(res, 200, cropFitResponse);
   }
   send(res, 404, {});
 });
@@ -69,12 +84,26 @@ try {
     throw new Error('Primary-to-backup failover did not select the backup model.');
   }
 
+  primaryRecovered = true;
+  const recoveredResult = await predictCropSuitability(request);
+  if (recoveredResult.model.name !== 'CropFit recovered' || recoveredResult.model.source !== 'ml' || recoveredRequests !== request.crops.length) {
+    throw new Error('Recovered primary was not immediately redetected as CropFit.');
+  }
+
+  primaryRecovered = false;
   process.env.ML_MODEL_FALLBACK_URL = url(failedBackup);
-  const calendarResult = await predictCropSuitability(request);
+  const calendarRequest = {
+    ...request,
+    sites: request.sites.map((site) => ({
+      ...site,
+      climate: site.climate ? { ...site.climate, temperatureC: site.climate.temperatureC.map((value) => value + .1) } : null,
+    })),
+  };
+  const calendarResult = await predictCropSuitability(calendarRequest);
   if (calendarResult.model.source !== 'calendar-fallback' || calendarResult.predictions.length !== 2) {
     throw new Error('Model-to-calendar failover did not return calendar predictions.');
   }
-  console.log('ML failover verified: primary -> backup -> crop calendar');
+  console.log('ML recovery verified: primary down -> backup -> primary recovered -> crop calendar');
 } finally {
   primary.close();
   backup.close();

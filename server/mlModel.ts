@@ -210,13 +210,17 @@ async function modelApiKind(url: string): Promise<'contract' | 'cropfit'> {
   if (forced === 'cropfit' || forced === 'contract') return forced;
   const cached = apiKindCache.get(url);
   if (cached && cached.expires > Date.now()) return cached.kind;
-  let kind: 'contract' | 'cropfit' = 'contract';
   try {
-    const health = await (await fetch(`${url}/health`, { signal: AbortSignal.timeout(4_000) })).json() as { model?: unknown };
-    if (typeof health.model === 'string' && /cropfit/i.test(health.model)) kind = 'cropfit';
-  } catch { /* keep contract */ }
-  apiKindCache.set(url, { kind, expires: Date.now() + 300_000 });
-  return kind;
+    const response = await fetch(`${url}/health`, { signal: AbortSignal.timeout(4_000) });
+    if (!response.ok) throw new Error(`Model health returned HTTP ${response.status}.`);
+    const health = await response.json() as { model?: unknown };
+    const kind: 'contract' | 'cropfit' = typeof health.model === 'string' && /cropfit/i.test(health.model) ? 'cropfit' : 'contract';
+    apiKindCache.set(url, { kind, expires: Date.now() + 300_000 });
+    return kind;
+  } catch {
+    apiKindCache.delete(url);
+    return 'contract';
+  }
 }
 
 function cropFitCall(url: string, crop: string, lat: number, lon: number, climate: MlClimate | null) {
