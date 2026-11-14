@@ -14,6 +14,7 @@
     "ml:evaluate:features": "PYTHONPATH=machine-learning machine-learning/.venv/bin/python -m cropfit.feature_validation",
     "ml:evaluate:uncertainty": "PYTHONPATH=machine-learning machine-learning/.venv/bin/python -m cropfit.uncertainty_validation",
     "ml:evaluate:estimator": "PYTHONPATH=machine-learning machine-learning/.venv/bin/python -m cropfit.estimator_validation",
+    "ml:evaluate:compact": "PYTHONPATH=machine-learning machine-learning/.venv/bin/python -m cropfit.compact_validation",
     "ml:build:yield-atlas": "PYTHONPATH=machine-learning machine-learning/.venv/bin/python -m cropfit.yield_atlas",
     "ml:evaluate:ranking": "PYTHONPATH=machine-learning machine-learning/.venv/bin/python -m cropfit.ranking_validation",
     "ml:evaluate:crop-expansion": "PYTHONPATH=machine-learning machine-learning/.venv/bin/python -m cropfit.crop_expansion_validation",

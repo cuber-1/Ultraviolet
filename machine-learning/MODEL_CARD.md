@@ -24,6 +24,11 @@ prediction median latency was 5.30 ms versus 5.18 ms. Timings and RSS are
 machine-dependent; Apple Silicon installation and loopback inference remain CI
 requirements.
 
+An 80-tree compact candidate reduced serialized estimator size to about 67% of
+the champion, but failed the frozen accuracy tolerance on all seven fresh
+seeds: mean MAE regressed 4.1% and mean p90 error regressed 5.9%. It was
+rejected; v0.6 retains 120 trees. See `evaluation/compact-validation-v1.md`.
+
 Version 0.5 adds four crop-relative features: temperature, water, pH, and solar
 membership within each crop's absolute and optimum ranges. The 120-tree Random
 Forest still receives the raw climate and profile fields. Against the v0.4

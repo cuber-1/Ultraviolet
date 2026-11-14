@@ -5,6 +5,7 @@ import csv
 import json
 import math
 import os
+import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -21,12 +22,58 @@ from .profiles import load_profiles
 
 
 TREE_STD_FLOOR = 0.01
+PRODUCTION_THRESHOLDS = {
+    "maximumMae": .10,
+    "maximumP90AbsoluteError": .27,
+    "minimumR2": .9997,
+    "minimumHeldOutProfiles": 350,
+    "maximumCoverageDeviation": .02,
+}
 
 
 def conformal_quantile(values: np.ndarray, coverage: float) -> float:
     """Finite-sample split-conformal quantile using the conservative higher rank."""
     level = min(1.0, math.ceil((len(values) + 1) * coverage) / len(values))
     return float(np.quantile(values, level, method="higher"))
+
+
+def production_gate(metrics: dict, held_out_profiles: int, coverage80: float, coverage90: float) -> dict:
+    checks = {
+        "mae": float(metrics["mae"]) <= PRODUCTION_THRESHOLDS["maximumMae"],
+        "p90AbsoluteError": float(metrics["p90AbsoluteError"]) <= PRODUCTION_THRESHOLDS["maximumP90AbsoluteError"],
+        "r2": float(metrics["r2"]) >= PRODUCTION_THRESHOLDS["minimumR2"],
+        "heldOutProfiles": held_out_profiles >= PRODUCTION_THRESHOLDS["minimumHeldOutProfiles"],
+        "coverage80": abs(coverage80 - .8) <= PRODUCTION_THRESHOLDS["maximumCoverageDeviation"],
+        "coverage90": abs(coverage90 - .9) <= PRODUCTION_THRESHOLDS["maximumCoverageDeviation"],
+    }
+    return {
+        "passed": all(checks.values()),
+        "checks": checks,
+        "thresholds": PRODUCTION_THRESHOLDS,
+        "rule": "Refuse artifact promotion unless held-out fidelity and conformal coverage meet every frozen production threshold.",
+    }
+
+
+def atomic_joblib_dump(value: dict, path: Path) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.NamedTemporaryFile(dir=path.parent, prefix=f".{path.name}.", suffix=".tmp", delete=False) as output:
+        temporary = Path(output.name)
+    try:
+        joblib.dump(value, temporary, compress=3)
+        os.replace(temporary, path)
+    finally:
+        temporary.unlink(missing_ok=True)
+
+
+def atomic_text_write(path: Path, value: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.NamedTemporaryFile(dir=path.parent, prefix=f".{path.name}.", suffix=".tmp", mode="w", delete=False) as output:
+        output.write(value)
+        temporary = Path(output.name)
+    try:
+        os.replace(temporary, path)
+    finally:
+        temporary.unlink(missing_ok=True)
 
 
 def generate_examples(profiles, samples_per_crop: int, seed: int):
@@ -134,6 +181,13 @@ def train(raw: Path, artifact: Path, metadata_path: Path, runs: Path, samples_pe
     held_out_p90_coverage = float(np.mean(residuals <= test_p90))
     created = datetime.now(timezone.utc)
     run_id = created.strftime("%Y%m%dT%H%M%SZ")
+    metrics = {
+        "mae": round(float(mean_absolute_error(y[test_indices], baseline_predictions)), 4),
+        "r2": round(float(r2_score(y[test_indices], baseline_predictions)), 4),
+        "p90AbsoluteError": round(float(np.quantile(residuals, .9)), 4),
+    }
+    held_out_profiles = int(len(set(groups[test_indices].tolist())))
+    promotion = production_gate(metrics, held_out_profiles, held_out_p80_coverage, held_out_p90_coverage)
     metadata = {
         "model": "CropFit EcoCrop surrogate v0.6",
         "selectedModel": "extraTrees",
@@ -144,13 +198,9 @@ def train(raw: Path, artifact: Path, metadata_path: Path, runs: Path, samples_pe
         "labelType": "mechanistic screening teacher; not observed farm yield",
         "profiles": len(profiles),
         "examples": int(len(x)),
-        "heldOutProfiles": int(len(set(groups[test_indices].tolist()))),
+        "heldOutProfiles": held_out_profiles,
         "boostingRounds": len(learning_rates),
-        "metrics": {
-            "mae": round(float(mean_absolute_error(y[test_indices], baseline_predictions)), 4),
-            "r2": round(float(r2_score(y[test_indices], baseline_predictions)), 4),
-            "p90AbsoluteError": round(float(np.quantile(residuals, .9)), 4),
-        },
+        "metrics": metrics,
         "validationMetrics": {
             "mae": round(float(mean_absolute_error(y[validation_indices], validation_predictions)), 4),
             "r2": round(float(r2_score(y[validation_indices], validation_predictions)), 4),
@@ -193,12 +243,15 @@ def train(raw: Path, artifact: Path, metadata_path: Path, runs: Path, samples_pe
         },
         "featureNames": FEATURE_NAMES,
         "seed": seed,
+        "promotionGate": promotion,
     }
     config = {"samplesPerCrop": samples_per_crop, "seed": seed, "requestedBoostingRounds": rounds, "learningRate": "cosine 0.08 to 0.005", "split": "68% train / 12% validation / 20% held-out crop profiles (approximate)"}
-    artifact.parent.mkdir(parents=True, exist_ok=True)
+    if not promotion["passed"]:
+        failed = ", ".join(name for name, passed in promotion["checks"].items() if not passed)
+        raise RuntimeError(f"Production promotion gate failed: {failed}. Existing artifact was not modified.")
     # Ship only the promoted estimator. Candidate diagnostics remain in the run directory.
-    joblib.dump({"model": model, "metadata": metadata}, artifact, compress=3)
-    metadata_path.write_text(json.dumps(metadata, indent=2) + "\n")
+    atomic_joblib_dump({"model": model, "metadata": metadata}, artifact)
+    atomic_text_write(metadata_path, json.dumps(metadata, indent=2) + "\n")
     save_run(runs / run_id, metadata, config, history, learning_rates, booster, model, residuals)
     return metadata
 

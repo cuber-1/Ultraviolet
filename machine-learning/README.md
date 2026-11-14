@@ -90,6 +90,15 @@ locked confirmation/final seeds, conformal coverage, and API-sized latency:
 npm run ml:evaluate:estimator
 ```
 
+Training refuses to replace the production artifact unless frozen MAE, p90,
+R², held-out-profile-count, and conformal-coverage thresholds all pass. The
+artifact and metadata are written atomically, so interruption cannot leave a
+partially serialized model.
+
+The smaller 80-tree experiment is reproducible with
+`npm run ml:evaluate:compact`; it remains rejected because all seven fresh
+accuracy gates failed despite the smaller artifact.
+
 The trained API obtains NASA POWER monthly history for 2016–2025 unless the
 caller supplies a 12-month `climate` array and `climateHistory`. It evaluates
 each month across all ten years and returns a risk-adjusted planting month,

@@ -29,6 +29,9 @@ def verify(artifact: Path, profiles: Path) -> None:
     assert predictor.model.n_features_in_ == len(FEATURE_NAMES), "artifact and feature code disagree"
     if predictor.metadata["model"].endswith("v0.6"):
         assert predictor.metadata["selectedModel"] == "extraTrees"
+    if predictor.metadata.get("promotionGate"):
+        assert predictor.metadata["promotionGate"]["passed"]
+        assert all(predictor.metadata["promotionGate"]["checks"].values())
     history = [climate(18.0 + offset) for offset in (-3, -2, -1, 0, 0, 1, 1, 2, 3, 5)]
     result = predictor.predict("tomato", 29.76, -95.37, 6.5, True, climate(20.0), history)
     assert result["plantingReliability"]["years"] == 10
@@ -121,6 +124,13 @@ def verify(artifact: Path, profiles: Path) -> None:
         assert estimator_report["gate"]["passed"]
         assert estimator_report["summary"]["lockedSeedWins"] == estimator_report["summary"]["lockedSeeds"] == 7
         assert estimator_report["summary"]["finalMeanMaeImprovementPercent"] >= 30
+
+    compact_validation = artifact.parents[1] / "evaluation/compact-validation-v1.json"
+    if compact_validation.exists():
+        compact_report = json.loads(compact_validation.read_text())
+        assert not compact_report["gate"]["passed"]
+        assert compact_report["summary"]["seedWins"] == 0
+        assert compact_report["summary"]["decision"].startswith("reject")
 
     from .trained_api import PredictionRequest, predict as api_predict
 

@@ -1,8 +1,8 @@
 {
   "model": "CropFit EcoCrop surrogate v0.6",
   "selectedModel": "extraTrees",
-  "createdAt": "2026-11-14T23:38:26.154140+00:00",
-  "runId": "20261114T233826Z",
+  "createdAt": "2026-11-14T23:43:27.665891+00:00",
+  "runId": "20261114T234327Z",
   "device": "cuda",
   "trainingSource": "FAO EcoCrop environmental requirement profiles via OpenCLIM",
   "labelType": "mechanistic screening teacher; not observed farm yield",
@@ -83,5 +83,24 @@
     "ph_range_fit",
     "solar_range_fit"
   ],
-  "seed": 20261114
+  "seed": 20261114,
+  "promotionGate": {
+    "passed": true,
+    "checks": {
+      "mae": true,
+      "p90AbsoluteError": true,
+      "r2": true,
+      "heldOutProfiles": true,
+      "coverage80": true,
+      "coverage90": true
+    },
+    "thresholds": {
+      "maximumMae": 0.1,
+      "maximumP90AbsoluteError": 0.27,
+      "minimumR2": 0.9997,
+      "minimumHeldOutProfiles": 350,
+      "maximumCoverageDeviation": 0.02
+    },
+    "rule": "Refuse artifact promotion unless held-out fidelity and conformal coverage meet every frozen production threshold."
+  }
 }
