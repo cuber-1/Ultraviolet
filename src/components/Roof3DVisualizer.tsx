@@ -142,16 +142,23 @@ function RoofPolygonSurface({
     {buildingGeometry && <mesh geometry={buildingGeometry} rotation={[Math.PI / 2, 0, 0]} castShadow receiveShadow>
       <meshStandardMaterial color="#d9d4ca" roughness={.86} metalness={.02} />
     </mesh>}
-    <mesh geometry={roofGeometry} rotation={[Math.PI / 2, 0, 0]} position={[0, .025, 0]} receiveShadow>
-      {surfaceMode === 'clean'
-        ? <meshStandardMaterial color="#63a878" roughness={.78} metalness={0} side={THREE.DoubleSide} />
-        : isInfrared
-        ? <primitive object={infraredMaterial!} attach="material" />
-        : <meshStandardMaterial map={texture} roughness={.72} metalness={.02} side={THREE.DoubleSide} />}
-    </mesh>
-    {isInfrared && surfaceMode === 'imagery' && <mesh geometry={roofGeometry} rotation={[Math.PI / 2, 0, 0]} position={[0, .04, 0]} receiveShadow>
-      <shadowMaterial color="#2b211b" transparent opacity={.22} depthWrite={false} />
-    </mesh>}
+    {surfaceMode === 'clean' ? <>
+      <mesh key="clean-roof" geometry={roofGeometry} rotation={[Math.PI / 2, 0, 0]} position={[0, .025, 0]}>
+        <meshBasicMaterial color="#63a878" side={THREE.DoubleSide} toneMapped={false} />
+      </mesh>
+      <mesh geometry={roofGeometry} rotation={[Math.PI / 2, 0, 0]} position={[0, .04, 0]} receiveShadow>
+        <shadowMaterial color="#193b28" transparent opacity={.2} depthWrite={false} />
+      </mesh>
+    </> : <>
+      <mesh key="imagery-roof" geometry={roofGeometry} rotation={[Math.PI / 2, 0, 0]} position={[0, .025, 0]} receiveShadow>
+        {isInfrared
+          ? <primitive object={infraredMaterial!} attach="material" />
+          : <meshStandardMaterial map={texture} roughness={.72} metalness={.02} side={THREE.DoubleSide} />}
+      </mesh>
+      {isInfrared && <mesh geometry={roofGeometry} rotation={[Math.PI / 2, 0, 0]} position={[0, .04, 0]} receiveShadow>
+        <shadowMaterial color="#2b211b" transparent opacity={.22} depthWrite={false} />
+      </mesh>}
+    </>}
   </>;
 }
 
@@ -225,8 +232,10 @@ function Scene({ props, surfaceMode }: { props: Roof3DVisualizerProps; surfaceMo
         receiveShadow
       >
         <boxGeometry args={[obstruction.width * .94, obstruction.heightM, obstruction.depth * .94]} />
-        <meshStandardMaterial color="#d9d2ca" roughness={.68} metalness={.02} transparent opacity={.48} depthWrite={false} />
-        <Edges color={surfaceMode === 'clean' ? '#236143' : '#e85d04'} threshold={12} />
+        {surfaceMode === 'clean'
+          ? <meshBasicMaterial colorWrite={false} depthWrite={false} />
+          : <meshStandardMaterial color="#d9d2ca" roughness={.68} metalness={.02} transparent opacity={.48} depthWrite={false} />}
+        {surfaceMode === 'imagery' && <Edges color="#e85d04" threshold={12} />}
       </mesh>)}
     </group>
 
