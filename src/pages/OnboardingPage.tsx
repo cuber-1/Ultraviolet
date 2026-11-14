@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, Building2, Check, Sprout, Tractor, Warehouse } from 'lucide-react';
 import Wordmark from '../components/Wordmark';
@@ -19,6 +19,7 @@ const SIZE_PRESETS = [
 
 const STEPS = ['Space', 'Crops', 'Location', 'Timing', 'Review'] as const;
 const MAX_CROPS = 4;
+const QUIPS = ['Got it!', 'Noted.', 'Smart choice!', 'Ooh, good one.', 'Writing that down…', 'Love it.', 'Great pick!', 'On it!', 'Nice, that helps.', 'Jotted!', 'Excellent taste.', 'Perfect.'];
 
 export default function OnboardingPage() {
   const navigate = useNavigate();
@@ -68,9 +69,23 @@ export default function OnboardingPage() {
   const notesKey = notes.join('|');
   const [scribbling, setScribbling] = useState(true);
   useEffect(() => { setScribbling(true); const timer = window.setTimeout(() => setScribbling(false), 1600); return () => window.clearTimeout(timer); }, [notesKey]);
+  // A random quip after every click (never the same twice in a row).
+  const [quip, setQuip] = useState({ text: 'Hi! I’ll take notes.', id: 0 });
+  const lastQuip = useRef(quip.text);
+  const clicks = useRef(0);
+  const react = (event: React.MouseEvent) => {
+    if (!(event.target as HTMLElement).closest('button')) return;
+    const options = QUIPS.filter((text) => text !== lastQuip.current);
+    const next = options[Math.floor(Math.random() * options.length)];
+    lastQuip.current = next;
+    clicks.current += 1;
+    setQuip({ text: next, id: clicks.current });
+    setScribbling(true);
+    window.setTimeout(() => setScribbling(false), 1300);
+  };
   const openSaved = () => { if (!savedMatch) return; saveBrief(brief); navigate('/plan', { state: { brief, savedId: savedMatch.id } }); };
 
-  return <div className="onboarding">
+  return <div className="onboarding" onClickCapture={react}>
     <header className="onboarding-header">
       <button className="onboarding-icon-button" onClick={back} aria-label="Back"><ArrowLeft size={18} /></button>
       <Wordmark />
@@ -149,11 +164,8 @@ export default function OnboardingPage() {
       </section>}
     </main>
 
-    <aside className="onboarding-scribe" aria-label="Your answers so far">
-      <div className="onboarding-notes">
-        <span>{scribbling ? 'Writing that down…' : 'My notes'}</span>
-        <ol>{notes.map((note, index) => <li key={note} className={index === notes.length - 1 ? 'latest' : ''}>{note}</li>)}</ol>
-      </div>
+    <aside className="onboarding-scribe" aria-live="polite">
+      <div className="onboarding-quip" data-quip={quip.id} style={{ animationName: quip.id % 2 ? 'onboardingQuipA' : 'onboardingQuipB' }}>{quip.text}</div>
       <MouseScribe key={notes.length} writing={scribbling} lines={notes.length + 1} thinking={!scribbling} />
     </aside>
 

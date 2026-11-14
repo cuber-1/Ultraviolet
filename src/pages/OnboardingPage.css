@@ -105,12 +105,12 @@
 @keyframes onboardingShimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
 @media (prefers-reduced-motion: reduce) { .onboarding-progress i { transition: none; } .onboarding-progress i::after { animation: none; } }
 
-/* Note-taking mouse beside the questions. */
-.onboarding-scribe { position: fixed; z-index: 20; right: clamp(16px, 3vw, 40px); bottom: 92px; display: flex; align-items: flex-end; gap: 4px; pointer-events: none; }
-.onboarding-scribe .mouse-scribe { width: 190px; }
-.onboarding-notes { display: grid; gap: 8px; width: 230px; margin-bottom: 70px; padding: 14px 16px; border-radius: 16px 16px 4px 16px; background: #fffaf1; box-shadow: 0 14px 34px rgba(40, 35, 31, .12); transform: rotate(-1.5deg); }
-.onboarding-notes span { color: var(--earth-dark); font-size: 14px; font-weight: 700; }
-.onboarding-notes ol { display: grid; gap: 4px; padding-left: 18px; color: var(--gray-600); font-size: 14px; line-height: 1.35; }
-.onboarding-notes li.latest { color: var(--black); font-weight: 600; animation: fadeIn .5s ease both; }
-@media (max-width: 1180px) { .onboarding-notes { display: none; } .onboarding-scribe .mouse-scribe { width: 110px; } }
-@media (max-width: 760px) { .onboarding-scribe { display: none; } }
+/* Note-taking mouse, top right, with a quip after every click. */
+.onboarding-scribe { position: fixed; z-index: 20; top: 104px; right: clamp(12px, 2.5vw, 36px); display: flex; align-items: flex-start; gap: 2px; pointer-events: none; }
+.onboarding-scribe .mouse-scribe { width: 130px; }
+.onboarding-quip { margin-top: 26px; padding: 11px 16px; border-radius: 16px 4px 16px 16px; background: #fffaf1; box-shadow: 0 12px 30px rgba(40, 35, 31, .12); color: var(--black); font-size: 16px; font-weight: 600; white-space: nowrap; animation: onboardingQuipA .45s cubic-bezier(.2, 1.4, .4, 1) both; }
+/* Two identical keyframes: alternating between them restarts the pop on every new quip. */
+@keyframes onboardingQuipA { from { opacity: 0; transform: translateY(6px) scale(.85); } to { opacity: 1; transform: none; } }
+@keyframes onboardingQuipB { from { opacity: 0; transform: translateY(6px) scale(.85); } to { opacity: 1; transform: none; } }
+@media (max-width: 760px) { .onboarding-scribe { top: 92px; } .onboarding-scribe .mouse-scribe { width: 84px; } .onboarding-quip { font-size: 14px; margin-top: 14px; } }
+@media (prefers-reduced-motion: reduce) { .onboarding-quip { animation: none; } }
