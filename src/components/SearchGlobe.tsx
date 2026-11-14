@@ -16,7 +16,7 @@ function project(lat: number, lon: number, centerLon: number, radius: number) {
   return { x: radius + radius * Math.cos(phi) * Math.sin(lambda), y: radius - radius * Math.sin(phi), visible };
 }
 
-export default function SearchGlobe({ points = [], onPointClick }: { points?: GlobePoint[]; onPointClick?: (id: string) => void }) {
+export default function SearchGlobe({ points = [], onPointClick, unitLabel = 'ROOFS' }: { points?: GlobePoint[]; onPointClick?: (id: string) => void; unitLabel?: string }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const mapElementRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<LeafletMap | null>(null);
@@ -70,7 +70,7 @@ export default function SearchGlobe({ points = [], onPointClick }: { points?: Gl
     L.control.zoom({ position: 'bottomleft' }).addTo(map);
     markerLayerRef.current = L.layerGroup().addTo(map);
     map.setView([points[0].lat, points[0].lon], 12);
-    return () => { map.remove(); mapRef.current = null; markerLayerRef.current = null; };
+    return () => { map.stop(); map.remove(); mapRef.current = null; markerLayerRef.current = null; };
   }, [hasResults]);
 
   useEffect(() => {
@@ -90,15 +90,17 @@ export default function SearchGlobe({ points = [], onPointClick }: { points?: Gl
       marker.on('click', () => onPointClick?.(item.id));
     });
     const center: [number, number] = [latitudeTotal / points.length, longitudeTotal / points.length];
-    requestAnimationFrame(() => {
+    const frame = requestAnimationFrame(() => {
+      if (mapRef.current !== map) return;
       map.invalidateSize();
       const fittedZoom = points.length === 1 ? 17 : map.getBoundsZoom(bounds, false, L.point(88, 88));
       map.flyTo(center, Math.max(3, Math.min(17, fittedZoom - (points.length > 1 ? 1 : 0))), { duration: .85 });
     });
+    return () => cancelAnimationFrame(frame);
   }, [hasResults, onPointClick, points]);
 
   return <div className={`search-globe ${hasResults ? 'showing-results-map' : ''}`}>
-    {hasResults ? <><div ref={mapElementRef} className="results-leaflet-map" aria-label={`Map centered on ${points.length} rooftop results`} /><div className="results-map-meta mono"><span>{points.length} ROOFS</span><strong>FIT TO RESULTS</strong></div></> : <canvas
+    {hasResults ? <><div ref={mapElementRef} className="results-leaflet-map" aria-label={`Map centered on ${points.length} rooftop results`} /><div className="results-map-meta mono"><span>{points.length} {unitLabel}</span><strong>FIT TO RESULTS</strong></div></> : <canvas
       ref={canvasRef}
       aria-label="Rotatable world globe"
       onPointerDown={(event) => { drag.current = { x: event.clientX, rotation }; event.currentTarget.setPointerCapture(event.pointerId); }}

@@ -93,8 +93,8 @@ export default function LandingPage() {
           and check sunlight across seasons.
         </p>
         <div className="landing-actions">
-          <button className="primary" onClick={() => navigate('/agriculture/urban')}>Explore urban rooftops →</button>
-          <button className="secondary" onClick={() => navigate('/agriculture/rural')}>Compare rural land</button>
+          <button className="primary" onClick={() => navigate('/start')}>Get started →</button>
+          <button className="secondary" onClick={() => navigate('/agriculture/urban')}>Search rooftops directly</button>
         </div>
       </main>
     </div>

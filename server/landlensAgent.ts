@@ -89,6 +89,8 @@ function configuredModel() {
 // A live 12-candidate Houston run took ~225s, mostly Vexcel geometry and sunlight work.
 const AGENT_TIMEOUT_MS = Number(process.env.LANDLENS_AGENT_TIMEOUT_MS) || 420_000;
 const AGENT_RECURSION_LIMIT = Number(process.env.LANDLENS_AGENT_RECURSION_LIMIT) || 80;
+// Each candidate costs a geometry + sunlight run; 8 keeps a top-5 answer to a few minutes.
+const AGENT_MAX_CANDIDATES = Number(process.env.LANDLENS_AGENT_MAX_CANDIDATES) || 8;
 
 export function landLensAgentStatus() {
   const model = configuredModel();
@@ -113,7 +115,7 @@ export async function runLandLensAgent(input: {
 
   const searchImagery = tool(async ({ query }: { query: string }) => {
     progress({ stage: 'imagery', message: `Searching Vexcel imagery near ${input.location}` });
-    const results = searchResults ?? await services.search(query);
+    const results = searchResults ?? (await services.search(query)).slice(0, AGENT_MAX_CANDIDATES);
     searchResults = results;
     results.forEach((candidate) => candidates.set(candidate.id, candidate));
     return results.map((candidate) => ({
@@ -189,7 +191,7 @@ export async function runLandLensAgent(input: {
     model: model.client,
     tools: [searchImagery, lookupProperty, resolveGeometry, simulateSunlight],
     responseFormat: toolStrategy(responseSchema),
-    systemPrompt: `You compare real urban rooftops for growing goals. Call search_rooftop_imagery exactly once. Then, for every candidate ID it returns, call lookup_property_record and simulate_rooftop_sunlight (it resolves geometry itself; call resolve_roof_geometry only if you need height details). Batch independent tool calls in the same turn. Do not repeat a call you already made. Rank only by sharedAreaSqft returned by the sunlight tool. A verified Matterport tour may break a near tie but can never outrank materially greater suitable area. Link evidence with the candidate URL. Never estimate missing geometry, listing status, or sunlight; list them under unknowns.`,
+    systemPrompt: `You compare real urban rooftops for growing goals. Call search_rooftop_imagery exactly once. Then, for every candidate ID it returns, call lookup_property_record and simulate_rooftop_sunlight (it resolves geometry itself; call resolve_roof_geometry only if you need height details). Batch independent tool calls in the same turn. Do not repeat a call you already made. Rank only by sharedAreaSqft returned by the sunlight tool. A verified Matterport tour may break a near tie but can never outrank materially greater suitable area. Never estimate missing geometry, listing status, or sunlight; list them under unknowns. Write the summary, explanations, and unknowns in plain, friendly language for a grower: refer to sites by rank or address rather than coordinates, round numbers, and never include tool or field names, code identifiers, or URLs. Keep each explanation to one or two sentences about why that roof ranks where it does.`,
   });
 
   let narrative: z.infer<typeof responseSchema> | null = null;

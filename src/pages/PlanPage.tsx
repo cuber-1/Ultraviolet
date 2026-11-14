@@ -1,0 +1,300 @@
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { ArrowLeft, ArrowRight, CalendarDays, CircleAlert, Droplets, MapPin, RotateCcw, Sun, ThermometerSun } from 'lucide-react';
+import Wordmark from '../components/Wordmark';
+import SearchGlobe from '../components/SearchGlobe';
+import DeepAgentLoader, { type LoaderStage } from '../components/DeepAgentLoader';
+import { SiteWorkspace } from './AgriculturePage';
+import { runAgentComparison, type AgentComparison, type SearchResult } from '../services/vexcel';
+import {
+  MONTH_LONG, MONTH_SHORT, briefCrops, fetchMonthlyClimate, formatArea, loadBrief, planForLocation, ruralPlaces,
+  urbanAgentCriteria, urbanAreaLabel, type Brief, type CropTiming, type LocationPlan,
+} from '../services/cropPlan';
+import './PlanPage.css';
+
+const TOP_N = 5;
+const URBAN_STAGES: LoaderStage[] = [
+  { key: 'climate', label: 'Climate calendar' },
+  { key: 'planning', label: 'Planning' },
+  { key: 'imagery', label: 'Aerial search' },
+  { key: 'property', label: 'Property records' },
+  { key: 'geometry', label: 'Roof geometry' },
+  { key: 'sunlight', label: 'Sunlight' },
+  { key: 'ranking', label: 'Ranking' },
+];
+const RURAL_STAGES: LoaderStage[] = [
+  { key: 'geocode', label: 'Locating towns' },
+  { key: 'climate', label: 'NASA climate' },
+  { key: 'calendar', label: 'Crop calendars' },
+  { key: 'ranking', label: 'Ranking' },
+];
+
+type UrbanOutcome = { kind: 'urban'; brief: Brief; plan: LocationPlan | null; criteria: ReturnType<typeof urbanAgentCriteria>; comparison: AgentComparison; top: SearchResult[] };
+type RuralOutcome = { kind: 'rural'; brief: Brief; plans: LocationPlan[]; errors: Array<{ location: string; error: string }> };
+type Outcome = UrbanOutcome | RuralOutcome;
+
+const RESULT_KEY = 'ultraviolet.plan.result';
+const saveOutcome = (outcome: Outcome) => { try { sessionStorage.setItem(RESULT_KEY, JSON.stringify(outcome)); } catch { /* storage unavailable */ } };
+const loadOutcome = (brief: Brief): Outcome | null => {
+  try { const raw = sessionStorage.getItem(RESULT_KEY); const value = raw ? JSON.parse(raw) as Outcome : null; return value && JSON.stringify(value.brief) === JSON.stringify(brief) ? value : null; } catch { return null; }
+};
+const cropList = (brief: Brief) => { const names = briefCrops(brief).map((crop) => crop.name.toLowerCase()); return names.length > 1 ? `${names.slice(0, -1).join(', ')} and ${names.at(-1)}` : names[0] ?? 'your crops'; };
+const sqft = (value: number | null | undefined) => value === null || value === undefined ? '—' : `${new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(value)} ft²`;
+const shortDate = (date: string) => new Date(`${date}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+export default function PlanPage() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const routeState = location.state as { brief?: Brief; run?: number } | null;
+  const brief = useMemo(() => routeState?.brief ?? loadBrief(), [routeState?.brief]);
+  const [outcome, setOutcome] = useState<Outcome | null>(() => (brief && !routeState?.run ? loadOutcome(brief) : null));
+  const [running, setRunning] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [stageIndex, setStageIndex] = useState(0);
+  const [log, setLog] = useState<string[]>([]);
+  const [startedAt, setStartedAt] = useState(Date.now());
+  const [climatePlan, setClimatePlan] = useState<LocationPlan | null>(null);
+  const requestRef = useRef<AbortController | null>(null);
+
+  const run = useCallback(async (input: Brief) => {
+    requestRef.current?.abort();
+    const controller = new AbortController();
+    requestRef.current = controller;
+    // Only the newest run may touch state (StrictMode and "Run again" can leave an older run finishing).
+    const live = () => requestRef.current === controller && !controller.signal.aborted;
+    const push = (message: string) => { if (live()) setLog((items) => [...items, message]); };
+    const advance = (stages: LoaderStage[], key: string) => { if (live()) setStageIndex((current) => Math.max(current, stages.findIndex((stage) => stage.key === key))); };
+    setRunning(true); setError(null); setOutcome(null); setLog([]); setStageIndex(0); setStartedAt(Date.now()); setClimatePlan(null);
+    try {
+      if (input.scale === 'urban') {
+        push(`Reading NASA monthly climate for ${urbanAreaLabel(input)}`);
+        const climate = await fetchMonthlyClimate([input.urbanArea ?? ''], controller.signal).catch(() => null);
+        if (!live()) return;
+        const plan = climate?.results[0] ? planForLocation(input, climate.results[0]) : null;
+        setClimatePlan(plan);
+        const criteria = urbanAgentCriteria(input, plan);
+        push(plan?.moveInMonth !== null && plan ? `Best start month: ${MONTH_LONG[plan.moveInMonth!]}` : 'Climate unavailable; using your preferred month');
+        advance(URBAN_STAGES, 'planning');
+        const comparison = await runAgentComparison({
+          goal: criteria.goal, location: input.urbanArea ?? 'All available Vexcel coverage', lat: 0, lon: 0, radiusM: 20_000,
+          dates: criteria.dates, targetHours: criteria.targetHours, targetAreaSqft: criteria.targetAreaSqft,
+        }, (event) => { advance(URBAN_STAGES, event.stage); push(event.message); }, controller.signal);
+        if (!live()) return;
+        const byId = new Map(comparison.candidates.map((candidate) => [candidate.id, candidate]));
+        const top = comparison.simulations.flatMap((simulation) => byId.get(simulation.candidateId) ?? []).slice(0, TOP_N);
+        const next: UrbanOutcome = { kind: 'urban', brief: input, plan, criteria, comparison, top };
+        setOutcome(next); saveOutcome(next);
+        navigate('/plan', { replace: true, state: { brief: input } });
+      } else {
+        const places = ruralPlaces(input);
+        push(`Locating ${places.length} farming towns`);
+        const pending = fetchMonthlyClimate(places, controller.signal);
+        pending.catch(() => undefined);
+        await new Promise((resolve) => setTimeout(resolve, 700));
+        advance(RURAL_STAGES, 'climate'); push('Reading NASA POWER monthly climatology');
+        const climate = await pending;
+        if (!live()) return;
+        advance(RURAL_STAGES, 'calendar'); push(`Matching ${briefCrops(input).length} crop calendars to ${climate.results.length} towns`);
+        const plans = climate.results.map((result) => planForLocation(input, result)).sort((a, b) => b.score - a.score);
+        await new Promise((resolve) => setTimeout(resolve, 900));
+        advance(RURAL_STAGES, 'ranking'); push('Ranking by crop fit');
+        await new Promise((resolve) => setTimeout(resolve, 600));
+        if (!live()) return;
+        const next: RuralOutcome = { kind: 'rural', brief: input, plans, errors: climate.errors };
+        setOutcome(next); saveOutcome(next);
+        navigate('/plan', { replace: true, state: { brief: input } });
+      }
+    } catch (reason) {
+      if (live()) setError(reason instanceof Error ? reason.message : 'The search failed.');
+    } finally {
+      if (requestRef.current === controller && !controller.signal.aborted) setRunning(false);
+    }
+  }, [navigate]);
+
+  useEffect(() => {
+    if (brief && !outcome) void run(brief);
+    return () => requestRef.current?.abort();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [brief, routeState?.run]);
+
+  useEffect(() => {
+    if (!running) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = previous; };
+  }, [running]);
+
+  const openSite = useCallback((id: string) => navigate(`/plan?site=${encodeURIComponent(id)}`), [navigate]);
+
+  if (!brief) return <Navigate to="/start" replace />;
+
+  const selectedId = new URLSearchParams(location.search).get('site');
+  if (outcome?.kind === 'urban' && selectedId) {
+    const result = outcome.top.find((item) => item.id === selectedId);
+    if (result) return <SiteWorkspace result={result} onClose={() => navigate('/plan')} backLabel="Top 5" initialDate={outcome.criteria.dates[0]} initialTargetHours={outcome.criteria.targetHours} targetAreaSqft={outcome.criteria.targetAreaSqft} />;
+  }
+
+  const cancel = () => { requestRef.current?.abort(); setRunning(false); navigate('/start'); };
+  const urban = brief.scale === 'urban';
+
+  return <div className="plan-page">
+    {running && <DeepAgentLoader
+      kicker={urban ? 'DEEP AGENT · LIVE' : 'CLIMATE MATCH · LIVE'}
+      title={urban ? 'Finding your roof' : 'Finding your region'}
+      subtitle={urban
+        ? `Searching ${urbanAreaLabel(brief)} for ${formatArea(brief.areaSqft)} of roof that suits ${cropList(brief)}.`
+        : `Comparing ${ruralPlaces(brief).length} farming towns for ${cropList(brief)} on ${formatArea(brief.areaSqft)}.`}
+      stages={urban ? URBAN_STAGES : RURAL_STAGES}
+      activeIndex={stageIndex}
+      message={log.at(-1) ?? 'Starting'}
+      log={log}
+      startedAt={startedAt}
+      expected={urban ? 'USUALLY 1–3 MIN' : 'A FEW SECONDS'}
+      insight={urban && climatePlan ? <TimingInsight plan={climatePlan} brief={brief} /> : undefined}
+      onCancel={cancel}
+    />}
+
+    <header className="plan-header">
+      <button className="plan-back" onClick={() => navigate('/start')}><ArrowLeft size={16} /> Edit answers</button>
+      <Wordmark />
+      <button className="plan-rerun" onClick={() => void run(brief)} disabled={running}><RotateCcw size={14} /> Run again</button>
+    </header>
+
+    {error && <main className="plan-main"><div className="plan-error"><CircleAlert /><div><strong>{urban ? 'The Deep Agent could not finish' : 'Climate lookup failed'}</strong><p>{error}</p><div><button onClick={() => void run(brief)}>Try again</button><button onClick={() => navigate('/start')}>Edit answers</button></div></div></div></main>}
+    {outcome?.kind === 'urban' && <UrbanResults outcome={outcome} onOpen={openSite} />}
+    {outcome?.kind === 'rural' && <RuralResults outcome={outcome} />}
+  </div>;
+}
+
+function TimingInsight({ plan, brief }: { plan: LocationPlan; brief: Brief }) {
+  return <div className="timing-insight">
+    <span className="mono">CLIMATE CALENDAR · {plan.climate.name.toUpperCase()}</span>
+    <div>{plan.timings.map((timing) => <p key={timing.crop.id}><strong>{timing.crop.name}</strong>{timing.startMonth === null ? 'No full season in this climate' : `Plant ${MONTH_SHORT[timing.startMonth]} → harvest ${MONTH_SHORT[timing.harvestMonth!]}`}</p>)}</div>
+    <small>Looking for {Math.max(...briefCrops(brief).map((crop) => crop.sunHours))} h of direct sun across {formatArea(brief.areaSqft)}.</small>
+  </div>;
+}
+
+function CropCalendar({ timings, preferredMonth }: { timings: CropTiming[]; preferredMonth: number }) {
+  return <div className="crop-calendar">
+    <div className="crop-calendar-row crop-calendar-head"><span />{MONTH_SHORT.map((month, index) => <em key={month} className={index === preferredMonth ? 'preferred' : ''}>{month[0]}</em>)}</div>
+    {timings.map((timing) => {
+      const inWindow = (month: number) => timing.startMonth !== null && ((month - timing.startMonth + 12) % 12) < timing.crop.growMonths;
+      return <div className="crop-calendar-row" key={timing.crop.id}>
+        <span>{timing.crop.name}</span>
+        {timing.growable.map((ok, month) => <i key={month} className={[ok ? 'ok' : '', inWindow(month) ? 'window' : '', month === timing.startMonth ? 'start' : ''].join(' ')} title={`${MONTH_LONG[month]}: ${ok ? 'temperature fits' : 'outside temperature range'}${month === timing.startMonth ? ' · recommended start' : ''}`} />)}
+      </div>;
+    })}
+    <div className="crop-calendar-key"><span><i className="window" /> Recommended season</span><span><i className="ok" /> Temperature fits</span><span><i /> Too hot or cold</span></div>
+  </div>;
+}
+
+function UrbanResults({ outcome, onOpen }: { outcome: UrbanOutcome; onOpen: (id: string) => void }) {
+  const { brief, plan, criteria, comparison, top } = outcome;
+  const simulations = new Map(comparison.simulations.map((simulation) => [simulation.candidateId, simulation]));
+  const explanations = new Map((comparison.narrative?.explanations ?? []).map((item) => [item.candidateId, item.explanation]));
+  const [hovered, setHovered] = useState<string | null>(null);
+  const points = useMemo(() => top.map((result, index) => ({ id: result.id, lat: result.lat, lon: result.lon, rank: index + 1 })), [top]);
+  return <main className="plan-main">
+    <section className="plan-hero">
+      <span className="mono">{comparison.mode === 'deep-agent' ? `DEEP AGENT · ${comparison.model ?? ''}`.trim() : 'DIRECT COMPARISON'} · {urbanAreaLabel(brief).toUpperCase()}</span>
+      <h1>Your top {top.length} roofs for {cropList(brief)}.</h1>
+      <dl className="plan-stats">
+        <div><dt>Growing area</dt><dd>{formatArea(criteria.targetAreaSqft)}</dd></div>
+        <div><dt>Direct sun needed</dt><dd>{criteria.targetHours} h / day</dd></div>
+        <div><dt>Best start</dt><dd>{MONTH_LONG[criteria.startMonth]}</dd></div>
+        <div><dt>Sun checked on</dt><dd>{criteria.dates.map(shortDate).join(' + ')}</dd></div>
+      </dl>
+    </section>
+
+    <section className="plan-grid">
+      <ol className="roof-list">
+        {top.length === 0 && <li className="plan-empty">No roofs came back from this search. Try another city or a smaller area.</li>}
+        {top.map((result, index) => {
+          const simulation = simulations.get(result.id);
+          const shared = simulation?.sharedAreaSqft ?? null;
+          const ratio = shared === null ? 0 : Math.min(1, shared / criteria.targetAreaSqft);
+          const meets = shared !== null && shared >= criteria.targetAreaSqft;
+          const title = result.costar?.buildingName || result.costar?.address || (result.property?.roofAreaSqft ? `${sqft(result.property.roofAreaSqft)} roof` : 'Rooftop');
+          return <li key={result.id} className={hovered === result.id ? 'roof-card hovered' : 'roof-card'} onMouseEnter={() => setHovered(result.id)} onMouseLeave={() => setHovered(null)}>
+            <button onClick={() => onOpen(result.id)}>
+              <span className="roof-rank">{index + 1}</span>
+              <img src={result.imageryUrl} alt="" loading="lazy" />
+              <div className="roof-body">
+                <strong>{title}</strong>
+                <span className="roof-address"><MapPin size={12} /> {result.costar?.address || `${result.lat.toFixed(4)}, ${result.lon.toFixed(4)}`}</span>
+                <div className="roof-meter"><div style={{ width: `${ratio * 100}%` }} className={meets ? 'meets' : ''} /></div>
+                <span className="roof-metric">{shared === null ? 'Sunlight not assessed · missing roof geometry' : <><b>{sqft(shared)}</b> gets {criteria.targetHours} h on both dates{meets ? ' · meets your area' : ` · ${Math.round(ratio * 100)}% of target`}</>}</span>
+                {explanations.get(result.id) && <p className="roof-why">{explanations.get(result.id)}</p>}
+                <div className="roof-chips">
+                  {result.property?.roofAreaSqft && <span>{sqft(result.property.roofAreaSqft)} roof</span>}
+                  {result.costar ? <span>{result.costar.propertyType}</span> : <span className="muted">No property record</span>}
+                  {result.costar?.listing?.active && <span className="hot">Active listing</span>}
+                  {(result.costar?.matterport.length ?? 0) > 0 && <span>3D tour</span>}
+                  {simulation?.geometry.obstructionCount ? <span>{simulation.geometry.obstructionCount} obstructions</span> : null}
+                </div>
+              </div>
+              <span className="roof-open">Open <ArrowRight size={14} /></span>
+            </button>
+          </li>;
+        })}
+      </ol>
+
+      <aside className="plan-side">
+        <div className="plan-globe"><SearchGlobe points={points} onPointClick={onOpen} /></div>
+        {plan && <div className="plan-card"><header><CalendarDays size={15} /><strong>When to start</strong><span className="mono">{plan.climate.name}</span></header><CropCalendar timings={plan.timings} preferredMonth={brief.preferredMonth} /></div>}
+        {comparison.narrative?.summary && <div className="plan-card"><header><Sun size={15} /><strong>Agent summary</strong></header><p>{comparison.narrative.summary}</p></div>}
+        {(comparison.narrative?.unknowns.length ?? 0) > 0 && <details className="plan-card plan-unknowns"><summary>What we couldn’t verify ({comparison.narrative!.unknowns.length})</summary><ul>{comparison.narrative!.unknowns.map((item) => <li key={item}>{item}</li>)}</ul></details>}
+      </aside>
+    </section>
+  </main>;
+}
+
+function RuralResults({ outcome }: { outcome: RuralOutcome }) {
+  const { brief, plans, errors } = outcome;
+  const top = useMemo(() => plans.slice(0, TOP_N), [plans]);
+  const points = useMemo(() => top.map((plan, index) => ({ id: plan.climate.query, lat: plan.climate.lat, lon: plan.climate.lon, rank: index + 1 })), [top]);
+  const [openId, setOpenId] = useState<string | null>(top[0]?.climate.query ?? null);
+  return <main className="plan-main">
+    <section className="plan-hero rural">
+      <span className="mono">CLIMATE MATCH · NASA POWER · {plans.length} TOWNS COMPARED</span>
+      <h1>Your top {top.length} regions for {cropList(brief)}.</h1>
+      <dl className="plan-stats">
+        <div><dt>Land</dt><dd>{formatArea(brief.areaSqft)}</dd></div>
+        <div><dt>Crops</dt><dd>{briefCrops(brief).length}</dd></div>
+        <div><dt>Preferred start</dt><dd>{MONTH_LONG[brief.preferredMonth]}</dd></div>
+        <div><dt>Best match</dt><dd>{top[0]?.climate.name ?? '—'}</dd></div>
+      </dl>
+    </section>
+
+    <section className="plan-grid">
+      <ol className="region-list">
+        {top.map((plan, index) => {
+          const open = openId === plan.climate.query;
+          const wait = plan.moveInMonth === null ? null : (plan.moveInMonth - brief.preferredMonth + 12) % 12;
+          return <li key={plan.climate.query} className={open ? 'region-card open' : 'region-card'}>
+            <button className="region-summary" onClick={() => setOpenId(open ? null : plan.climate.query)}>
+              <span className="roof-rank">{index + 1}</span>
+              <div><strong>{plan.climate.name}</strong><span className="roof-address"><MapPin size={12} /> {plan.climate.region}</span></div>
+              <div className="region-move"><small>START</small><b>{plan.moveInMonth === null ? 'No season' : MONTH_SHORT[plan.moveInMonth]}</b><small>{wait === null ? '' : wait === 0 ? 'right away' : `in ${wait} mo`}</small></div>
+              <div className="region-score"><b>{plan.score}</b><small>FIT</small></div>
+            </button>
+            {open && <div className="region-detail">
+              <div className="region-metrics">
+                <span><Sun size={14} /><b>{plan.climate.annual.solarMjM2Day.toFixed(1)}</b> MJ/m²/day</span>
+                <span><ThermometerSun size={14} /><b>{plan.climate.annual.temperatureC.toFixed(1)}°C</b> mean</span>
+                <span><Droplets size={14} /><b>{plan.climate.annual.precipitationMmDay.toFixed(1)}</b> mm/day rain</span>
+              </div>
+              <CropCalendar timings={plan.timings} preferredMonth={brief.preferredMonth} />
+              <ul className="region-reasons">{plan.reasons.map((reason) => <li key={reason}>{reason}</li>)}</ul>
+            </div>}
+          </li>;
+        })}
+        {errors.map((item) => <li key={item.location} className="plan-empty">{item.location}: {item.error}</li>)}
+      </ol>
+      <aside className="plan-side">
+        <div className="plan-globe"><SearchGlobe points={points} onPointClick={setOpenId} unitLabel="REGIONS" /></div>
+        <div className="plan-card"><header><CircleAlert size={15} /><strong>How this is scored</strong></header><p>Fit combines how many of your crops have a full growing season (45%), how soon they can start after your preferred month (25%), season length (15%), and annual solar resource (15%). A month counts when NASA’s average temperature sits inside the crop’s range. Soil, water rights, parcels, and price are not assessed yet.</p></div>
+      </aside>
+    </section>
+  </main>;
+}

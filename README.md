@@ -22,6 +22,23 @@ a regional screening heuristic; it does not claim that a parcel is farmland or
 assess USDA soil capability, water rights, flood risk, ownership, price, or
 availability.
 
+## Guided search
+
+**Get started** on the home page opens a five-step onboarding at `#/start`:
+space, crops, location, start month, review. Under one acre runs the urban
+rooftop Deep Agent; an acre or more runs the rural region match.
+
+- Crop timing uses `POST /api/climate/monthly` (NASA POWER monthly
+  climatology, no key). A month counts as growable when its mean temperature
+  sits inside the crop's range; a start month works when the crop's whole
+  growing period is growable. Crop profiles live in `src/services/cropPlan.ts`.
+- Urban: the brief sets the agent's sun-hour target (the most demanding crop),
+  growing area, and two season dates. The top five roofs open in the existing
+  3D, infrared, and sunlight workspace preset to those values.
+- Rural: towns in the chosen regions are scored on crop fit, how soon planting
+  can start, season length, and solar resource. Soil, water rights, and
+  parcels are not assessed.
+
 ## Environment
 
 Set the Vexcel key only on the server:
@@ -48,6 +65,7 @@ LANDLENS_AGENT_BASE_URL="https://ellm.nrp-nautilus.io/v1" # optional default
 LANDLENS_AGENT_MODEL="qwen3"                              # default; glm-5 or minimax-m2 also work
 LANDLENS_AGENT_TIMEOUT_MS=420000                          # optional, default 420000
 LANDLENS_AGENT_RECURSION_LIMIT=80                         # optional, default 80
+LANDLENS_AGENT_MAX_CANDIDATES=8                           # optional, roofs the agent checks
 ```
 
 A single agent calls the four tools directly. On NRP, `qwen3` finishes a

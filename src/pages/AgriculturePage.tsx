@@ -27,7 +27,7 @@ function offsetForDate(date: string, timeZone: string) {
   return (Date.UTC(Number(parts.year), Number(parts.month) - 1, Number(parts.day), Number(parts.hour), Number(parts.minute), Number(parts.second)) - instant.getTime()) / 3_600_000;
 }
 
-function SiteWorkspace({ result, onClose }: { result: SearchResult; onClose: () => void }) {
+export function SiteWorkspace({ result, onClose, initialDate = '2026-04-15', initialTargetHours = 6, targetAreaSqft = 5_000, backLabel = 'Results' }: { result: SearchResult; onClose: () => void; initialDate?: string; initialTargetHours?: number; targetAreaSqft?: number; backLabel?: string }) {
   const roofArea = result.property?.roofAreaSqft ?? 5_000;
   const uncenteredRoofGeometry = useMemo(() => roofWktToMetricGeometry(result.property?.roofWkt, result.lat, result.lon, 0), [result.lat, result.lon, result.property?.roofWkt]);
   const imageRadiusM = Math.min(250, Math.max(55, Math.sqrt(roofArea * .092903) * .9, geometryRequiredRadius(uncenteredRoofGeometry)));
@@ -73,14 +73,14 @@ function SiteWorkspace({ result, onClose }: { result: SearchResult; onClose: () 
   }, [elevationGrid, elevations]);
   const obstructions = elevations ? elevationModel?.obstructions ?? [] : null;
   const initialSelection = useMemo<AreaSelection>(() => {
-    const scale = Math.sqrt(Math.min(1, 5_000 / roofArea));
+    const scale = Math.sqrt(Math.min(1, targetAreaSqft / roofArea));
     return { x: roofBounds.x + roofBounds.width * (1 - scale) / 2, y: roofBounds.y + roofBounds.height * (1 - scale) / 2, width: roofBounds.width * scale, height: roofBounds.height * scale };
-  }, [roofArea, roofBounds]);
+  }, [roofArea, roofBounds, targetAreaSqft]);
   const [selection, setSelection] = useState(initialSelection);
-  const [date, setDate] = useState('2026-04-15');
+  const [date, setDate] = useState(initialDate);
   const [minute, setMinute] = useState(720);
   const [playing, setPlaying] = useState(false);
-  const [targetHours, setTargetHours] = useState(6);
+  const [targetHours, setTargetHours] = useState(initialTargetHours);
   const [layer, setLayer] = useState<'aerial' | 'infrared' | 'tour' | 'sun'>('sun');
   const [sunView, setSunView] = useState<'model' | 'analysis'>('model');
   const [solarSurface, setSolarSurface] = useState<'rgb' | 'irg'>('rgb');
@@ -105,7 +105,7 @@ function SiteWorkspace({ result, onClose }: { result: SearchResult; onClose: () 
   const buildingName = costar?.buildingName || costar?.address || `${result.lat.toFixed(5)}, ${result.lon.toFixed(5)}`;
 
   return <div className="site-workspace">
-    <button className="site-floating-back" onClick={onClose}><ArrowLeft size={16} /> Results</button>
+    <button className="site-floating-back" onClick={onClose}><ArrowLeft size={16} /> {backLabel}</button>
     <div className="site-layout">
       <section className="site-visual">
         <div className="layer-tabs">
