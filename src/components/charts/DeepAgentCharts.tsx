@@ -143,7 +143,9 @@ export type CurveSeries = { id: string; name: string; curve: Array<{ month: numb
 export function PlantingCurveChart({ series, preferredMonth, focusId = null }: { series: CurveSeries[]; preferredMonth: number; focusId?: string | null }) {
   const tip = useTip();
   const [hover, setHover] = useState<number | null>(null);
-  const width = useWidth(tip.ref); const height = 280; const m = { l: 40, r: 96, t: 22, b: 30 };
+  // Bumping this replays the draw-in animation (clicking the chart, switching crops).
+  const [replay, setReplay] = useState(0);
+  const width = useWidth(tip.ref); const height = 280; const m = { l: 40, r: 128, t: 22, b: 30 };
   const band = (width - m.l - m.r) / 12;
   const x = (month: number) => m.l + (month + .5) * band;
   const y = (value: number) => height - m.b - (Math.max(0, Math.min(100, value)) / 100) * (height - m.t - m.b);
@@ -156,7 +158,8 @@ export function PlantingCurveChart({ series, preferredMonth, focusId = null }: {
   }, [usable]);
   if (!usable.length) return <p className="viz-empty">The crop model did not return monthly curves for this search. Run it again with the model online to see them.</p>;
   return <div className="viz" ref={tip.ref}>
-    <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Crop-model fit by planting month">
+    <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Crop-model fit by planting month (click to replay)" onClick={() => setReplay((value) => value + 1)} style={{ cursor: 'pointer' }}>
+      <g key={`${focusId ?? 'all'}-${replay}`} className="viz-draw-scope">
       <rect x={m.l + preferredMonth * band} y={m.t} width={band} height={height - m.t - m.b} className="viz-col-highlight" />
       <text x={x(preferredMonth)} y={m.t - 8} textAnchor="middle" className="viz-ref-label">Your start</text>
       {[0, 25, 50, 75, 100].map((tick) => <g key={tick}><line x1={m.l} x2={width - m.r} y1={y(tick)} y2={y(tick)} className="viz-grid" /><text x={m.l - 8} y={y(tick) + 4} textAnchor="end" className="viz-axis">{tick}</text></g>)}
@@ -167,14 +170,16 @@ export function PlantingCurveChart({ series, preferredMonth, focusId = null }: {
         const upper = item.curve.map((point) => `${x(point.month)},${y(point.score + (point.uncertainty ?? 0))}`);
         const lower = item.curve.slice().reverse().map((point) => `${x(point.month)},${y(point.score - (point.uncertainty ?? 0))}`);
         const dim = focusId !== null && focusId !== item.id;
+        const delay = (dim ? 0 : .15) + index * .18;
         return <g key={item.id} opacity={dim ? .3 : 1}>
-          {focusId === item.id && <polygon points={[...upper, ...lower].join(' ')} fill={color} opacity={.14} />}
-          <polyline points={item.curve.map((point) => `${x(point.month)},${y(point.score)}`).join(' ')} fill="none" stroke={color} strokeWidth={2} strokeLinejoin="round" />
-          {item.suitableMonths.map((month) => <circle key={month} cx={x(month)} cy={y(item.curve[month].score)} r={3.5} fill={color} className="viz-ring" />)}
-          {item.plantMonth !== null && <g><circle cx={x(item.plantMonth)} cy={y(item.curve[item.plantMonth].score)} r={7} fill="#fff" stroke={color} strokeWidth={2.5} /><circle cx={x(item.plantMonth)} cy={y(item.curve[item.plantMonth].score)} r={3} fill={color} /></g>}
+          {focusId === item.id && <polygon points={[...upper, ...lower].join(' ')} fill={color} opacity={.14} className="viz-fade" style={{ animationDelay: `${delay + .9}s` }} />}
+          <polyline points={item.curve.map((point) => `${x(point.month)},${y(point.score)}`).join(' ')} fill="none" stroke={color} strokeWidth={dim ? 2 : 2.5} strokeLinejoin="round" strokeLinecap="round" pathLength={1} className="viz-draw" style={{ animationDelay: `${delay}s` }} />
+          {item.suitableMonths.map((month) => <circle key={month} cx={x(month)} cy={y(item.curve[month].score)} r={3.5} fill={color} className="viz-ring viz-pop" style={{ animationDelay: `${delay + .2 + (month / 12) * 1.1}s`, transformOrigin: `${x(month)}px ${y(item.curve[month].score)}px` }} />)}
+          {item.plantMonth !== null && <g className="viz-pop" style={{ animationDelay: `${delay + 1.35}s`, transformOrigin: `${x(item.plantMonth)}px ${y(item.curve[item.plantMonth].score)}px` }}><circle cx={x(item.plantMonth)} cy={y(item.curve[item.plantMonth].score)} r={7} fill="#fff" stroke={color} strokeWidth={2.5} /><circle cx={x(item.plantMonth)} cy={y(item.curve[item.plantMonth].score)} r={3} fill={color} /></g>}
         </g>;
       })}
-      {labels.map((label) => <g key={label.id}><circle cx={width - m.r + 12} cy={label.y - 4} r={4} fill={label.color} /><text x={width - m.r + 20} y={label.y} className="viz-label">{label.name.length > 12 ? `${label.name.slice(0, 11)}…` : label.name}</text></g>)}
+      {labels.map((label) => <g key={label.id} className="viz-fade" style={{ animationDelay: '1.2s' }}><circle cx={width - m.r + 12} cy={label.y - 4} r={4} fill={label.color} /><text x={width - m.r + 20} y={label.y} className="viz-label">{label.name.length > 16 ? `${label.name.slice(0, 15)}…` : label.name}</text></g>)}
+      </g>
       {MONTHS.map((_, month) => <rect key={month} x={m.l + month * band} y={m.t} width={band} height={height - m.t - m.b} fill="transparent"
         onMouseMove={(event) => { setHover(month); tip.show(event, <><strong>Plant in {MONTH_NAMES[month]}</strong>{usable.map((item, index) => { const point = item.curve[month]; return <span key={item.id}><i style={{ background: CROP_COLORS[index % CROP_COLORS.length] }} />{item.name}: {point.score.toFixed(0)}{point.uncertainty !== null ? ` ± ${point.uncertainty.toFixed(0)}` : ''}{item.plantMonth === month ? ' · recommended' : item.suitableMonths.includes(month) ? ' · workable' : ''}</span>; })}</>); }}
         onMouseLeave={() => { setHover(null); tip.hide(); }} />)}

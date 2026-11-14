@@ -72,7 +72,7 @@ export default function DeepAgentSite({ result, rank, total, simulation, predict
         {simulation ? simulation.perDate.map((item) => <div key={item.date}><span className="das-label">{shortDate(item.date)}</span><strong>{item.areaMeetingTargetSqft === null ? '—' : `${fmt(item.areaMeetingTargetSqft)} ft²`}</strong><small>get {criteria.targetHours} h+ · avg {item.meanHours === null ? '—' : `${item.meanHours.toFixed(1)} h`}</small></div>) : <div><strong>No sunlight simulation for this roof</strong></div>}
         <div className="das-sun-total"><span className="das-label">On every date</span><strong>{sunlit === null ? '—' : `${fmt(sunlit)} ft²`}</strong><small>{simulation?.geometry.obstructionCount ?? 0} obstructions · {simulation?.geometry.validSamples ?? 0} height points</small></div>
       </div>
-      <SiteWorkspace embedded result={result} onClose={onClose} initialDate={criteria.dates[0]} initialTargetHours={criteria.targetHours} targetAreaSqft={criteria.targetAreaSqft} />
+      <SiteWorkspace embedded initialSurfaceMode="clean" result={result} onClose={onClose} initialDate={criteria.dates[0]} initialTargetHours={criteria.targetHours} targetAreaSqft={criteria.targetAreaSqft} />
     </main>}
 
     {tab === 'model' && <ModelTab predictions={predictions} crops={crops} preferredMonth={preferredMonth} mlModel={mlModel} />}

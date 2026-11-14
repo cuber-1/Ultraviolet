@@ -66,3 +66,14 @@
   .viz-timeline-row { grid-template-columns: 84px repeat(12, minmax(0, 1fr)); }
   .viz-timeline-row.head em { font-size: 8px; }
 }
+
+/* Planting-curve draw-in: lines trace left to right, bands and markers follow. */
+.viz-draw { stroke-dasharray: 1; stroke-dashoffset: 1; animation: vizDraw 1.4s cubic-bezier(.45, .05, .25, 1) forwards; }
+.viz-fade { opacity: 0; animation: vizFade .6s ease forwards; }
+.viz-pop { opacity: 0; transform: scale(.2); animation: vizPop .45s cubic-bezier(.2, 1.6, .4, 1) forwards; }
+@keyframes vizDraw { to { stroke-dashoffset: 0; } }
+@keyframes vizFade { to { opacity: 1; } }
+@keyframes vizPop { to { opacity: 1; transform: scale(1); } }
+polygon.viz-fade { animation-name: vizFadeBand; }
+@keyframes vizFadeBand { to { opacity: .14; } }
+@media (prefers-reduced-motion: reduce) { .viz-draw, .viz-fade, .viz-pop { animation: none; stroke-dashoffset: 0; opacity: 1; transform: none; } polygon.viz-fade { opacity: .14; } }
