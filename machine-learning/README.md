@@ -29,6 +29,9 @@ artifact instead, use the full setup below. Because the repository is private,
 the installer uses an authenticated GitHub CLI session (`gh auth login`) or a
 `GITHUB_TOKEN`.
 
+Every push to `main` repeats the release installation and loopback HTTP test on
+a GitHub-hosted Apple Silicon (`macos-15`, arm64) runner with Python 3.12.
+
 ```bash
 python3 -m venv machine-learning/.venv
 machine-learning/.venv/bin/pip install -r machine-learning/requirements.txt
