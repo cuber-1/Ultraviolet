@@ -50,7 +50,7 @@ export type SearchResponse = {
   source: string;
 };
 
-export async function searchVexcel(input: { query: string }, signal?: AbortSignal) {
+export async function searchVexcel(input: { query: string; location?: string }, signal?: AbortSignal) {
   const response = await fetch('/api/vexcel/search', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

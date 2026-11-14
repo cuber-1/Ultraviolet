@@ -294,8 +294,10 @@ async function elevationsAt(key: string, points: Array<{ lat: number; lon: numbe
   };
 }
 
-async function searchCandidates(key: string, costar: ReturnType<typeof costarIndex>, input: { query: string; lat: number; lon: number; radiusM: number }) {
-  const place = locationPhrase(input.query);
+async function searchCandidates(key: string, costar: ReturnType<typeof costarIndex>, input: { query: string; lat: number; lon: number; radiusM: number; location?: string }) {
+  const explicitPlace = input.location?.trim();
+  const allCoverage = explicitPlace && /^(?:all (?:available )?(?:areas|vexcel coverage)|available vexcel coverage)$/i.test(explicitPlace);
+  const place = explicitPlace ? (allCoverage ? null : explicitPlace) : locationPhrase(input.query);
   let searchBody: JsonRecord;
   let searchDescription: string;
   if (place) {
@@ -438,7 +440,7 @@ export function vexcelApiPlugin(root: string) {
     try {
       for (const watch of watches.values()) {
         try {
-          const candidates = await searchCandidates(key, costar, { query: watch.goal, lat: watch.lat, lon: watch.lon, radiusM: watch.radiusM });
+          const candidates = await searchCandidates(key, costar, { query: watch.goal, location: watch.location, lat: watch.lat, lon: watch.lon, radiusM: watch.radiusM });
           const currentOpenings = candidates.filter(isOpening);
           const known = new Set(watch.knownOpenings);
           const newOpenings = currentOpenings.filter((candidate) => !known.has(openingFingerprint(candidate)));
@@ -495,7 +497,7 @@ export function vexcelApiPlugin(root: string) {
         const targetHours = Math.min(14, Math.max(1, Number(input.targetHours) || 6));
         const targetAreaSqft = Math.max(100, Number(input.targetAreaSqft) || 5_000);
         if (!['imessage', 'sms', 'telegram', 'email', 'whatsapp_business'].includes(platform) || !handle || !Number.isFinite(lat) || !Number.isFinite(lon)) return json(res, 400, { error: 'Platform, destination, and geographic scope are required.' });
-        const current = await searchCandidates(key, costar, { query: goal, lat, lon, radiusM });
+        const current = await searchCandidates(key, costar, { query: goal, location, lat, lon, radiusM });
         const conversation = await createPhotonConversation(platform, handle);
         const watch: PhotonWatch = { id: `watch_${Date.now().toString(36)}`, goal, location, lat, lon, radiusM, dates, targetHours, targetAreaSqft, platform, handle, spaceId: conversation.spaceId, knownOpenings: current.filter(isOpening).map(openingFingerprint), createdAt: new Date().toISOString(), lastCheckedAt: null };
         const message = await sendPhotonMessage(conversation.spaceId, `LandLens is watching ${location} for new rooftop openings that match:\n\n${goal}\n\nNew listings will be checked with property records, roof geometry, and sunlight before you hear about them.`);
@@ -505,7 +507,8 @@ export function vexcelApiPlugin(root: string) {
       if (url.pathname === '/api/vexcel/search' && req.method === 'POST') {
         const input = await body(req);
         const query = String(input.query || 'large flat unobstructed commercial rooftop');
-        const hydrated = await searchCandidates(key, costar, { query, lat: 0, lon: 0, radiusM: 20_000 });
+        const searchLocation = typeof input.location === 'string' ? input.location.trim() : undefined;
+        const hydrated = await searchCandidates(key, costar, { query, location: searchLocation, lat: 0, lon: 0, radiusM: 20_000 });
         return json(res, 200, { query, results: hydrated, source: costar.available ? 'Vexcel available embedding collections + property geometry + CoStar local property inventory' : 'Vexcel available embedding collections + property geometry' });
       }
       if (url.pathname === '/api/vexcel/elevation' && req.method === 'POST') {
@@ -519,11 +522,12 @@ export function vexcelApiPlugin(root: string) {
         const lat = Number(input.lat); const lon = Number(input.lon);
         const radiusM = Math.min(20_000, Math.max(500, Number(input.radiusM) || 8_000));
         const query = String(input.query || 'large flat commercial rooftop');
+        const searchLocation = typeof input.location === 'string' ? input.location.trim() : undefined;
         const dates = Array.isArray(input.dates) ? input.dates.map(String).slice(0, 6) : ['2026-04-15', '2026-10-15'];
         const targetHours = Math.min(14, Math.max(1, Number(input.targetHours) || 6));
         const targetAreaSqft = Math.max(100, Number(input.targetAreaSqft) || 5_000);
         if (!Number.isFinite(lat) || !Number.isFinite(lon)) return json(res, 400, { error: 'A valid search center is required.' });
-        const candidates = await searchCandidates(key, costar, { query, lat, lon, radiusM });
+        const candidates = await searchCandidates(key, costar, { query, location: searchLocation, lat, lon, radiusM });
         const simulations: SunlightEvidence[] = [];
         for (const candidate of candidates) simulations.push(await simulateCandidate(key, candidate, dates, targetHours, targetAreaSqft));
         const byId = new Map(candidates.map((candidate) => [candidate.id, candidate]));
@@ -542,6 +546,7 @@ export function vexcelApiPlugin(root: string) {
         const lat = Number(input.lat); const lon = Number(input.lon);
         const radiusM = Math.min(20_000, Math.max(500, Number(input.radiusM) || 8_000));
         const goal = String(input.goal || 'Find a suitable rooftop for urban agriculture.');
+        const searchLocation = typeof input.location === 'string' ? input.location.trim() : undefined;
         const dates = Array.isArray(input.dates) ? input.dates.map(String).slice(0, 6) : ['2026-04-15', '2026-10-15'];
         const targetHours = Math.min(14, Math.max(1, Number(input.targetHours) || 6));
         const targetAreaSqft = Math.max(100, Number(input.targetAreaSqft) || 5_000);
@@ -555,7 +560,7 @@ export function vexcelApiPlugin(root: string) {
         const geometryCache = new Map<string, Promise<ResolvedGeometry | null>>();
         const candidateCache = new Map<string, AgentCandidate>();
         const search = async (searchQuery: string) => {
-          const results = await searchCandidates(key, costar, { query: searchQuery, lat, lon, radiusM });
+          const results = await searchCandidates(key, costar, { query: searchQuery, location: searchLocation, lat, lon, radiusM });
           results.forEach((candidate) => candidateCache.set(candidate.id, candidate));
           return results;
         };
@@ -569,7 +574,7 @@ export function vexcelApiPlugin(root: string) {
           return simulateCandidate(key, candidate, requestedDates, requestedHours, requestedArea, await geometryCache.get(candidate.id)!);
         };
         try {
-          const output = await runLandLensAgent({ goal, followUp: typeof input.followUp === 'string' ? input.followUp : undefined, location: locationPhrase(goal) || 'all available Vexcel coverage', dates, targetHours, targetAreaSqft }, { search, geometry, simulate: sunlight }, (event) => send({ type: 'progress', ...event }));
+          const output = await runLandLensAgent({ goal, followUp: typeof input.followUp === 'string' ? input.followUp : undefined, location: searchLocation || locationPhrase(goal) || 'all available Vexcel coverage', dates, targetHours, targetAreaSqft }, { search, geometry, simulate: sunlight }, (event) => send({ type: 'progress', ...event }));
           const simulatedIds = new Set(output.simulations.map((item) => item.candidateId));
           for (const candidate of output.candidates) if (!simulatedIds.has(candidate.id)) output.simulations.push(await sunlight(candidate, dates, targetHours, targetAreaSqft));
           const byId = new Map(output.candidates.map((candidate) => [candidate.id, candidate]));
