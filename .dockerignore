@@ -3,9 +3,9 @@
 node_modules
 dist
 runtime
-ml/.venv
-ml/data
-ml/artifacts
-ml/runs
+machine-learning/.venv
+machine-learning/data
+machine-learning/artifacts
+machine-learning/runs
 __pycache__
 *.pyc

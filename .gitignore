@@ -4,9 +4,9 @@ dist/
 .DS_Store
 .env
 runtime/
-ml/.venv/
-ml/data/
-ml/artifacts/
-ml/runs/
-ml/__pycache__/
-ml/cropfit/__pycache__/
+machine-learning/.venv/
+machine-learning/data/
+machine-learning/artifacts/
+machine-learning/runs/
+machine-learning/__pycache__/
+machine-learning/cropfit/__pycache__/

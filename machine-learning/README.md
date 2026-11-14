@@ -8,23 +8,23 @@ not return pounds, revenue, or a buy/sell recommendation.
 ## Train
 
 ```bash
-python3 -m venv ml/.venv
-ml/.venv/bin/pip install -r ml/requirements.txt
-ml/.venv/bin/python ml/download_ecocrop.py
-PYTHONPATH=ml ml/.venv/bin/python -m cropfit.training
+python3 -m venv machine-learning/.venv
+machine-learning/.venv/bin/pip install -r machine-learning/requirements.txt
+machine-learning/.venv/bin/python machine-learning/download_ecocrop.py
+PYTHONPATH=machine-learning machine-learning/.venv/bin/python -m cropfit.training
 ```
 
 The evaluation split holds out entire crop profiles, so reported metrics test
 generalization to unseen species rather than memorization of random scenarios.
 Each run writes its full configuration, per-round train/validation history,
 learning-rate schedule, error distribution, and feature importance to
-`ml/runs/<run-id>/`. A candidate is only promoted when it improves held-out
+`machine-learning/runs/<run-id>/`. A candidate is only promoted when it improves held-out
 crop-profile error.
 
 ## Serve
 
 ```bash
-PYTHONPATH=ml ml/.venv/bin/uvicorn cropfit.api:app --host 127.0.0.1 --port 8100
+PYTHONPATH=machine-learning machine-learning/.venv/bin/python -m uvicorn cropfit.api:app --host 127.0.0.1 --port 8100
 ```
 
 The service obtains monthly climatology from NASA POWER unless the caller

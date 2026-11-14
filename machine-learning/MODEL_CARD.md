@@ -13,7 +13,7 @@
 The CUDA XGBoost candidate completed 500 rounds with a cosine learning-rate
 schedule from 0.08 to 0.005. It was not promoted because held-out-profile MAE
 was worse (8.951). Every run stores `history.csv`, `config.json`, metrics,
-learning-rate/loss/error plots, and feature-importance plots under `ml/runs/`.
+learning-rate/loss/error plots, and feature-importance plots under `machine-learning/runs/`.
 
 ## Intended use
 
