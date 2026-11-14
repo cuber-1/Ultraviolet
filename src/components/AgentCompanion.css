@@ -106,3 +106,9 @@
   .agent-companion-character, .agent-companion-bubble { opacity: 1; }
   .agent-companion-character, .agent-companion-bubble, .agent-companion-body, .agent-companion-shadow, .agent-companion-eye, .agent-companion-arm, .agent-companion-leg { animation: none; }
 }
+
+/* Mouse companion: larger, readable bubble text. */
+.agent-companion { width: 120px; }
+.agent-companion-character { width: 120px; }
+.agent-companion-bubble span { font-size: 14px; }
+.agent-companion-bubble small { max-width: 260px; font-size: 12px; }

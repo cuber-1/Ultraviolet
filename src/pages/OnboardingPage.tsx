@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, Building2, Check, Sprout, Tractor, Warehouse } from 'lucide-react';
 import Wordmark from '../components/Wordmark';
+import MouseScribe from '../components/MouseScribe';
 import {
   ACRE_SQFT, CROPS, MONTH_LONG, MONTH_SHORT, RURAL_REGIONS, URBAN_AREAS,
   fetchMlCapabilities, formatArea, loadBrief, saveBrief, scaleForArea, type Brief, type MlCapabilities,
@@ -57,6 +58,16 @@ export default function OnboardingPage() {
     listRuns(controller.signal).then((runs) => setSavedMatch(runs.find((item) => item.key === key && item.demo) ?? runs.find((item) => item.key === key) ?? null)).catch(() => setSavedMatch(null));
     return () => controller.abort();
   }, [step, key]);
+  // The mascot's notes: one line per answer so far.
+  const notes = [
+    `${formatArea(areaSqft)} ${scale === 'urban' ? 'rooftop' : 'of farmland'}`,
+    chosenCrops.length ? chosenCrops.map((id) => CROPS.find((crop) => crop.id === id)?.name).join(', ') : null,
+    step >= 2 ? (scale === 'urban' ? URBAN_AREAS.find((area) => area.value === urbanArea)?.label ?? null : ruralRegions.map((id) => RURAL_REGIONS.find((region) => region.id === id)?.label).join(', ') || null) : null,
+    step >= 3 ? `Start in ${MONTH_LONG[preferredMonth]}` : null,
+  ].filter((note): note is string => Boolean(note));
+  const notesKey = notes.join('|');
+  const [scribbling, setScribbling] = useState(true);
+  useEffect(() => { setScribbling(true); const timer = window.setTimeout(() => setScribbling(false), 1600); return () => window.clearTimeout(timer); }, [notesKey]);
   const openSaved = () => { if (!savedMatch) return; saveBrief(brief); navigate('/plan', { state: { brief, savedId: savedMatch.id } }); };
 
   return <div className="onboarding">
@@ -137,6 +148,14 @@ export default function OnboardingPage() {
           : 'We read NASA monthly climate for each farming town and match it to your crops’ growing calendars. This takes a few seconds.'}</p>
       </section>}
     </main>
+
+    <aside className="onboarding-scribe" aria-label="Your answers so far">
+      <div className="onboarding-notes">
+        <span>{scribbling ? 'Writing that down…' : 'My notes'}</span>
+        <ol>{notes.map((note, index) => <li key={note} className={index === notes.length - 1 ? 'latest' : ''}>{note}</li>)}</ol>
+      </div>
+      <MouseScribe key={notes.length} writing={scribbling} lines={notes.length + 1} thinking={!scribbling} />
+    </aside>
 
     <footer className="onboarding-footer">
       <span className="mono">{STEPS[step].toUpperCase()} · {step + 1} / {STEPS.length}</span>

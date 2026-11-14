@@ -1,0 +1,35 @@
+.mouse-scribe { display: block; width: 100%; height: auto; overflow: visible; }
+.mouse-scribe .ms-shadow { fill: rgba(74, 52, 38, .14); }
+.mouse-scribe .ms-tail { fill: none; stroke: #e2a8a6; stroke-width: 4.5; stroke-linecap: round; transform-origin: 118px 150px; animation: msTail 2.6s ease-in-out infinite; }
+.mouse-scribe .ms-foot { fill: #d8b5ae; }
+.mouse-scribe .ms-cheek { fill: #f3a9a5; opacity: .45; }
+.mouse-scribe .ms-body { transform-origin: 86px 168px; animation: msBreathe 3.2s ease-in-out infinite; }
+.mouse-scribe .ms-head { transform-origin: 86px 100px; animation: msHead 6s ease-in-out infinite; }
+.mouse-scribe .ms-ear-left { transform-origin: 60px 56px; animation: msEar 4.5s ease-in-out infinite; }
+.mouse-scribe .ms-ear-right { transform-origin: 112px 56px; animation: msEar 5.3s 1.2s ease-in-out infinite; }
+.mouse-scribe .ms-eyes { transform-origin: 86px 68px; animation: msBlink 4.2s ease-in-out infinite; }
+.mouse-scribe .ms-whiskers { transform-origin: 86px 88px; animation: msWhisker 3s ease-in-out infinite; }
+.mouse-scribe .ms-line { stroke: #b7a593; stroke-width: 2; stroke-linecap: round; stroke-dasharray: 40; stroke-dashoffset: 40; opacity: 0; }
+.mouse-scribe .ms-line.on { opacity: 1; stroke-dashoffset: 0; transition: stroke-dashoffset .9s ease, opacity .2s; }
+.mouse-scribe .ms-line.latest { stroke: #e85d04; }
+.mouse-scribe.writing .ms-line.latest { animation: msWriteLine 1.1s ease forwards; }
+.mouse-scribe.writing .ms-pencil-arm { transform-origin: 96px 126px; animation: msScribble .28s ease-in-out infinite alternate; }
+.mouse-scribe .ms-thought { fill: #fff; stroke: #e2d4c5; stroke-width: 1.2; opacity: 0; }
+.mouse-scribe.thinking .ms-thought { animation: msThink 2.4s ease-in-out infinite; }
+.mouse-scribe.thinking .ms-thought circle:nth-child(2) { animation: msPop 2.4s .2s ease-in-out infinite; }
+.mouse-scribe.thinking .ms-thought circle:nth-child(3) { animation: msPop 2.4s .4s ease-in-out infinite; }
+
+@keyframes msTail { 0%, 100% { transform: rotate(0); } 50% { transform: rotate(-9deg); } }
+@keyframes msBreathe { 0%, 100% { transform: scale(1, 1); } 50% { transform: scale(1.012, .99); } }
+@keyframes msHead { 0%, 70%, 100% { transform: rotate(0); } 78% { transform: rotate(-6deg) translateY(-2px); } 90% { transform: rotate(-6deg) translateY(-2px); } }
+@keyframes msEar { 0%, 86%, 100% { transform: rotate(0); } 90% { transform: rotate(-8deg); } 94% { transform: rotate(5deg); } }
+@keyframes msBlink { 0%, 44%, 50%, 100% { transform: scaleY(1); } 47% { transform: scaleY(.1); } }
+@keyframes msWhisker { 0%, 100% { transform: rotate(0); } 50% { transform: rotate(1.5deg); } }
+@keyframes msScribble { from { transform: translate(-2px, 1px) rotate(-3deg); } to { transform: translate(3px, -1px) rotate(4deg); } }
+@keyframes msWriteLine { from { stroke-dashoffset: 40; } to { stroke-dashoffset: 0; } }
+@keyframes msThink { 0%, 100% { opacity: 0; } 20%, 80% { opacity: 1; } }
+@keyframes msPop { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-2px); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .mouse-scribe *, .mouse-scribe { animation: none !important; }
+}
