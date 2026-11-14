@@ -1,4 +1,5 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
+import { createHash } from 'node:crypto';
 
 // Crop-suitability model client. See machine-learning/INTEGRATION.md for the wire format.
 // Failover order: ML_MODEL_URL -> ML_MODEL_FALLBACK_URL -> built-in calendar.
@@ -174,7 +175,35 @@ type CropFitResult = {
   observedYieldEvidence?: { county?: unknown; state?: unknown; distanceKm?: number; years?: unknown[]; observations?: number; meanPercentile?: number; p10Percentile?: number; p90Percentile?: number; meanYieldBushelsPerAcre?: number; observedYieldPrior?: { expectedPercentile?: number; interval80?: unknown[]; interval90?: unknown[]; historyBucket?: unknown; calibrationExamples?: number }; history?: Array<{ year?: number; yieldBushelsPerAcre?: number; percentile?: number }>; evidenceGrade?: unknown; source?: unknown; disclaimer?: unknown } | null;
 };
 const apiKindCache = new Map<string, { kind: 'contract' | 'cropfit'; expires: number }>();
-const cropFitCache = new Map<string, { expires: number; value: Promise<CropFitResult> }>();
+export class BoundedExpiringCache<T> {
+  private readonly entries = new Map<string, { expires: number; value: T }>();
+  readonly maxEntries: number;
+  constructor(maxEntries: number) {
+    if (!Number.isInteger(maxEntries) || maxEntries < 1) throw new Error('Cache capacity must be a positive integer.');
+    this.maxEntries = maxEntries;
+  }
+  get size() { return this.entries.size; }
+  get(key: string, now = Date.now()) {
+    const entry = this.entries.get(key);
+    if (!entry) return undefined;
+    if (entry.expires <= now) { this.entries.delete(key); return undefined; }
+    this.entries.delete(key); this.entries.set(key, entry);
+    return entry.value;
+  }
+  set(key: string, value: T, expires: number) {
+    this.entries.delete(key); this.entries.set(key, { expires, value });
+    while (this.entries.size > this.maxEntries) {
+      const oldest = this.entries.keys().next().value;
+      if (oldest === undefined) break;
+      this.entries.delete(oldest);
+    }
+  }
+  delete(key: string) { return this.entries.delete(key); }
+}
+
+export const CROPFIT_CACHE_MAX_ENTRIES = 2_048;
+export const cropFitRequestCacheKey = (url: string, payload: object) => `${url}:${createHash('sha256').update(JSON.stringify(payload)).digest('base64url')}`;
+const cropFitCache = new BoundedExpiringCache<Promise<CropFitResult>>(CROPFIT_CACHE_MAX_ENTRIES);
 
 async function modelApiKind(url: string): Promise<'contract' | 'cropfit'> {
   const forced = process.env.ML_MODEL_API?.trim().toLowerCase();
@@ -191,22 +220,23 @@ async function modelApiKind(url: string): Promise<'contract' | 'cropfit'> {
 }
 
 function cropFitCall(url: string, crop: string, lat: number, lon: number, climate: MlClimate | null) {
-  const key = `${url}:${crop}:${lat.toFixed(2)},${lon.toFixed(2)}:h${climate?.history?.length ?? 0}`;
+  const payload = {
+    crop, latitude: Number(lat.toFixed(4)), longitude: Number(lon.toFixed(4)), soilPh: Number(process.env.ML_SOIL_PH) || 6.5, irrigated: process.env.ML_IRRIGATED !== 'false',
+    climate: climate ? MONTH_KEYS.map((month, index) => ({ month: month.toUpperCase(), temperatureC: climate.temperatureC[index], precipitationMmDay: climate.precipitationMmDay[index], solarMjM2Day: climate.solarMjM2Day[index] })) : undefined,
+    climateHistory: climate?.history?.map((year) => MONTH_KEYS.map((month, index) => ({ month: month.toUpperCase(), temperatureC: year.temperatureC[index], precipitationMmDay: year.precipitationMmDay[index], solarMjM2Day: year.solarMjM2Day[index], year: year.year }))),
+  };
+  const key = cropFitRequestCacheKey(url, payload);
   const cached = cropFitCache.get(key);
-  if (cached && cached.expires > Date.now()) return cached.value;
+  if (cached) return cached;
   const value = fetch(`${url}/predict`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(modelTimeoutMs()),
-    body: JSON.stringify({
-      crop, latitude: Number(lat.toFixed(4)), longitude: Number(lon.toFixed(4)), soilPh: Number(process.env.ML_SOIL_PH) || 6.5, irrigated: process.env.ML_IRRIGATED !== 'false',
-      climate: climate ? MONTH_KEYS.map((month, index) => ({ month: month.toUpperCase(), temperatureC: climate.temperatureC[index], precipitationMmDay: climate.precipitationMmDay[index], solarMjM2Day: climate.solarMjM2Day[index] })) : undefined,
-      climateHistory: climate?.history?.map((year) => MONTH_KEYS.map((month, index) => ({ month: month.toUpperCase(), temperatureC: year.temperatureC[index], precipitationMmDay: year.precipitationMmDay[index], solarMjM2Day: year.solarMjM2Day[index], year: year.year }))),
-    }),
+    body: JSON.stringify(payload),
   }).then(async (response) => {
     const payload = await response.json().catch(() => ({})) as CropFitResult & { detail?: unknown };
     if (!response.ok) throw new Error(typeof payload.detail === 'string' ? payload.detail : `CropFit HTTP ${response.status}`);
     return payload;
   });
-  cropFitCache.set(key, { expires: Date.now() + 3_600_000, value });
+  cropFitCache.set(key, value, Date.now() + 3_600_000);
   value.catch(() => cropFitCache.delete(key));
   return value;
 }

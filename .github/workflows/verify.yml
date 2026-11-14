@@ -28,6 +28,7 @@ jobs:
       - run: npm run test:rural-ranking
       - run: npm run test:crop-expansion-policy
       - run: npm run test:crop-coverage
+      - run: npm run test:cropfit-cache
 
   cropfit:
     name: Released model inference

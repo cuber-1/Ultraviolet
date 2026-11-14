@@ -26,6 +26,7 @@
     "test:rural-ranking": "node --experimental-strip-types scripts/verifyRuralRanking.ts",
     "test:crop-expansion-policy": "node --experimental-strip-types scripts/verifyCropExpansion.ts",
     "test:crop-coverage": "node --experimental-strip-types scripts/verifyCropCoverage.ts",
+    "test:cropfit-cache": "node --experimental-strip-types scripts/verifyCropFitCache.ts",
     "test:cropfit": "PYTHONPATH=machine-learning machine-learning/.venv/bin/python -m cropfit.verify_inference",
     "test:cropfit:http": "./scripts/verifyCropFitHttp.sh",
     "test:simulation": "node --experimental-strip-types scripts/verifySunSimulation.ts",

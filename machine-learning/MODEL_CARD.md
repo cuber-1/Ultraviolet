@@ -145,3 +145,11 @@ use common bean, cucumbers and squash use cucumber, and melons use rock melon.
 Strict mode supports 15 choices and intentionally excludes microgreens because
 a mature lettuce profile does not represent a 2–3 week microgreen cycle. CI
 checks the complete ID-to-profile mapping on every push.
+
+## Client cache correctness
+
+The web server's one-hour CropFit cache is content-addressed over the complete
+request and model URL. Climate, soil pH, irrigation, coordinate, crop, or
+primary/backup changes cannot reuse a stale prediction. The cache is a bounded
+2,048-entry LRU, and CI checks key sensitivity, model isolation, expiry, and
+least-recently-used eviction.

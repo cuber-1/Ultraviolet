@@ -22,6 +22,9 @@ Nearest-county retrieval uses a cached exact haversine spatial index; it returns
 the same county as brute force while avoiding a full atlas scan per request.
 Caller-supplied climate accepts 12 or 24 ordered monthly records and at most 20
 12-month history years. Invalid shapes or physical ranges return HTTP 422.
+The Ultraviolet server caches successful CropFit calls for one hour using a
+SHA-256 key over the complete request (including climate, soil, irrigation,
+coordinates, and model URL) and caps the LRU at 2,048 entries.
 
 For `kind: "region"` results, the Ultraviolet client uses that observed prior
 to rank corn, soybean, and wheat locations while retaining CropFit suitability
