@@ -8,7 +8,14 @@ bundle_tmp="$(mktemp -d)"
 trap 'rm -rf "${bundle_tmp}"' EXIT
 
 echo "Downloading CropFit v0.3 model bundle..."
-curl --fail --location --retry 3 --output "${bundle_tmp}/cropfit.tar.gz" "${release_url}"
+if command -v gh >/dev/null 2>&1; then
+  gh release download cropfit-v0.3 --repo cuber-1/Ultraviolet --pattern ultraviolet-cropfit-v0.3.tar.gz --output "${bundle_tmp}/cropfit.tar.gz"
+elif [[ -n "${GITHUB_TOKEN:-}" ]]; then
+  curl --fail --location --retry 3 --header "Authorization: Bearer ${GITHUB_TOKEN}" --output "${bundle_tmp}/cropfit.tar.gz" "${release_url}"
+else
+  echo "This repository is private. Install and authenticate GitHub CLI (brew install gh; gh auth login), or set GITHUB_TOKEN." >&2
+  exit 1
+fi
 
 actual_sha256="$(python3 - "${bundle_tmp}/cropfit.tar.gz" <<'PY'
 import hashlib
@@ -29,6 +36,6 @@ fi
 
 tar -xzf "${bundle_tmp}/cropfit.tar.gz" -C "${repo_root}"
 python3 -m venv "${repo_root}/machine-learning/.venv"
-"${repo_root}/machine-learning/.venv/bin/pip" install -r "${repo_root}/machine-learning/requirements-inference.txt"
+"${repo_root}/machine-learning/.venv/bin/python" -m pip install -r "${repo_root}/machine-learning/requirements-inference.txt"
 
 echo "CropFit v0.3 is installed. Start it with: npm run ml:serve"

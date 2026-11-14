@@ -16,7 +16,9 @@ npm run ml:serve
 ```
 
 The release bundle is checksum-verified before extraction. To train a fresh
-artifact instead, use the full setup below.
+artifact instead, use the full setup below. Because the repository is private,
+the installer uses an authenticated GitHub CLI session (`gh auth login`) or a
+`GITHUB_TOKEN`.
 
 ```bash
 python3 -m venv machine-learning/.venv
