@@ -1,18 +1,3 @@
-.scope-radius {
-  display: grid;
-  grid-template-columns: auto 110px;
-  align-items: center;
-  gap: 8px;
-  margin-top: 6px;
-  color: #b9c8c2;
-  font-size: 8px;
-}
-
-.scope-radius input {
-  width: 100%;
-  accent-color: #d1ff63;
-}
-
 .infrared-note {
   position: absolute;
   left: 16px;
@@ -601,14 +586,6 @@
 .panel-label { border-bottom-color: var(--gray-100); background: #fff; color: var(--gray-500); }
 .panel-label .mono { color: var(--earth); }
 .globe-panel .search-globe { background: radial-gradient(circle at 50% 45%, #fffaf4 0, #f7eee5 62%, #eee1d4 100%); }
-.globe-panel .globe-scope { border-color: rgba(232,93,4,.24); background: rgba(255,255,255,.92); color: var(--black); box-shadow: 0 12px 30px rgba(95,53,24,.12); }
-.globe-scope>.mono { color: var(--earth); }
-.globe-scope small,
-.scope-radius { color: var(--gray-500); }
-.scope-radius input { accent-color: var(--earth); }
-.globe-scope button { border-color: var(--gray-200); color: var(--gray-600); }
-.globe-scope button.active { border-color: var(--earth); background: var(--earth); color: #fff; }
-
 .discovery-workbench .search-results { border-left-color: var(--gray-100); background: #fbf8f4; }
 .discovery-workbench .results-heading,
 .discovery-workbench .live-results>button { border-color: var(--gray-100); }
@@ -665,7 +642,6 @@
 .rural-map-panel .panel-label .mono { color: var(--earth); }
 .rural-map-panel .search-globe { flex: 1; min-height: 646px; overflow: hidden; background: radial-gradient(circle at 50% 45%, #fffaf4 0, #f7eee5 62%, #eee1d4 100%); }
 .rural-map-panel .search-globe canvas { width: min(72vh,700px); max-width: 90%; }
-.rural-map-panel .globe-scope { display: none; }
 .rural-map-panel .results-leaflet-map { min-height: 646px; }
 .rural-results { max-height: 690px; overflow-y: auto; background: #fbf8f4; }
 .rural-results>header { position: sticky; z-index: 4; top: 0; display: flex; align-items: center; justify-content: space-between; min-height: 74px; padding: 15px 17px; border-bottom: 1px solid var(--gray-100); background: rgba(255,255,255,.96); backdrop-filter: blur(10px); }

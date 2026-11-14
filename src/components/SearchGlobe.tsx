@@ -17,7 +17,7 @@ function project(lat: number, lon: number, centerLon: number, radius: number) {
   return { x: radius + radius * Math.cos(phi) * Math.sin(lambda), y: radius - radius * Math.sin(phi), visible };
 }
 
-export default function SearchGlobe({ scope, onScopeChange, points = [], onPointClick, presets: suppliedPresets }: { scope: Scope; onScopeChange: (scope: Scope) => void; points?: GlobePoint[]; onPointClick?: (id: string) => void; presets?: Scope[] }) {
+export default function SearchGlobe({ scope, points = [], onPointClick }: { scope: Scope; points?: GlobePoint[]; onPointClick?: (id: string) => void }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const mapElementRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<LeafletMap | null>(null);
@@ -104,27 +104,14 @@ export default function SearchGlobe({ scope, onScopeChange, points = [], onPoint
     });
   }, [hasResults, onPointClick, points]);
 
-  const presets: Scope[] = suppliedPresets ?? [
-    { name: 'Houston, TX', lat: 29.7604, lon: -95.3698, radiusM: 8000 },
-    { name: 'Los Angeles, CA', lat: 34.0522, lon: -118.2437, radiusM: 8000 },
-    { name: 'New York, NY', lat: 40.7128, lon: -74.006, radiusM: 8000 },
-  ];
-
   return <div className={`search-globe ${hasResults ? 'showing-results-map' : ''}`}>
     {hasResults ? <><div ref={mapElementRef} className="results-leaflet-map" aria-label={`Map centered on ${points.length} rooftop results`} /><div className="results-map-meta mono"><span>{points.length} ROOFS</span><strong>FIT TO RESULTS</strong></div></> : <canvas
       ref={canvasRef}
-      aria-label={`Rotatable globe centered on ${scope.name}`}
+      aria-label="Rotatable world globe"
       onPointerDown={(event) => { drag.current = { x: event.clientX, rotation }; event.currentTarget.setPointerCapture(event.pointerId); }}
       onPointerMove={(event) => { if (drag.current) setRotation(drag.current.rotation - (event.clientX - drag.current.x) * .45); }}
       onPointerUp={(event) => { const start = drag.current; drag.current = null; if (!start || Math.abs(event.clientX - start.x) > 4) return; const rect = event.currentTarget.getBoundingClientRect(); const scale = event.currentTarget.clientWidth / rect.width; const x = (event.clientX - rect.left) * scale; const y = (event.clientY - rect.top) * scale; const nearest = markers.current.find((item) => Math.hypot(item.x - x, item.y - y) < 14); if (nearest) onPointClick?.(nearest.id); }}
       onWheel={(event) => { event.preventDefault(); setZoom((value) => Math.min(1.12, Math.max(.72, value - event.deltaY * .001))); }}
     />}
-    <div className="globe-scope">
-      <span className="mono">GEOGRAPHIC SCOPE</span>
-      <strong>{scope.name}</strong>
-      <small>{(scope.radiusM / 1000).toFixed(0)} km radius · {hasResults ? 'drag map · scroll to zoom · click a pin' : 'country boundaries · drag to rotate · scroll to zoom'}</small>
-      <label className="scope-radius">Search radius <input aria-label="Search radius in kilometers" type="range" min="1" max="20" step="1" value={scope.radiusM / 1000} onChange={(event) => onScopeChange({ ...scope, radiusM: Number(event.target.value) * 1000 })} /></label>
-      <div>{presets.map((preset) => <button key={preset.name} className={scope.name === preset.name ? 'active' : ''} onClick={() => { onScopeChange(preset); setRotation(preset.lon); }}>{preset.name.split(',')[0]}</button>)}</div>
-    </div>
   </div>;
 }

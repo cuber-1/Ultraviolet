@@ -49,7 +49,7 @@ export default function RuralExplorer() {
       <div className="rural-source-line"><span><i /> NASA POWER LIVE</span><span>OPEN-METEO GEOCODING</span><span>SOIL + PARCELS NOT ASSESSED</span></div>
     </section>
     <section className="rural-workbench">
-      <div className="rural-map-panel"><div className="panel-label"><span className="mono">01 / REGIONS</span><span>{results.length ? 'Ranked locations · map fit to results' : 'Loading regional evidence'}</span></div><SearchGlobe scope={scope} onScopeChange={() => {}} points={results.map((result, index) => ({ id: result.query, lat: result.lat, lon: result.lon, rank: index + 1 }))} presets={[]} /></div>
+      <div className="rural-map-panel"><div className="panel-label"><span className="mono">01 / REGIONS</span><span>{results.length ? 'Ranked locations · map fit to results' : 'Loading regional evidence'}</span></div><SearchGlobe scope={scope} points={results.map((result, index) => ({ id: result.query, lat: result.lat, lon: result.lon, rank: index + 1 }))} /></div>
       <aside className="rural-results">
         <header><div><span className="mono">02 / CLIMATE FIT</span><h2>{loading ? 'Reading climate…' : results.length ? `${results.length} regions` : 'No results'}</h2></div><span>{goalLabels[goal]}</span></header>
         {error && <div className="rural-error"><CircleAlert /><span>{error}</span></div>}
