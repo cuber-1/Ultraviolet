@@ -107,8 +107,56 @@ function RoofPolygonSurface({
       `,
     });
   }, [isInfrared, sourceTexture.image, texture]);
+  const cleanInfraredMaterial = useMemo(() => {
+    if (!isInfrared) return null;
+    const image = sourceTexture.image as { width?: number; height?: number };
+    return new THREE.ShaderMaterial({
+      side: THREE.DoubleSide,
+      toneMapped: false,
+      stencilWrite: true,
+      stencilRef: 1,
+      stencilFunc: THREE.AlwaysStencilFunc,
+      stencilZPass: THREE.ReplaceStencilOp,
+      uniforms: {
+        map: { value: texture },
+        sampleRadius: { value: new THREE.Vector2(5 / (image.width || 800), 5 / (image.height || 800)) },
+      },
+      vertexShader: `
+        varying vec2 vUv;
+        void main() {
+          vUv = uv;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: `
+        uniform sampler2D map;
+        uniform vec2 sampleRadius;
+        varying vec2 vUv;
+
+        void main() {
+          vec4 channels = texture2D(map, vUv) * 0.28;
+          channels += texture2D(map, vUv + vec2(sampleRadius.x, 0.0)) * 0.12;
+          channels += texture2D(map, vUv - vec2(sampleRadius.x, 0.0)) * 0.12;
+          channels += texture2D(map, vUv + vec2(0.0, sampleRadius.y)) * 0.12;
+          channels += texture2D(map, vUv - vec2(0.0, sampleRadius.y)) * 0.12;
+          channels += texture2D(map, vUv + sampleRadius) * 0.06;
+          channels += texture2D(map, vUv - sampleRadius) * 0.06;
+          channels += texture2D(map, vUv + vec2(sampleRadius.x, -sampleRadius.y)) * 0.06;
+          channels += texture2D(map, vUv + vec2(-sampleRadius.x, sampleRadius.y)) * 0.06;
+
+          float balance = (channels.r - channels.b) / (channels.r + channels.b + 0.001);
+          vec3 blueBand = vec3(0.20, 0.40, 0.61);
+          vec3 neutralBand = vec3(0.84, 0.84, 0.77);
+          vec3 redBand = vec3(0.82, 0.22, 0.13);
+          vec3 color = balance < -0.03 ? blueBand : balance > 0.08 ? redBand : neutralBand;
+          gl_FragColor = vec4(color, 1.0);
+        }
+      `,
+    });
+  }, [isInfrared, sourceTexture.image, texture]);
   useEffect(() => () => texture.dispose(), [texture]);
   useEffect(() => () => infraredMaterial?.dispose(), [infraredMaterial]);
+  useEffect(() => () => cleanInfraredMaterial?.dispose(), [cleanInfraredMaterial]);
 
   const shape = useMemo(() => {
     const next = new THREE.Shape();
@@ -161,7 +209,9 @@ function RoofPolygonSurface({
     </mesh>}
     {surfaceMode === 'clean' ? <>
       <mesh key="clean-roof" geometry={roofGeometry} rotation={[Math.PI / 2, 0, 0]} position={[0, .025, 0]}>
-        <meshBasicMaterial color="#63a878" side={THREE.DoubleSide} toneMapped={false} stencilWrite stencilRef={1} stencilFunc={THREE.AlwaysStencilFunc} stencilZPass={THREE.ReplaceStencilOp} />
+        {isInfrared
+          ? <primitive object={cleanInfraredMaterial!} attach="material" />
+          : <meshBasicMaterial color="#63a878" side={THREE.DoubleSide} toneMapped={false} stencilWrite stencilRef={1} stencilFunc={THREE.AlwaysStencilFunc} stencilZPass={THREE.ReplaceStencilOp} />}
       </mesh>
     </> : <>
       <mesh key="imagery-roof" geometry={roofGeometry} rotation={[Math.PI / 2, 0, 0]} position={[0, .025, 0]} receiveShadow>
@@ -336,7 +386,7 @@ export default function Roof3DVisualizer(props: Roof3DVisualizerProps) {
       <small>Drag to orbit · scroll to zoom</small>
     </div>
     <div className="roof-3d-status">
-      <span>{surfaceMode === 'clean' ? 'CLEAN' : props.surfaceLabel.startsWith('CIR') ? 'NIR' : 'RGB'}</span>
+      <span>{surfaceMode === 'clean' ? props.surfaceLabel.startsWith('CIR') ? 'CLEAN IR' : 'CLEAN' : props.surfaceLabel.startsWith('CIR') ? 'NIR' : 'RGB'}</span>
       <strong>{isNight ? 'Night' : `${props.sun.altitude.toFixed(1)}° sun`}</strong>
       <small>{isNight ? `Sun below horizon · ${props.obstructions.length} measured features` : `${props.sun.azimuth.toFixed(0)}° azimuth · ${props.obstructions.length} measured features`}</small>
     </div>
@@ -344,6 +394,6 @@ export default function Roof3DVisualizer(props: Roof3DVisualizerProps) {
       <button className={surfaceMode === 'imagery' ? 'active' : ''} onClick={() => setSurfaceMode('imagery')} aria-pressed={surfaceMode === 'imagery'}>Imagery</button>
       <button className={surfaceMode === 'clean' ? 'active' : ''} onClick={() => setSurfaceMode('clean')} aria-pressed={surfaceMode === 'clean'}>Clean roof</button>
     </div>
-    {props.surfaceLabel.startsWith('CIR') && surfaceMode === 'imagery' && <div className="roof-3d-cir-note"><span className="mono">NIR INTENSITY</span><small>Denoised single-spectrum view</small></div>}
+    {props.surfaceLabel.startsWith('CIR') && <div className="roof-3d-cir-note"><span className="mono">{surfaceMode === 'clean' ? 'RED / BLUE BALANCE' : 'NIR INTENSITY'}</span><small>{surfaceMode === 'clean' ? 'Smoothed IRG channels · three flat bands' : 'Denoised single-spectrum view'}</small></div>}
   </div>;
 }
