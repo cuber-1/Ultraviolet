@@ -69,6 +69,8 @@
 @media (prefers-reduced-motion: reduce) { .ms-sweep, .ms-core { animation: none; } }
 
 /* ChatGPT's animated Deep Agent companion, anchored over the map during the search. */
-.ms-companion { position: absolute; z-index: 520; top: 24px; right: 220px; width: 140px; height: 150px; pointer-events: none; }
-.ms-companion .agent-companion { left: 0; top: 0; }
+.ms-companion { position: absolute; z-index: 520; top: 18px; left: 440px; right: 40px; height: 150px; pointer-events: none; }
+/* Walk only across the map area to the right of the panel. */
+.ms-companion .agent-companion { top: 0; animation-name: msCompanionPace; }
+@keyframes msCompanionPace { 0%, 6% { left: 0; } 44%, 56% { left: calc(100% - 112px); } 94%, 100% { left: 0; } }
 @media (max-width: 760px) { .ms-companion { display: none; } }
