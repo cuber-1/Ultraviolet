@@ -178,13 +178,16 @@ async function modelApiKind(url: string): Promise<'contract' | 'cropfit'> {
   return kind;
 }
 
-function cropFitCall(url: string, crop: string, lat: number, lon: number) {
+function cropFitCall(url: string, crop: string, lat: number, lon: number, climate: MlClimate | null) {
   const key = `${url}:${crop}:${lat.toFixed(2)},${lon.toFixed(2)}`;
   const cached = cropFitCache.get(key);
   if (cached && cached.expires > Date.now()) return cached.value;
   const value = fetch(`${url}/predict`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(modelTimeoutMs()),
-    body: JSON.stringify({ crop, latitude: Number(lat.toFixed(4)), longitude: Number(lon.toFixed(4)), soilPh: Number(process.env.ML_SOIL_PH) || 6.5, irrigated: process.env.ML_IRRIGATED !== 'false' }),
+    body: JSON.stringify({
+      crop, latitude: Number(lat.toFixed(4)), longitude: Number(lon.toFixed(4)), soilPh: Number(process.env.ML_SOIL_PH) || 6.5, irrigated: process.env.ML_IRRIGATED !== 'false',
+      climate: climate ? MONTH_KEYS.map((month, index) => ({ month: month.toUpperCase(), temperatureC: climate.temperatureC[index], precipitationMmDay: climate.precipitationMmDay[index], solarMjM2Day: climate.solarMjM2Day[index] })) : undefined,
+    }),
   }).then(async (response) => {
     const payload = await response.json().catch(() => ({})) as CropFitResult & { detail?: unknown };
     if (!response.ok) throw new Error(typeof payload.detail === 'string' ? payload.detail : `CropFit HTTP ${response.status}`);
@@ -242,7 +245,7 @@ async function predictViaCropFit(url: string, request: MlRequest): Promise<MlRes
   for (let i = 0; i < pairs.length; i += 6) {
     const batch = await Promise.all(pairs.slice(i, i + 6).map(async ({ site, crop, name }) => {
       if (!name) return strict ? null : calendarPrediction(site, crop, request.preferredMonth);
-      try { return fromCropFit(site, crop, request.preferredMonth, await cropFitCall(url, name, site.lat, site.lon)); }
+      try { return fromCropFit(site, crop, request.preferredMonth, await cropFitCall(url, name, site.lat, site.lon, site.climate)); }
       catch (reason) {
         const message = reason instanceof Error ? reason.message : 'CropFit failed';
         if (strict) throw new Error(`CropFit failed for ${crop.name}: ${message}`);

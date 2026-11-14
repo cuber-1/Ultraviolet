@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import calendar
+from functools import lru_cache
 from pathlib import Path
 
 import joblib
@@ -23,6 +24,7 @@ class CropFitPredictor:
         self.metadata = bundle["metadata"]
         self.profiles = load_profiles(profiles_path)
 
+    @lru_cache(maxsize=512)
     def climate(self, latitude: float, longitude: float) -> list[dict[str, float | str]]:
         response = requests.get(
             "https://power.larc.nasa.gov/api/temporal/climatology/point",

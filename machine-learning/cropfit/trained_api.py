@@ -11,7 +11,7 @@ from .inference import CropFitPredictor
 
 
 ROOT = Path(__file__).resolve().parents[1]
-app = FastAPI(title="Ultraviolet CropFit", version="0.2.1")
+app = FastAPI(title="Ultraviolet CropFit", version="0.3.0")
 
 
 class PredictionRequest(BaseModel):

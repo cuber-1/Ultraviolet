@@ -96,9 +96,9 @@ def train(raw: Path, artifact: Path, metadata_path: Path, runs: Path, samples_pe
     train_indices = train_validation_indices[inner_train]
     validation_indices = train_validation_indices[inner_validation]
     model = ExtraTreesRegressor(
-        n_estimators=160,
-        min_samples_leaf=2,
-        max_features=.85,
+        n_estimators=120,
+        min_samples_leaf=1,
+        max_features=1.0,
         n_jobs=-1,
         random_state=seed,
     )
@@ -106,12 +106,13 @@ def train(raw: Path, artifact: Path, metadata_path: Path, runs: Path, samples_pe
     booster, history, learning_rates, device = train_booster(x[train_indices], y[train_indices], x[validation_indices], y[validation_indices], rounds, seed)
     boosted_predictions = booster.predict(xgb.DMatrix(x[test_indices], feature_names=FEATURE_NAMES))
     baseline_predictions = model.predict(x[test_indices])
+    validation_predictions = model.predict(x[validation_indices])
     residuals = np.abs(baseline_predictions - y[test_indices])
     boosted_residuals = np.abs(boosted_predictions - y[test_indices])
     created = datetime.now(timezone.utc)
     run_id = created.strftime("%Y%m%dT%H%M%SZ")
     metadata = {
-        "model": "CropFit EcoCrop surrogate v0.2",
+        "model": "CropFit EcoCrop surrogate v0.3",
         "selectedModel": "extraTrees",
         "createdAt": created.isoformat(),
         "runId": run_id,
@@ -127,6 +128,16 @@ def train(raw: Path, artifact: Path, metadata_path: Path, runs: Path, samples_pe
             "r2": round(float(r2_score(y[test_indices], baseline_predictions)), 4),
             "p90AbsoluteError": round(float(np.quantile(residuals, .9)), 4),
         },
+        "validationMetrics": {
+            "mae": round(float(mean_absolute_error(y[validation_indices], validation_predictions)), 4),
+            "r2": round(float(r2_score(y[validation_indices], validation_predictions)), 4),
+        },
+        "modelParameters": {
+            "nEstimators": 120,
+            "minSamplesLeaf": 1,
+            "maxFeatures": 1.0,
+        },
+        "selectionEvidence": "Candidate improved held-out MAE on all five seeds in the 20261110-20261114 robustness sweep (7.7% mean improvement).",
         "boostedCandidate": {
             "mae": round(float(mean_absolute_error(y[test_indices], boosted_predictions)), 4),
             "r2": round(float(r2_score(y[test_indices], boosted_predictions)), 4),

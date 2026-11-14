@@ -16,12 +16,20 @@ const send = (res: http.ServerResponse, status: number, body: object) => {
 };
 
 const primary = await start((_req, res) => send(res, 503, { error: 'spark unavailable' }));
-const backup = await start((req, res) => {
-  if (req.url === '/health') return send(res, 200, { model: { name: 'backup-cropfit', version: 'demo' } });
-  if (req.url === '/predict') return send(res, 200, {
-    model: { name: 'backup-cropfit', version: 'demo' },
-    predictions: [{ siteId: 'houston', cropId: 'tomatoes', suitability: 0.81, plantMonth: 2, harvestMonth: 4, confidence: 0.7 }],
-  });
+let receivedClimate = false;
+const backup = await start(async (req, res) => {
+  if (req.url === '/health') return send(res, 200, { model: 'CropFit backup' });
+  if (req.url === '/predict') {
+    const chunks: Buffer[] = [];
+    for await (const chunk of req) chunks.push(Buffer.from(chunk));
+    const body = JSON.parse(Buffer.concat(chunks).toString()) as { climate?: unknown[] };
+    receivedClimate = body.climate?.length === 12;
+    return send(res, 200, {
+      score: 81, bestPlantingMonth: 'MAR', suitableMonths: ['MAR', 'APR'], confidence: 0.7,
+      growingDays: { min: 60, max: 90 }, limitingFactors: [{ factor: 'water', score: 75 }],
+      monthlyCurve: [{ month: 'MAR', score: 81, uncertainty: 5 }],
+    });
+  }
   send(res, 404, {});
 });
 const failedBackup = await start((_req, res) => send(res, 503, { error: 'backup unavailable' }));
@@ -47,7 +55,7 @@ try {
   process.env.ML_MODEL_TIMEOUT_MS = '1000';
   const backupResult = await predictCropSuitability(request);
   const health = await mlModelHealth();
-  if (backupResult.model.name !== 'backup-cropfit' || backupResult.model.source !== 'ml' || health.role !== 'backup') {
+  if (backupResult.model.name !== 'CropFit backup' || backupResult.model.source !== 'ml' || health.role !== 'backup' || !receivedClimate) {
     throw new Error('Primary-to-backup failover did not select the backup model.');
   }
 
