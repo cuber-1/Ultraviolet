@@ -271,7 +271,7 @@ function Scene({ props, surfaceMode }: { props: Roof3DVisualizerProps; surfaceMo
           obstruction.heightM / 2 + .05,
           obstruction.y + obstruction.depth / 2 - centerY,
         ]}
-        castShadow
+        castShadow={surfaceMode === 'imagery'}
         receiveShadow
       >
         <boxGeometry args={[obstruction.width * .94, obstruction.heightM, obstruction.depth * .94]} />
@@ -282,10 +282,10 @@ function Scene({ props, surfaceMode }: { props: Roof3DVisualizerProps; surfaceMo
       </mesh>)}
     </group>
 
-    <mesh position={[0, -.05, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+    {surfaceMode === 'imagery' && <mesh position={[0, -.05, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
       <planeGeometry args={[span * 3.2, span * 3.2]} />
       <shadowMaterial color="#292522" transparent opacity={.2} />
-    </mesh>
+    </mesh>}
 
     {props.sun.altitude > 0 && <>
       <mesh position={sunPosition.toArray()}>
