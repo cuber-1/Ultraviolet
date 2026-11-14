@@ -21,7 +21,7 @@
 .sp-empty code { padding: 10px 14px; border-radius: 10px; background: #221e1a; color: #f3e8dc; font: 15px var(--font-mono); }
 
 .sp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 18px; }
-.sp-node { display: grid; gap: 14px; padding: 22px; border-radius: 24px; background: #fffdfa; box-shadow: 0 1px 0 rgba(40, 35, 31, .04); transition: opacity .3s; }
+.sp-node { display: grid; align-content: start; gap: 14px; padding: 22px; border-radius: 24px; background: #fffdfa; box-shadow: 0 1px 0 rgba(40, 35, 31, .04); transition: opacity .3s; }
 .sp-node.stale { opacity: .6; }
 .sp-node > header { display: flex; align-items: center; justify-content: space-between; }
 .sp-node > header span { display: inline-flex; align-items: center; gap: 8px; font-size: 18px; font-weight: 700; }

@@ -63,7 +63,7 @@ export default function SensorsPage() {
           <div className="sp-gauge">
             <svg viewBox="0 0 200 120" aria-hidden="true">
               <path d="M20 110 A80 80 0 0 1 180 110" className="sp-arc-track" />
-              <path d="M20 110 A80 80 0 0 1 180 110" className="sp-arc" pathLength={100} style={{ strokeDasharray: `${latest.soilPct} 100` }} />
+              {latest.soilPct >= 1 && <path d="M20 110 A80 80 0 0 1 180 110" className="sp-arc" pathLength={100} style={{ strokeDasharray: `${latest.soilPct} 200` }} />}
             </svg>
             <div><strong>{latest.soilPct.toFixed(0)}<small>%</small></strong><span>soil moisture</span></div>
           </div>
