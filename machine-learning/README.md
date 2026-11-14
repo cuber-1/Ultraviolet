@@ -99,6 +99,14 @@ The smaller 80-tree experiment is reproducible with
 `npm run ml:evaluate:compact`; it remains rejected because all seven fresh
 accuracy gates failed despite the smaller artifact.
 
+The deployed score is capped by exact seasonal and establishment EcoCrop
+constraints to prevent tree extrapolation at hard or out-of-domain boundaries.
+Reproduce the held-out and boundary stress tests with:
+
+```bash
+npm run ml:evaluate:ood
+```
+
 The trained API obtains NASA POWER monthly history for 2016–2025 unless the
 caller supplies a 12-month `climate` array and `climateHistory`. It evaluates
 each month across all ten years and returns a risk-adjusted planting month,

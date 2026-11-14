@@ -6,9 +6,11 @@
 - Generated training scenarios: 134,064
 - Evaluation: entire crop profiles held out (373 profiles)
 - Selected production estimator: Extra Trees
-- MAE: 0.0894 suitability points
+- Raw estimator MAE: 0.0894 suitability points
+- Deployed score MAE after deterministic seasonal ceiling: 0.0362 points
 - R²: 0.9998
-- 90th percentile absolute error: 0.2289 points
+- Raw estimator 90th percentile absolute error: 0.2289 points
+- Deployed score 90th percentile absolute error: 0.0361 points
 
 Version 0.6 replaces the 120-tree Random Forest with a 120-tree Extra Trees
 estimator while preserving the same 23 inputs and Mac-compatible scikit-learn
@@ -28,6 +30,20 @@ An 80-tree compact candidate reduced serialized estimator size to about 67% of
 the champion, but failed the frozen accuracy tolerance on all seven fresh
 seeds: mean MAE regressed 4.1% and mean p90 error regressed 5.9%. It was
 rejected; v0.6 retains 120 trees. See `evaluation/compact-validation-v1.md`.
+
+## Out-of-distribution ceiling
+
+API v0.6.1 caps the ML score by the exact seasonal and establishment EcoCrop
+suitability already computed for limiting-factor explanations. This is a
+one-sided safety constraint: the ensemble still determines underprediction but
+cannot claim suitability above the mechanistic target it approximates.
+
+On the production held-out split, the ceiling reduced MAE from 0.0894 to 0.0362
+and p90 error from 0.2289 to 0.0361 without increasing any example's error.
+Existing intervals remained conservative at 88.2%/93.7% coverage. It also
+eliminated raw errors as high as 64.6 points at exact hard solar boundaries,
+where continuous random training samples do not land. See
+`evaluation/ood-validation-v0.6.1.md`.
 
 Version 0.5 adds four crop-relative features: temperature, water, pH, and solar
 membership within each crop's absolute and optimum ranges. The 120-tree Random

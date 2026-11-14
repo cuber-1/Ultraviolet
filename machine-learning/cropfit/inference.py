@@ -140,7 +140,9 @@ class CropFitPredictor:
                 position = offset + index
                 component = {name: min(value, establishment[index][name]) for name, value in teacher[index].items()}
                 temperature, precipitation_mm_day, solar = seasonal_climate[index]
-                score = min(float(predictions[position]), establishment[index]["suitability"])
+                # The surrogate may not extrapolate a hard zero at exact/out-of-domain
+                # EcoCrop boundaries. Never let it exceed either deterministic ceiling.
+                score = min(float(predictions[position]), teacher[index]["suitability"], establishment[index]["suitability"])
                 error_p80, error_p90 = self.calibrated_error(float(uncertainty[position]))
                 curve.append({
                     "month": str(month["month"]),

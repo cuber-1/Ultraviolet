@@ -53,6 +53,14 @@ def verify(artifact: Path, profiles: Path) -> None:
     assert ordinary[-1]["score"] != hot_next_year[-1]["score"], "late planting did not use following-year climate"
     scenarios = [climate(18.0), climate(20.0) + climate(21.0), climate(25.0)]
     assert predictor.curves(profile, scenarios, 6.5, True) == [predictor.curve(profile, values, 6.5, True) for values in scenarios]
+    stress = climate((profile.temp_opt_min + profile.temp_opt_max) / 2)
+    for item in stress:
+        item["precipitationMmDay"] = ((profile.rain_opt_min + profile.rain_opt_max) / 2) / 365.25
+        item["solarMjM2Day"] = 34.0
+    _, stress_teacher, _, _ = predictor.curve_inputs(profile, stress, 6.5, False)
+    stress_curve = predictor.curve(profile, stress, 6.5, False)
+    assert all(item["score"] <= target["suitability"] for item, target in zip(stress_curve, stress_teacher, strict=True))
+    assert all(item["score"] == 0 for item in stress_curve), "seasonal EcoCrop ceiling did not stop boundary extrapolation"
     onboarding_profiles = {
         "basil": "Ocimum basilicum",
         "kale": "Brassica oleracea var. acephala",
@@ -131,6 +139,13 @@ def verify(artifact: Path, profiles: Path) -> None:
         assert not compact_report["gate"]["passed"]
         assert compact_report["summary"]["seedWins"] == 0
         assert compact_report["summary"]["decision"].startswith("reject")
+
+    ood_validation = artifact.parents[1] / "evaluation/ood-validation-v0.6.1.json"
+    if ood_validation.exists():
+        ood_report = json.loads(ood_validation.read_text())
+        assert ood_report["gate"]["passed"]
+        assert ood_report["heldOut"]["errorNeverIncreased"]
+        assert ood_report["heldOut"]["seasonalCeiling"]["mae"] < ood_report["heldOut"]["rawSurrogate"]["mae"]
 
     from .trained_api import PredictionRequest, predict as api_predict
 

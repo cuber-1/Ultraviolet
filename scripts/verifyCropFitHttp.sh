@@ -66,6 +66,9 @@ prediction_body = prediction.json()
 assert prediction_body["observedYieldEvidence"]["county"] == "Fort Bend County"
 assert prediction_body["confidence"] == .8
 assert prediction_body["expectedAbsoluteError"]["p80"] <= prediction_body["expectedAbsoluteError"]["p90"]
+boundary = requests.post(f"{base}/predict", json={**payload, "climate": [{**item, "solarMjM2Day": 34} for item in climate]}, timeout=30)
+boundary.raise_for_status()
+assert boundary.json()["score"] == 0, "hard EcoCrop solar boundary was not enforced"
 representatives = {
     "basil": "Ocimum basilicum",
     "kale": "Brassica oleracea var. acephala",
@@ -80,5 +83,5 @@ for crop, scientific_name in representatives.items():
     assert response.json()["profile"]["scientific_name"] == scientific_name
 invalid = requests.post(f"{base}/predict", json={**payload, "climate": climate[:11]}, timeout=10)
 assert invalid.status_code == 422
-print(f'CropFit HTTP verified: API {health["apiVersion"]}, model v0.6, 2016-2025 climate window, 16-choice coverage, USDA evidence, input bounds')
+print(f'CropFit HTTP verified: API {health["apiVersion"]}, model v0.6, seasonal boundary ceiling, 2016-2025 climate window, 16-choice coverage, USDA evidence, input bounds')
 PY
