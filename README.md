@@ -38,6 +38,12 @@ rooftop Deep Agent; an acre or more runs the rural region match.
 - Rural: towns in the chosen regions are scored on crop fit, how soon planting
   can start, season length, and solar resource. Soil, water rights, and
   parcels are not assessed.
+- Crop model: set `ML_MODEL_URL` (and optionally `ML_MODEL_TIMEOUT_MS`) to a
+  server implementing `ml/CONTRACT.md`. The Deep Agent's
+  `predict_crop_suitability` tool and the rural ranking use its suitability
+  scores and planting windows; roofs rank by 60% sunlit area and 40% crop
+  suitability. Without it, the app uses the crop calendar and says so.
+  `python3 ml/stub_server.py` serves a stand-in on port 8765.
 
 ## Environment
 

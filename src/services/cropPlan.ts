@@ -1,3 +1,5 @@
+import type { CropModelInfo, CropPrediction, CropProfileInput } from './vexcel';
+
 // Onboarding brief, crop profiles, and climate-based timing.
 // Timing is a transparent crop calendar: a month is "growable" when the NASA POWER
 // monthly mean temperature sits inside the crop's range. A start month works when
@@ -93,6 +95,7 @@ export type CropTiming = {
   harvestMonth: number | null;
   waitMonths: number | null; // months after the preferred month
   seasonMonths: number;
+  suitability?: number;
 };
 
 export function cropTiming(crop: Crop, climate: MonthlyClimate, preferredMonth: number): CropTiming {
@@ -166,4 +169,37 @@ const BRIEF_KEY = 'ultraviolet.brief';
 export function saveBrief(brief: Brief) { try { sessionStorage.setItem(BRIEF_KEY, JSON.stringify(brief)); } catch { /* storage unavailable */ } }
 export function loadBrief(): Brief | null {
   try { const raw = sessionStorage.getItem(BRIEF_KEY); return raw ? JSON.parse(raw) as Brief : null; } catch { return null; }
+}
+
+// ---- Crop model (see ml/CONTRACT.md) ----
+
+export const cropProfiles = (brief: Brief): CropProfileInput[] => briefCrops(brief).map(({ id, name, sunHours, tempMinC, tempMaxC, growMonths }) => ({ id, name, sunHours, tempMinC, tempMaxC, growMonths }));
+
+export async function fetchRegionPredictions(brief: Brief, climates: MonthlyClimate[], signal?: AbortSignal) {
+  const response = await fetch('/api/ml/predict', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, signal,
+    body: JSON.stringify({
+      crops: cropProfiles(brief), preferredMonth: brief.preferredMonth, targetAreaSqft: brief.areaSqft,
+      targetSunHours: Math.max(...briefCrops(brief).map((crop) => crop.sunHours)),
+      sites: climates.map((climate) => ({ id: climate.query, kind: 'region', lat: climate.lat, lon: climate.lon, climate: { temperatureC: climate.temperatureC, solarMjM2Day: climate.solarMjM2Day, precipitationMmDay: climate.precipitationMmDay }, roof: null })),
+    }),
+  });
+  const payload = await response.json();
+  if (!response.ok) throw new Error(payload.error || 'Crop model request failed.');
+  return payload as { model: CropModelInfo; predictions: CropPrediction[] };
+}
+
+/** Use trained-model timing and suitability for a region when the model answered; otherwise keep the calendar plan. */
+export function applyModel(plan: LocationPlan, predictions: CropPrediction[], preferredMonth: number): LocationPlan {
+  const mine = predictions.filter((item) => item.siteId === plan.climate.query && item.source === 'ml');
+  if (!mine.length) return plan;
+  const timings = plan.timings.map((timing) => {
+    const hit = mine.find((item) => item.cropId === timing.crop.id);
+    if (!hit) return timing;
+    return { ...timing, startMonth: hit.plantMonth, harvestMonth: hit.harvestMonth, waitMonths: hit.plantMonth === null ? null : (hit.plantMonth - preferredMonth + 12) % 12, suitability: hit.suitability };
+  });
+  const suitability = mine.reduce((sum, item) => sum + item.suitability, 0) / mine.length;
+  const started = timings.filter((timing) => timing.waitMonths !== null);
+  const moveInMonth = started.length ? started.reduce((best, timing) => timing.waitMonths! < best.waitMonths! ? timing : best).startMonth : null;
+  return { ...plan, timings, moveInMonth, score: Math.round(100 * suitability), reasons: [`Crop model suitability ${Math.round(100 * suitability)}%`, ...plan.reasons] };
 }

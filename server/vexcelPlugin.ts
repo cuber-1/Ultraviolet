@@ -5,7 +5,8 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import { geometryBounds, geometryRequiredRadius, insideMetricGeometry, metricPointToLonLat, roofWktToMetricGeometry, type MetricRoofGeometry } from '../src/services/roofGeometry';
 import { sharedMeetingArea, simulate, type AreaSelection, type Obstruction } from '../src/services/sunSimulation';
 import { handleMonthlyClimate } from './monthlyClimate';
-import { landLensAgentStatus, runLandLensAgent, type AgentCandidate, type GeometryEvidence, type SunlightEvidence } from './landlensAgent';
+import { combinedRoofScore, handleMlRoute, mlModelStatus, predictCropSuitability, siteSuitability, type MlCrop } from './mlModel';
+import { landLensAgentStatus, roofSites, runLandLensAgent, type AgentCandidate, type GeometryEvidence, type SunlightEvidence } from './landlensAgent';
 import { createPhotonConversation, photonStatus, sendPhotonMessage, type PhotonPlatform } from './photon';
 
 const API_ROOT = 'https://api.vexcelgroup.com/v2';
@@ -469,6 +470,7 @@ export function vexcelApiPlugin(root: string) {
     const url = new URL(req.url, 'http://localhost');
     try {
       if (await handleMonthlyClimate(url.pathname, req, res)) return;
+      if (await handleMlRoute(url.pathname, req, res)) return;
       if (url.pathname === '/api/rural/compare' && req.method === 'POST') {
         const input = await body(req);
         const goal = ['balanced', 'sun', 'low-irrigation'].includes(String(input.goal)) ? String(input.goal) as RuralGoal : 'balanced';
@@ -485,7 +487,7 @@ export function vexcelApiPlugin(root: string) {
       if (!url.pathname.startsWith('/api/vexcel/')) return next();
       const key = configuredKey(root);
       if (!key) return json(res, 503, { error: 'Vexcel access is not configured on this server.' });
-      if (url.pathname === '/api/vexcel/status') return json(res, 200, { configured: true, search: 'live', agent: landLensAgentStatus(), photon: photonStatus() });
+      if (url.pathname === '/api/vexcel/status') return json(res, 200, { configured: true, search: 'live', agent: landLensAgentStatus(), photon: photonStatus(), ml: mlModelStatus() });
       if (url.pathname === '/api/vexcel/watch' && req.method === 'POST') {
         if (!photonStatus().configured) return json(res, 503, { error: 'Photon is not configured. Add PHOTON_API_KEY, PHOTON_PROJECT_ID, and PHOTON_AGENT_USER_ID on the server.' });
         const input = await body(req);
@@ -552,6 +554,8 @@ export function vexcelApiPlugin(root: string) {
         const dates = Array.isArray(input.dates) ? input.dates.map(String).slice(0, 6) : ['2026-04-15', '2026-10-15'];
         const targetHours = Math.min(14, Math.max(1, Number(input.targetHours) || 6));
         const targetAreaSqft = Math.max(100, Number(input.targetAreaSqft) || 5_000);
+        const cropProfiles = (Array.isArray(input.cropProfiles) ? input.cropProfiles : []).filter((crop): crop is MlCrop => Boolean(crop) && typeof (crop as MlCrop).id === 'string' && typeof (crop as MlCrop).name === 'string' && [(crop as MlCrop).sunHours, (crop as MlCrop).tempMinC, (crop as MlCrop).tempMaxC, (crop as MlCrop).growMonths].every(Number.isFinite)).slice(0, 6);
+        const preferredMonth = Number.isInteger(input.preferredMonth) && Number(input.preferredMonth) >= 0 && Number(input.preferredMonth) <= 11 ? Number(input.preferredMonth) : new Date().getMonth();
         if (!Number.isFinite(lat) || !Number.isFinite(lon)) return json(res, 400, { error: 'A valid search center is required.' });
         if (!landLensAgentStatus().configured) return json(res, 503, { error: 'Agent model access is not configured.', fallback: '/api/vexcel/compare' });
         res.statusCode = 200;
@@ -576,11 +580,24 @@ export function vexcelApiPlugin(root: string) {
           return simulateCandidate(key, candidate, requestedDates, requestedHours, requestedArea, await geometryCache.get(candidate.id)!);
         };
         try {
-          const output = await runLandLensAgent({ goal, followUp: typeof input.followUp === 'string' ? input.followUp : undefined, location: searchLocation || locationPhrase(goal) || 'all available Vexcel coverage', dates, targetHours, targetAreaSqft, crops: Array.isArray(input.crops) ? input.crops.map(String).slice(0, 6) : undefined, source: input.source === 'guided' ? 'guided' : 'search' }, { search, geometry, simulate: sunlight }, (event) => send({ type: 'progress', ...event }));
+          const output = await runLandLensAgent({ goal, followUp: typeof input.followUp === 'string' ? input.followUp : undefined, location: searchLocation || locationPhrase(goal) || 'all available Vexcel coverage', dates, targetHours, targetAreaSqft, crops: Array.isArray(input.crops) ? input.crops.map(String).slice(0, 6) : undefined, cropProfiles, preferredMonth, source: input.source === 'guided' ? 'guided' : 'search' }, { search, geometry, simulate: sunlight }, (event) => send({ type: 'progress', ...event }));
           const simulatedIds = new Set(output.simulations.map((item) => item.candidateId));
           for (const candidate of output.candidates) if (!simulatedIds.has(candidate.id)) output.simulations.push(await sunlight(candidate, dates, targetHours, targetAreaSqft));
           const byId = new Map(output.candidates.map((candidate) => [candidate.id, candidate]));
+          // Every roof gets a crop-model score, even ones the agent did not ask about.
+          const scored = new Set(output.predictions.map((item) => item.siteId));
+          const unscored = output.candidates.filter((candidate) => !scored.has(candidate.id));
+          if (cropProfiles.length && unscored.length) {
+            const response = await predictCropSuitability({ crops: cropProfiles, preferredMonth, targetAreaSqft, targetSunHours: targetHours, sites: await roofSites(unscored, new Map(output.simulations.map((item) => [item.candidateId, item]))) });
+            output.predictions.push(...response.predictions);
+            output.mlModel ??= response.model;
+          }
+          const suitability = siteSuitability({ model: output.mlModel!, predictions: output.predictions });
+          const rankScore = (id: string, shared: number | null) => cropProfiles.length ? combinedRoofScore(shared, targetAreaSqft, suitability.get(id) ?? null) : null;
           output.simulations.sort((a, b) => {
+            const scoreA = rankScore(a.candidateId, a.sharedAreaSqft);
+            const scoreB = rankScore(b.candidateId, b.sharedAreaSqft);
+            if (scoreA !== null && scoreB !== null && Math.abs(scoreB - scoreA) > 0.01) return scoreB - scoreA;
             const difference = (b.sharedAreaSqft ?? -1) - (a.sharedAreaSqft ?? -1);
             if (Math.abs(difference) <= 100) {
               const tourDifference = (byId.get(b.candidateId)?.costar?.matterport.length ?? 0) - (byId.get(a.candidateId)?.costar?.matterport.length ?? 0);

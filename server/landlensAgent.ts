@@ -2,6 +2,8 @@ import { ChatOpenAI } from '@langchain/openai';
 import { createDeepAgent } from 'deepagents';
 import { tool, toolStrategy } from 'langchain';
 import { z } from 'zod';
+import { monthlyClimateAt } from './monthlyClimate';
+import { combinedRoofScore, predictCropSuitability, siteSuitability, type MlCrop, type MlPrediction, type MlResponse, type MlSite } from './mlModel';
 
 export type AgentCandidate = {
   id: string;
@@ -52,7 +54,27 @@ export type LandLensAgentServices = {
   simulate: (candidate: AgentCandidate, dates: string[], targetHours: number, targetAreaSqft: number) => Promise<SunlightEvidence>;
 };
 
-export type AgentProgress = { stage: 'planning' | 'imagery' | 'property' | 'geometry' | 'sunlight' | 'ranking'; message: string };
+export type AgentProgress = { stage: 'planning' | 'imagery' | 'property' | 'geometry' | 'sunlight' | 'model' | 'ranking'; message: string };
+
+/** Build model inputs for roof candidates from the evidence already gathered (climate is fetched per ~0.1° cell). */
+export async function roofSites(candidates: AgentCandidate[], simulations: Map<string, SunlightEvidence>): Promise<MlSite[]> {
+  return Promise.all(candidates.map(async (candidate) => {
+    const simulation = simulations.get(candidate.id);
+    const hours = simulation?.perDate.map((item) => item.meanHours).filter((value): value is number => value !== null) ?? [];
+    const climate = await monthlyClimateAt(candidate.lat, candidate.lon).catch(() => null);
+    return {
+      id: candidate.id, kind: 'roof' as const, lat: candidate.lat, lon: candidate.lon,
+      climate: climate ? { temperatureC: climate.temperatureC, solarMjM2Day: climate.solarMjM2Day, precipitationMmDay: climate.precipitationMmDay } : null,
+      roof: {
+        roofAreaSqft: candidate.property?.roofAreaSqft ?? null,
+        sharedAreaSqft: simulation?.sharedAreaSqft ?? null,
+        meanSunHours: hours.length ? hours.reduce((sum, value) => sum + value, 0) / hours.length : null,
+        obstructionCount: simulation?.geometry.obstructionCount ?? 0,
+        buildingHeightM: simulation?.geometry.buildingHeightM ?? null,
+      },
+    };
+  }));
+}
 
 const responseSchema = z.object({
   summary: z.string(),
@@ -124,6 +146,8 @@ export async function runLandLensAgent(input: {
   targetHours: number;
   targetAreaSqft: number;
   crops?: string[];
+  cropProfiles?: MlCrop[];
+  preferredMonth?: number;
   source?: 'guided' | 'search' | 'photon-watch';
 }, services: LandLensAgentServices, progress: (event: AgentProgress) => void) {
   const model = configuredModel();
@@ -207,12 +231,55 @@ export async function runLandLensAgent(input: {
     }),
   });
 
+  const cropProfiles = input.cropProfiles ?? [];
+  const predictions = new Map<string, MlPrediction>();
+  let modelInfo: MlResponse['model'] | null = null;
+  const predictSuitability = tool(async ({ candidateIds }: { candidateIds: string[] }) => {
+    const known = candidateIds.map((id) => candidates.get(id)).filter((candidate): candidate is AgentCandidate => Boolean(candidate));
+    if (!known.length) return { available: false, reason: 'Run rooftop imagery search first.' };
+    progress({ stage: 'model', message: `Scoring ${cropProfiles.map((crop) => crop.name.toLowerCase()).join(', ')} on ${known.length} roofs with the crop model` });
+    const latestSimulation = new Map([...simulations.values()].map((item) => [item.candidateId, item]));
+    const response = await predictCropSuitability({
+      crops: cropProfiles, preferredMonth: input.preferredMonth ?? new Date().getMonth(),
+      targetAreaSqft: input.targetAreaSqft, targetSunHours: input.targetHours,
+      sites: await roofSites(known, latestSimulation),
+    });
+    modelInfo = response.model;
+    response.predictions.forEach((item) => predictions.set(`${item.siteId}::${item.cropId}`, item));
+    const bySite = siteSuitability(response);
+    // Pre-computed ranking so the model explains it instead of doing arithmetic.
+    const ranked = known
+      .map((candidate) => ({ candidate, shared: latestSimulation.get(candidate.id)?.sharedAreaSqft ?? null, suitability: bySite.get(candidate.id) ?? null }))
+      .map((item) => ({ ...item, score: combinedRoofScore(item.shared, input.targetAreaSqft, item.suitability) }))
+      .sort((a, b) => b.score - a.score);
+    return {
+      model: response.model,
+      ranking: 'Final order. Already combines sunlit area (60%) and crop suitability (40%); do not recompute.',
+      sites: ranked.map(({ candidate, shared, score }, index) => ({
+        rank: index + 1,
+        candidateId: candidate.id,
+        rankScore: Number(score.toFixed(3)),
+        sharedAreaSqft: shared === null ? null : Math.round(shared),
+        suitability: Number((bySite.get(candidate.id) ?? 0).toFixed(2)),
+        crops: response.predictions.filter((item) => item.siteId === candidate.id).map((item) => ({
+          crop: cropProfiles.find((crop) => crop.id === item.cropId)?.name ?? item.cropId,
+          suitability: Number(item.suitability.toFixed(2)), plantMonth: item.plantMonth, harvestMonth: item.harvestMonth, notes: item.notes,
+        })),
+      })),
+    };
+  }, {
+    name: 'predict_crop_suitability',
+    description: "Score how well the user's crops suit each roof with the trained crop model (falls back to a climate crop calendar when the model is offline). Returns 0-1 suitability per crop, plus planting and harvest months (0 = January). Call once with every candidate ID after the sunlight runs.",
+    schema: z.object({ candidateIds: z.array(z.string()).min(1) }),
+  });
+  const useModel = cropProfiles.length > 0;
+
   progress({ stage: 'planning', message: 'Planning the site comparison' });
   const agent = createDeepAgent({
     model: model.client,
-    tools: [searchImagery, lookupProperty, resolveGeometry, simulateSunlight],
+    tools: useModel ? [searchImagery, lookupProperty, resolveGeometry, simulateSunlight, predictSuitability] : [searchImagery, lookupProperty, resolveGeometry, simulateSunlight],
     responseFormat: toolStrategy(responseSchema),
-    systemPrompt: `You compare real urban rooftops for growing goals. Call search_rooftop_imagery exactly once. Then, for every candidate ID it returns, call lookup_property_record and simulate_rooftop_sunlight (it resolves geometry itself; call resolve_roof_geometry only if you need height details). Batch independent tool calls in the same turn. Do not repeat a call you already made. Rank only by sharedAreaSqft returned by the sunlight tool. A verified Matterport tour may break a near tie but can never outrank materially greater suitable area. Never estimate missing geometry, listing status, or sunlight; list them under unknowns. Write the summary, explanations, and unknowns in plain, friendly language for a grower: refer to sites by rank or address rather than coordinates, round numbers, and never include tool or field names, code identifiers, or URLs. Keep each explanation to one or two sentences about why that roof ranks where it does.`,
+    systemPrompt: `You compare real urban rooftops for growing goals. Call search_rooftop_imagery exactly once. Then, for every candidate ID it returns, call lookup_property_record and simulate_rooftop_sunlight (it resolves geometry itself; call resolve_roof_geometry only if you need height details). Batch independent tool calls in the same turn. Do not repeat a call you already made. ${useModel ? `After the sunlight runs, call predict_crop_suitability once with every candidate ID. Its "sites" list is already in final rank order (sunlit area and crop suitability combined); use that order as-is and do not recompute scores. Mention each roof's planting window. ` : 'Rank only by sharedAreaSqft returned by the sunlight tool. '}A verified Matterport tour may break a near tie but can never outrank materially greater suitable area. Never estimate missing geometry, listing status, or sunlight; list them under unknowns. Write the summary, explanations, and unknowns in plain, friendly language for a grower: refer to sites by rank or address rather than coordinates, round numbers, and never include tool or field names, code identifiers, or URLs. Write explanations only for the five best-ranked roofs, one or two sentences each about why that roof ranks where it does.`,
   });
 
   let narrative: z.infer<typeof responseSchema> | null = null;
@@ -232,5 +299,7 @@ export async function runLandLensAgent(input: {
     narrative,
     candidates: [...candidates.values()],
     simulations: [...new Map([...simulations.values()].map((item) => [item.candidateId, item])).values()],
+    predictions: [...predictions.values()],
+    mlModel: modelInfo as MlResponse['model'] | null,
   };
 }

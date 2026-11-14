@@ -113,3 +113,9 @@
   .region-detail { padding-left: 18px; }
   .crop-calendar-row { grid-template-columns: 80px repeat(12, 1fr); }
 }
+
+.roof-crops { display: flex; flex-wrap: wrap; gap: 5px; }
+.roof-crops span { padding: 4px 8px; border: 1px solid #f4c7a1; border-radius: 6px; background: var(--orange-soft); color: var(--gray-600); font-size: 10px; }
+.roof-crops b { color: var(--earth-dark); font-weight: 600; }
+.model-card.live { border-color: var(--earth); }
+.model-card.live header .mono { color: var(--earth); }

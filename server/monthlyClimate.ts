@@ -37,26 +37,24 @@ async function geocode(place: string) {
   };
 }
 
-export async function monthlyClimate(place: string): Promise<MonthlyClimate> {
-  const key = place.trim().toLowerCase();
-  const cached = cache.get(key);
-  if (cached && cached.expires > Date.now()) return cached.value;
-  const location = await geocode(place);
+type ClimateSeries = Pick<MonthlyClimate, 'temperatureC' | 'solarMjM2Day' | 'precipitationMmDay' | 'annual' | 'source'>;
+const pointCache = new Map<string, { expires: number; value: Promise<ClimateSeries> }>();
+
+async function fetchNasaMonthly(lat: number, lon: number, label: string): Promise<ClimateSeries> {
   const params = new URLSearchParams({
     parameters: 'T2M,ALLSKY_SFC_SW_DWN,PRECTOTCORR', community: 'AG',
-    longitude: String(location.lon), latitude: String(location.lat), format: 'JSON',
+    longitude: String(lon), latitude: String(lat), format: 'JSON',
   });
   const response = await fetch(`https://power.larc.nasa.gov/api/temporal/climatology/point?${params}`);
-  if (!response.ok) throw new Error(`NASA POWER climate lookup failed for ${place}.`);
+  if (!response.ok) throw new Error(`NASA POWER climate lookup failed for ${label}.`);
   const payload = await response.json() as { properties?: { parameter?: Record<string, Record<string, number>> } };
   const values = payload.properties?.parameter ?? {};
   const series = (name: string) => MONTHS.map((month) => Number(values[name]?.[month]));
   const temperatureC = series('T2M');
   const solarMjM2Day = series('ALLSKY_SFC_SW_DWN');
   const precipitationMmDay = series('PRECTOTCORR');
-  if (![...temperatureC, ...solarMjM2Day, ...precipitationMmDay].every(Number.isFinite)) throw new Error(`NASA POWER returned incomplete monthly data for ${place}.`);
-  const value: MonthlyClimate = {
-    ...location,
+  if (![...temperatureC, ...solarMjM2Day, ...precipitationMmDay].every(Number.isFinite)) throw new Error(`NASA POWER returned incomplete monthly data for ${label}.`);
+  return {
     temperatureC, solarMjM2Day, precipitationMmDay,
     annual: {
       temperatureC: Number(values.T2M?.ANN),
@@ -65,6 +63,25 @@ export async function monthlyClimate(place: string): Promise<MonthlyClimate> {
     },
     source: 'NASA POWER Agroclimatology monthly climatology',
   };
+}
+
+/** Monthly climate at a coordinate. NASA POWER's grid is ~0.5°, so nearby roofs share one cached lookup. */
+export function monthlyClimateAt(lat: number, lon: number): Promise<ClimateSeries> {
+  const key = `${lat.toFixed(1)},${lon.toFixed(1)}`;
+  const cached = pointCache.get(key);
+  if (cached && cached.expires > Date.now()) return cached.value;
+  const value = fetchNasaMonthly(Number(lat.toFixed(1)), Number(lon.toFixed(1)), key);
+  pointCache.set(key, { expires: Date.now() + 86_400_000, value });
+  value.catch(() => pointCache.delete(key));
+  return value;
+}
+
+export async function monthlyClimate(place: string): Promise<MonthlyClimate> {
+  const key = place.trim().toLowerCase();
+  const cached = cache.get(key);
+  if (cached && cached.expires > Date.now()) return cached.value;
+  const location = await geocode(place);
+  const value: MonthlyClimate = { ...location, ...await fetchNasaMonthly(location.lat, location.lon, place) };
   cache.set(key, { expires: Date.now() + 86_400_000, value });
   return value;
 }
