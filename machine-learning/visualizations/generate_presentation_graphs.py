@@ -47,10 +47,10 @@ def header(fig, eyebrow, title, subtitle):
     fig.text(0.94, 0.925, "CROPFIT v0.2", color=MUTED, fontsize=9, ha="right")
 
 
-def footer(fig):
+def footer(fig, context="Houston · irrigated · soil pH 6.5"):
     fig.text(0.06, 0.045, "FAO EcoCrop surrogate + NASA POWER climatology · screening evidence, not yield or purchase advice",
              color=MUTED, fontsize=8)
-    fig.text(0.94, 0.045, "Houston · irrigated · soil pH 6.5", color=MUTED, fontsize=8, ha="right")
+    fig.text(0.94, 0.045, context, color=MUTED, fontsize=8, ha="right")
 
 
 def growing_calendar():
@@ -342,6 +342,135 @@ def model_derived_houston_map():
     plt.close(fig)
 
 
+def learned_temperature_response():
+    """Isolate the production model's learned response to temperature."""
+    import joblib
+    from cropfit.features import feature_row
+    from cropfit.profiles import load_profiles, resolve_profile
+
+    ml_root = OUTPUT.parent
+    model = joblib.load(ml_root / "artifacts/cropfit.joblib")["model"]
+    profiles = load_profiles(ml_root / "data/raw/ecocrop.csv")
+    crops = [
+        ("Lettuce", "lettuce", GREEN), ("Strawberry", "strawberry", BLUE),
+        ("Wheat", "wheat", "#c691e8"), ("Tomato", "tomato", CORAL),
+        ("Pepper", "pepper", YELLOW), ("Corn", "corn", "#e7a45d"),
+    ]
+    temperatures = np.linspace(0, 40, 161)
+    fig = plt.figure(figsize=(16, 9), dpi=160)
+    header(fig, "LEARNED RESPONSE FUNCTION", "What temperature niches has CropFit learned?",
+           "Temperature varies while water, soil pH, sunlight, and irrigation are held at crop-optimal values.")
+    ax = fig.add_axes([0.08, 0.19, 0.84, 0.58])
+    ax.axvspan(0, 14, color=BLUE, alpha=0.035)
+    ax.axvspan(14, 24, color=GREEN, alpha=0.035)
+    ax.axvspan(24, 40, color=CORAL, alpha=0.035)
+    ax.text(7, 104, "COOL", color=BLUE, fontsize=9, fontweight="bold", ha="center")
+    ax.text(19, 104, "TEMPERATE", color=GREEN, fontsize=9, fontweight="bold", ha="center")
+    ax.text(32, 104, "HOT", color=CORAL, fontsize=9, fontweight="bold", ha="center")
+    for label, query, color in crops:
+        profile = resolve_profile(query, profiles)
+        rainfall = (profile.rain_opt_min + profile.rain_opt_max) / 2
+        ph = (profile.ph_opt_min + profile.ph_opt_max) / 2
+        rows = np.asarray([feature_row(profile, value, rainfall, ph, 18.0, True) for value in temperatures], dtype=np.float32)
+        predictions = model.predict(rows)
+        ax.plot(temperatures, predictions, color=color, linewidth=2.8, label=label)
+        peak_index = int(np.argmax(predictions))
+        ax.scatter(temperatures[peak_index], predictions[peak_index], s=48, color=color, edgecolor=TEXT, linewidth=0.9, zorder=4)
+        label_x = min(39.2, profile.temp_opt_max + 0.6)
+        label_y = float(model.predict(np.asarray([feature_row(profile, min(label_x, 40), rainfall, ph, 18.0, True)], dtype=np.float32))[0])
+        ax.text(label_x, label_y, label, color=color, fontsize=9, fontweight="bold", va="center")
+        ax.hlines(-3 - crops.index((label, query, color)) * 2.2, profile.temp_opt_min, profile.temp_opt_max,
+                  color=color, linewidth=5, alpha=0.9, clip_on=False)
+    ax.text(0.2, -2.5, "ECROP OPTIMAL BANDS", color=MUTED, fontsize=7.5, fontweight="bold", va="top")
+    ax.set_xlim(0, 40)
+    ax.set_ylim(-17, 108)
+    ax.set_xlabel("Air temperature (°C)", fontsize=10, labelpad=12)
+    ax.set_ylabel("Predicted suitability (0–100)", fontsize=10, labelpad=12)
+    ax.set_xticks(range(0, 41, 5))
+    ax.set_yticks([0, 20, 40, 60, 80, 100])
+    ax.grid(color=GRID, linewidth=0.8, alpha=0.65)
+    ax.spines[["top", "right"]].set_visible(False)
+    ax.legend(loc="lower left", bbox_to_anchor=(0.0, 1.01), ncol=6, frameon=False,
+              labelcolor=TEXT, fontsize=8, handlelength=2.4)
+    fig.text(0.08, 0.105, "JUDGE READ", color=GREEN, fontsize=9, fontweight="bold")
+    fig.text(0.17, 0.105, "The same trained function separates cool crops from warm-season crops without using a city-specific lookup table.",
+             color=TEXT, fontsize=9.5)
+    footer(fig, "Controlled experiment · crop-optimal water, pH, sunlight, irrigation")
+    fig.savefig(OUTPUT / "cropfit-learned-temperature-response.png", facecolor=BG)
+    plt.close(fig)
+
+
+def model_evaluation_diagnostics():
+    """Reconstruct the exact held-out split and show honest production metrics."""
+    import joblib
+    from sklearn.model_selection import GroupShuffleSplit
+    from cropfit.profiles import load_profiles
+    from cropfit.training import generate_examples
+
+    ml_root = OUTPUT.parent
+    bundle = joblib.load(ml_root / "artifacts/cropfit.joblib")
+    model, metadata = bundle["model"], bundle["metadata"]
+    profiles = load_profiles(ml_root / "data/raw/ecocrop.csv")
+    x, y, groups = generate_examples(profiles, 72, metadata["seed"])
+    _, test_indices = next(GroupShuffleSplit(n_splits=1, test_size=.2, random_state=metadata["seed"]).split(x, y, groups))
+    predictions = model.predict(x[test_indices])
+    residuals = np.abs(predictions - y[test_indices])
+    history_path = ml_root / "runs" / metadata["runId"] / "history.csv"
+    history = np.genfromtxt(history_path, delimiter=",", names=True)
+
+    fig = plt.figure(figsize=(16, 9), dpi=160)
+    header(fig, "MODEL EVALUATION · HELD-OUT CROP PROFILES", "What does CropFit accuracy actually measure?",
+           "Production ExtraTrees is evaluated on species profiles never seen during training—not random rows from known crops.")
+    metrics = [("7.21", "MAE", "suitability points"), ("0.817", "R²", "held-out scenarios"),
+               ("21.42", "P90 ERROR", "90% within this"), ("373", "UNSEEN PROFILES", "20% group holdout")]
+    for index, (value, label, note) in enumerate(metrics):
+        x_pos = 0.07 + index * 0.225
+        fig.text(x_pos, 0.755, value, color=TEXT, fontsize=20, fontweight="bold")
+        fig.text(x_pos + 0.058, 0.765, label, color=GREEN, fontsize=8, fontweight="bold")
+        fig.text(x_pos + 0.058, 0.746, note, color=MUTED, fontsize=7.5)
+
+    predicted_axis = fig.add_axes([0.07, 0.20, 0.27, 0.45])
+    sample = np.random.default_rng(7).choice(len(test_indices), min(7000, len(test_indices)), replace=False)
+    predicted_axis.scatter(y[test_indices][sample], predictions[sample], s=5, color=GREEN, alpha=0.11, rasterized=True)
+    predicted_axis.plot([0, 100], [0, 100], color=TEXT, linewidth=1.2, linestyle="--", alpha=0.8)
+    predicted_axis.set(title="Selected model · predicted vs target", xlabel="Mechanistic target", ylabel="ExtraTrees prediction", xlim=(-2, 102), ylim=(-2, 102))
+
+    error_axis = fig.add_axes([0.39, 0.20, 0.24, 0.45])
+    error_axis.hist(residuals, bins=np.arange(0, 52, 2), color=BLUE, alpha=0.85)
+    error_axis.axvline(metadata["metrics"]["mae"], color=GREEN, linewidth=2, label="MAE 7.21")
+    error_axis.axvline(metadata["metrics"]["p90AbsoluteError"], color=YELLOW, linewidth=2, linestyle="--", label="P90 21.42")
+    error_axis.set(title="Selected model · held-out error", xlabel="Absolute error (suitability points)", ylabel="Scenarios", xlim=(0, 50))
+    error_axis.legend(frameon=False, labelcolor=TEXT, fontsize=8)
+
+    loss_axis = fig.add_axes([0.68, 0.20, 0.25, 0.45])
+    loss_axis.plot(history["iteration"], history["train_rmse"], color=GREEN, linewidth=2, label="train RMSE")
+    loss_axis.plot(history["iteration"], history["validation_rmse"], color=CORAL, linewidth=2, label="validation RMSE")
+    loss_axis.set(title="Rejected XGBoost candidate · loss", xlabel="Boosting round", ylabel="RMSE", xlim=(1, len(history)))
+    rate_axis = loss_axis.twinx()
+    rate_axis.plot(history["iteration"], history["learning_rate"], color=YELLOW, linewidth=1.3, alpha=0.8, label="learning rate")
+    rate_axis.set_ylabel("Learning rate", color=YELLOW)
+    rate_axis.tick_params(axis="y", colors=YELLOW)
+    handles, labels = loss_axis.get_legend_handles_labels()
+    rate_handles, rate_labels = rate_axis.get_legend_handles_labels()
+    loss_axis.legend(handles + rate_handles, labels + rate_labels, frameon=False, labelcolor=TEXT, fontsize=7.5)
+
+    for axis in [predicted_axis, error_axis, loss_axis]:
+        axis.grid(color=GRID, linewidth=0.7, alpha=0.65)
+        axis.spines[["top", "right"]].set_visible(False)
+        axis.title.set_color(TEXT); axis.title.set_fontsize(10); axis.title.set_fontweight("bold")
+    rate_axis.spines["top"].set_visible(False)
+    rate_axis.spines["right"].set_color(YELLOW)
+    fig.text(0.07, 0.115, "WHAT THIS PROVES", color=GREEN, fontsize=9, fontweight="bold")
+    fig.text(0.19, 0.115, "The model reproduces the EcoCrop screening function on unseen crop profiles. It does not yet prove farm yield accuracy.",
+             color=TEXT, fontsize=9.5)
+    fig.text(0.07, 0.085, "MODEL SELECTION", color=BLUE, fontsize=9, fontweight="bold")
+    fig.text(0.19, 0.085, "ExtraTrees won (MAE 7.21). The iterative XGBoost candidate shown at right was rejected (MAE 8.95).",
+             color=TEXT, fontsize=9.5)
+    footer(fig, "134,064 synthetic scenarios · 373 held-out crop profiles · seed 20261114")
+    fig.savefig(OUTPUT / "cropfit-model-evaluation-diagnostics.png", facecolor=BG)
+    plt.close(fig)
+
+
 if __name__ == "__main__":
     setup()
     growing_calendar()
@@ -349,4 +478,6 @@ if __name__ == "__main__":
     portfolio_map()
     crop_classification_map()
     model_derived_houston_map()
-    print("Generated 5 CropFit presentation PNGs in", OUTPUT)
+    learned_temperature_response()
+    model_evaluation_diagnostics()
+    print("Generated 7 CropFit presentation PNGs in", OUTPUT)

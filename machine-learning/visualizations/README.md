@@ -11,6 +11,11 @@ irrigation enabled and soil pH 6.5:
 - `cropfit-model-derived-houston-classification.png` — trained location-fit
   classes with profile temperature ranges, ensemble disagreement, crop-cycle
   size, score, and planting month; every quantitative mark comes from CropFit
+- `cropfit-learned-temperature-response.png` — city-independent response curves
+  learned by the promoted model while non-temperature inputs stay optimal
+- `cropfit-model-evaluation-diagnostics.png` — selected-model held-out scatter,
+  residual distribution, metrics, and the rejected XGBoost candidate's loss and
+  learning-rate curves
 
 Regenerate them with the full ML environment:
 
