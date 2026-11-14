@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useMemo } from 'react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { Edges, Line, OrbitControls, useTexture } from '@react-three/drei';
 import * as THREE from 'three';
@@ -6,6 +6,7 @@ import type { CellResult, MetricPolygon, MetricRoofGeometry, Obstruction, SunPos
 import './Roof3DVisualizer.css';
 
 type Bounds = { x: number; y: number; width: number; height: number };
+type SurfaceMode = 'imagery' | 'clean';
 
 type Roof3DVisualizerProps = {
   roofGeometry: MetricRoofGeometry;
@@ -30,6 +31,7 @@ function RoofPolygonSurface({
   imageryUrl,
   buildingHeightM,
   isInfrared,
+  surfaceMode,
 }: {
   polygon: MetricPolygon;
   centerX: number;
@@ -39,6 +41,7 @@ function RoofPolygonSurface({
   imageryUrl: string;
   buildingHeightM: number | null;
   isInfrared: boolean;
+  surfaceMode: SurfaceMode;
 }) {
   const sourceTexture = useTexture(imageryUrl);
   const texture = useMemo(() => {
@@ -140,11 +143,13 @@ function RoofPolygonSurface({
       <meshStandardMaterial color="#d9d4ca" roughness={.86} metalness={.02} />
     </mesh>}
     <mesh geometry={roofGeometry} rotation={[Math.PI / 2, 0, 0]} position={[0, .025, 0]} receiveShadow>
-      {isInfrared
+      {surfaceMode === 'clean'
+        ? <meshStandardMaterial color="#63a878" roughness={.78} metalness={0} side={THREE.DoubleSide} />
+        : isInfrared
         ? <primitive object={infraredMaterial!} attach="material" />
         : <meshStandardMaterial map={texture} roughness={.72} metalness={.02} side={THREE.DoubleSide} />}
     </mesh>
-    {isInfrared && <mesh geometry={roofGeometry} rotation={[Math.PI / 2, 0, 0]} position={[0, .04, 0]} receiveShadow>
+    {isInfrared && surfaceMode === 'imagery' && <mesh geometry={roofGeometry} rotation={[Math.PI / 2, 0, 0]} position={[0, .04, 0]} receiveShadow>
       <shadowMaterial color="#2b211b" transparent opacity={.22} depthWrite={false} />
     </mesh>}
   </>;
@@ -154,7 +159,7 @@ function RoofSurface({ geometry, ...props }: Omit<Parameters<typeof RoofPolygonS
   return <>{geometry.map((polygon, index) => <RoofPolygonSurface key={index} polygon={polygon} {...props} />)}</>;
 }
 
-function Scene({ props }: { props: Roof3DVisualizerProps }) {
+function Scene({ props, surfaceMode }: { props: Roof3DVisualizerProps; surfaceMode: SurfaceMode }) {
   const isInfrared = props.surfaceLabel.startsWith('CIR');
   const centerX = props.roofBounds.x + props.roofBounds.width / 2;
   const centerY = props.roofBounds.y + props.roofBounds.height / 2;
@@ -199,11 +204,12 @@ function Scene({ props }: { props: Roof3DVisualizerProps }) {
         imageryUrl={props.imageryUrl}
         buildingHeightM={props.buildingHeightM}
         isInfrared={isInfrared}
+        surfaceMode={surfaceMode}
       />
       {outlineRings.map((ring, index) => <Line
         key={`outline-${index}`}
         points={[...ring, ring[0]].map((point) => [point.x - centerX, .2, point.y - centerY])}
-        color="#e85d04"
+        color={surfaceMode === 'clean' ? '#236143' : '#e85d04'}
         lineWidth={2.2}
         transparent
         opacity={.94}
@@ -220,7 +226,7 @@ function Scene({ props }: { props: Roof3DVisualizerProps }) {
       >
         <boxGeometry args={[obstruction.width * .94, obstruction.heightM, obstruction.depth * .94]} />
         <meshStandardMaterial color="#d9d2ca" roughness={.68} metalness={.02} transparent opacity={.48} depthWrite={false} />
-        <Edges color="#e85d04" threshold={12} />
+        <Edges color={surfaceMode === 'clean' ? '#236143' : '#e85d04'} threshold={12} />
       </mesh>)}
     </group>
 
@@ -252,6 +258,7 @@ function Scene({ props }: { props: Roof3DVisualizerProps }) {
 export default function Roof3DVisualizer(props: Roof3DVisualizerProps) {
   const span = Math.max(props.roofBounds.width, props.roofBounds.height, 12);
   const buildingHeight = props.buildingHeightM ?? 0;
+  const [surfaceMode, setSurfaceMode] = useState<SurfaceMode>('imagery');
 
   return <div className="roof-3d-view">
     <Canvas
@@ -267,7 +274,7 @@ export default function Roof3DVisualizer(props: Roof3DVisualizerProps) {
     >
       <color attach="background" args={['#f7f5f2']} />
       <fog attach="fog" args={['#f7f5f2', span * 2.2, span * 6]} />
-      <Suspense fallback={null}><Scene props={props} /></Suspense>
+      <Suspense fallback={null}><Scene props={props} surfaceMode={surfaceMode} /></Suspense>
     </Canvas>
     <div className="roof-3d-hud roof-3d-hud--left">
       <span className="mono">ROOF VIEW</span>
@@ -275,10 +282,14 @@ export default function Roof3DVisualizer(props: Roof3DVisualizerProps) {
       <small>Drag to orbit · scroll to zoom</small>
     </div>
     <div className="roof-3d-status">
-      <span>{props.surfaceLabel.startsWith('CIR') ? 'NIR' : 'RGB'}</span>
+      <span>{surfaceMode === 'clean' ? 'CLEAN' : props.surfaceLabel.startsWith('CIR') ? 'NIR' : 'RGB'}</span>
       <strong>{props.sun.altitude.toFixed(1)}° sun</strong>
       <small>{props.sun.azimuth.toFixed(0)}° azimuth · {props.obstructions.length} measured features</small>
     </div>
-    {props.surfaceLabel.startsWith('CIR') && <div className="roof-3d-cir-note"><span className="mono">NIR INTENSITY</span><small>Denoised single-spectrum view</small></div>}
+    <div className="roof-surface-mode" aria-label="Roof surface style">
+      <button className={surfaceMode === 'imagery' ? 'active' : ''} onClick={() => setSurfaceMode('imagery')} aria-pressed={surfaceMode === 'imagery'}>Imagery</button>
+      <button className={surfaceMode === 'clean' ? 'active' : ''} onClick={() => setSurfaceMode('clean')} aria-pressed={surfaceMode === 'clean'}>Clean roof</button>
+    </div>
+    {props.surfaceLabel.startsWith('CIR') && surfaceMode === 'imagery' && <div className="roof-3d-cir-note"><span className="mono">NIR INTENSITY</span><small>Denoised single-spectrum view</small></div>}
   </div>;
 }
