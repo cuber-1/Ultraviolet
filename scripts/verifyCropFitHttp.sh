@@ -60,7 +60,19 @@ assert health["status"] == "ok" and health["requestLimits"]["historyYearsMax"] =
 prediction = requests.post(f"{base}/predict", json=payload, timeout=30)
 prediction.raise_for_status()
 assert prediction.json()["observedYieldEvidence"]["county"] == "Fort Bend County"
+representatives = {
+    "basil": "Ocimum basilicum",
+    "kale": "Brassica oleracea var. acephala",
+    "common bean": "Phaseolus vulgaris",
+    "melon": "Cucumis melo",
+    "onion": "Allium cepa",
+    "sunflower": "Helianthus annuus",
+}
+for crop, scientific_name in representatives.items():
+    response = requests.post(f"{base}/predict", json={**payload, "crop": crop}, timeout=30)
+    response.raise_for_status()
+    assert response.json()["profile"]["scientific_name"] == scientific_name
 invalid = requests.post(f"{base}/predict", json={**payload, "climate": climate[:11]}, timeout=10)
 assert invalid.status_code == 422
-print(f'CropFit HTTP verified: API {health["apiVersion"]}, local fallback, USDA evidence, input bounds')
+print(f'CropFit HTTP verified: API {health["apiVersion"]}, 16-choice coverage, USDA evidence, input bounds')
 PY

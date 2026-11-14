@@ -135,3 +135,13 @@ random-forest pass rather than invoking every tree once per scenario. The
 committed benchmark requires exact nested output equality and measured a
 machine-dependent median reduction from 26.4 ms to 4.5 ms (**5.9x faster**) on
 the development host. See `evaluation/inference-benchmark-v1.md`.
+
+## Onboarding crop coverage
+
+All 16 onboarding choices now reach CropFit in resilient mode, up from 10.
+Grouped choices disclose their representative EcoCrop profile in result notes:
+leafy greens use lettuce, herbs use basil, kale and brassicas use kale, beans
+use common bean, cucumbers and squash use cucumber, and melons use rock melon.
+Strict mode supports 15 choices and intentionally excludes microgreens because
+a mature lettuce profile does not represent a 2–3 week microgreen cycle. CI
+checks the complete ID-to-profile mapping on every push.

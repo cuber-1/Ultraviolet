@@ -27,6 +27,7 @@ jobs:
       - run: npm run test:ml-failover
       - run: npm run test:rural-ranking
       - run: npm run test:crop-expansion-policy
+      - run: npm run test:crop-coverage
 
   cropfit:
     name: Released model inference

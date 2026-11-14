@@ -6,11 +6,14 @@
 > `{ crop, latitude, longitude, soilPh, irrigated, climate, climateHistory }`, and maps `monthlyCurve`,
 > `plantingReliability`, `suitableMonths`, `growingDays`, `confidence`, and `limitingFactors` onto the
 > prediction fields below. Crop ids map to EcoCrop names (greens→lettuce,
-> tomatoes→tomato, peppers→pepper, strawberries→strawberry, cucumbers→cucumber,
-> corn, soybeans→soybean, wheat, potatoes→potato); other crops use the calendar.
+> herbs→basil, tomatoes→tomato, peppers→pepper, strawberries→strawberry,
+> kale→kale, beans→common bean, cucumbers→cucumber, corn, soybeans→soybean,
+> wheat, potatoes→potato, melons→rock melon, onions→onion,
+> sunflowers→sunflower). Microgreens use lettuce only in resilient mode and
+> remain excluded in strict mode.
 > Optional: `ML_SOIL_PH` (default 6.5), `ML_IRRIGATED` (default true).
 
-For corn, soybean, and wheat, CropFit API v0.5.7 also returns optional
+For corn, soybean, and wheat, CropFit API v0.5.8 also returns optional
 `observedYieldEvidence` from the nearest USDA reporting county within 100 km.
 Atlas v2 includes 2010–2025 history plus a calibrated observed-yield percentile
 prior with 80% and 90% uncertainty intervals. It does not modify the underlying

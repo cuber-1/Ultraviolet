@@ -41,6 +41,16 @@ def verify(artifact: Path, profiles: Path) -> None:
     assert ordinary[-1]["score"] != hot_next_year[-1]["score"], "late planting did not use following-year climate"
     scenarios = [climate(18.0), climate(20.0) + climate(21.0), climate(25.0)]
     assert predictor.curves(profile, scenarios, 6.5, True) == [predictor.curve(profile, values, 6.5, True) for values in scenarios]
+    onboarding_profiles = {
+        "basil": "Ocimum basilicum",
+        "kale": "Brassica oleracea var. acephala",
+        "common bean": "Phaseolus vulgaris",
+        "melon": "Cucumis melo",
+        "onion": "Allium cepa",
+        "sunflower": "Helianthus annuus",
+    }
+    for name, scientific_name in onboarding_profiles.items():
+        assert resolve_profile(name, predictor.profiles).scientific_name == scientific_name
 
     invalid = climate(20.0) + climate(20.0)
     invalid[-1]["precipitationMmDay"] = -1

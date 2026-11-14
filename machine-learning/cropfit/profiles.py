@@ -22,6 +22,17 @@ ALIASES = {
     "cucumber": "Cucumis sativus",
     "pepper": "Capsicum annuum",
     "okra": "Abelmoschus esculentus",
+    "basil": "Ocimum basilicum",
+    "kale": "Brassica oleracea var. acephala",
+    "bean": "Phaseolus vulgaris",
+    "beans": "Phaseolus vulgaris",
+    "common bean": "Phaseolus vulgaris",
+    "melon": "Cucumis melo",
+    "melons": "Cucumis melo",
+    "onion": "Allium cepa",
+    "onions": "Allium cepa",
+    "sunflower": "Helianthus annuus",
+    "sunflowers": "Helianthus annuus",
 }
 
 

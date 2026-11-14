@@ -41,7 +41,10 @@ const backup = await start(async (req, res) => {
 const failedBackup = await start((_req, res) => send(res, 503, { error: 'backup unavailable' }));
 
 const request = {
-  crops: [{ id: 'tomatoes', name: 'Tomatoes', sunHours: 8, tempMinC: 16, tempMaxC: 30, growMonths: 3 }],
+  crops: [
+    { id: 'tomatoes', name: 'Tomatoes', sunHours: 8, tempMinC: 16, tempMaxC: 30, growMonths: 3 },
+    { id: 'herbs', name: 'Herbs', sunHours: 6, tempMinC: 15, tempMaxC: 30, growMonths: 2 },
+  ],
   preferredMonth: 2,
   targetAreaSqft: 1000,
   targetSunHours: 8,
@@ -61,13 +64,14 @@ try {
   process.env.ML_MODEL_TIMEOUT_MS = '1000';
   const backupResult = await predictCropSuitability(request);
   const health = await mlModelHealth();
-  if (backupResult.model.name !== 'CropFit backup' || backupResult.model.source !== 'ml' || health.role !== 'backup' || !receivedClimate || backupResult.predictions[0]?.observedYieldEvidence?.observedYieldPrior?.interval90[1] !== .7) {
+  const herbs = backupResult.predictions.find(({ cropId }) => cropId === 'herbs');
+  if (backupResult.model.name !== 'CropFit backup' || backupResult.model.source !== 'ml' || health.role !== 'backup' || !receivedClimate || backupResult.predictions[0]?.observedYieldEvidence?.observedYieldPrior?.interval90[1] !== .7 || !herbs?.notes?.includes('Representative EcoCrop profile for Herbs: basil.')) {
     throw new Error('Primary-to-backup failover did not select the backup model.');
   }
 
   process.env.ML_MODEL_FALLBACK_URL = url(failedBackup);
   const calendarResult = await predictCropSuitability(request);
-  if (calendarResult.model.source !== 'calendar-fallback' || calendarResult.predictions.length !== 1) {
+  if (calendarResult.model.source !== 'calendar-fallback' || calendarResult.predictions.length !== 2) {
     throw new Error('Model-to-calendar failover did not return calendar predictions.');
   }
   console.log('ML failover verified: primary -> backup -> crop calendar');

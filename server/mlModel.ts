@@ -144,9 +144,15 @@ function parsePrediction(value: unknown): Omit<MlPrediction, 'source'> | null {
 const CROPFIT_NAMES: Record<string, string> = {
   greens: 'lettuce', tomatoes: 'tomato', peppers: 'pepper', strawberries: 'strawberry', cucumbers: 'cucumber',
   corn: 'corn', soybeans: 'soybean', wheat: 'wheat', potatoes: 'potato', microgreens: 'lettuce',
+  herbs: 'basil', kale: 'kale', beans: 'common bean', melons: 'melon', onions: 'onion', sunflowers: 'sunflower',
+};
+const CROPFIT_REPRESENTATIVES: Record<string, string> = {
+  greens: 'lettuce', herbs: 'basil', microgreens: 'lettuce', kale: 'kale', beans: 'common bean',
+  cucumbers: 'cucumber', melons: 'rock melon',
 };
 /** Crops the model scores natively (microgreens borrows lettuce, so it is excluded in strict mode). */
 export const cropFitCropIds = () => Object.keys(CROPFIT_NAMES).filter((id) => !(mlStrict() && id === 'microgreens'));
+export const cropFitModelName = (cropId: string) => CROPFIT_NAMES[cropId] ?? null;
 
 export async function mlCapabilities() {
   const url = explicitModelUrl() ?? fallbackModelUrl();
@@ -223,6 +229,7 @@ function fromCropFit(site: MlSite, crop: MlCrop, preferredMonth: number, result:
   const reliableMonth = monthIndex(result.bestReliablePlantingMonth);
   const reliabilityNote = Number.isFinite(successRate) ? `Risk-adjusted ${reliableMonth === null ? 'best' : MONTH_KEYS[reliableMonth].toUpperCase()} window cleared the threshold in ${Math.round(successRate * 100)}% of ${Number(reliability?.years) || 0} historical years.` : null;
   const limitingNote = limiting?.factor && Number(limiting.score) < 90 ? `Most limited by ${limiting.factor.replace(/_/g, ' ')} (${Math.round(Number(limiting.score))}/100).` : limiting?.factor ? 'No strong limiting factor.' : null;
+  const representativeNote = CROPFIT_REPRESENTATIVES[crop.id] ? `Representative EcoCrop profile for ${crop.name}: ${CROPFIT_REPRESENTATIVES[crop.id]}.` : null;
   const observedNote = observed && typeof observed.county === 'string' && Number.isFinite(observed.meanPercentile) ? `USDA observed prior near ${observed.county}, ${String(observed.state)}: ${Math.round(Number(observed.observedYieldPrior?.expectedPercentile ?? observed.meanPercentile) * 100)}th percentile from ${Number(observed.observations)} published years (${Math.round(Number(observed.distanceKm))} km away).` : null;
   return {
     siteId: site.id, cropId: crop.id,
@@ -231,7 +238,7 @@ function fromCropFit(site: MlSite, crop: MlCrop, preferredMonth: number, result:
     harvestMonth: plant === null ? null : (plant + Math.max(1, Math.round(days / 30)) - 1) % 12,
     confidence: Number.isFinite(result.confidence) ? clamp01(Number(result.confidence)) : null,
     expectedYield: null,
-    notes: [reliabilityNote, observedNote, limitingNote].filter(Boolean).join(' ') || null,
+    notes: [representativeNote, reliabilityNote, observedNote, limitingNote].filter(Boolean).join(' ') || null,
     source: 'ml',
     curve: (result.monthlyCurve ?? []).flatMap((item) => {
       const month = monthIndex(item.month);
