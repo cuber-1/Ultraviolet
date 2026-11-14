@@ -144,10 +144,10 @@ function RoofPolygonSurface({
     </mesh>}
     {surfaceMode === 'clean' ? <>
       <mesh key="clean-roof" geometry={roofGeometry} rotation={[Math.PI / 2, 0, 0]} position={[0, .025, 0]}>
-        <meshBasicMaterial color="#63a878" side={THREE.DoubleSide} toneMapped={false} />
+        <meshBasicMaterial color="#e85d04" side={THREE.DoubleSide} toneMapped={false} />
       </mesh>
       <mesh geometry={roofGeometry} rotation={[Math.PI / 2, 0, 0]} position={[0, .04, 0]} receiveShadow>
-        <shadowMaterial color="#193b28" transparent opacity={.2} depthWrite={false} />
+        <shadowMaterial color="#4d1900" transparent opacity={.24} depthWrite={false} />
       </mesh>
     </> : <>
       <mesh key="imagery-roof" geometry={roofGeometry} rotation={[Math.PI / 2, 0, 0]} position={[0, .025, 0]} receiveShadow>
@@ -216,7 +216,7 @@ function Scene({ props, surfaceMode }: { props: Roof3DVisualizerProps; surfaceMo
       {outlineRings.map((ring, index) => <Line
         key={`outline-${index}`}
         points={[...ring, ring[0]].map((point) => [point.x - centerX, .2, point.y - centerY])}
-        color={surfaceMode === 'clean' ? '#236143' : '#e85d04'}
+        color={surfaceMode === 'clean' ? '#a83d00' : '#e85d04'}
         lineWidth={2.2}
         transparent
         opacity={.94}
@@ -233,9 +233,9 @@ function Scene({ props, surfaceMode }: { props: Roof3DVisualizerProps; surfaceMo
       >
         <boxGeometry args={[obstruction.width * .94, obstruction.heightM, obstruction.depth * .94]} />
         {surfaceMode === 'clean'
-          ? <meshStandardMaterial color="#2f6242" roughness={.82} metalness={0} />
+          ? <meshStandardMaterial color="#8f3000" roughness={.82} metalness={0} />
           : <meshStandardMaterial color="#d9d2ca" roughness={.68} metalness={.02} transparent opacity={.48} depthWrite={false} />}
-        <Edges color={surfaceMode === 'clean' ? '#173c29' : '#e85d04'} threshold={12} />
+        <Edges color={surfaceMode === 'clean' ? '#541a00' : '#e85d04'} threshold={12} />
       </mesh>)}
     </group>
 

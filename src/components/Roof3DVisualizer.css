@@ -89,7 +89,7 @@
   cursor: pointer;
 }
 
-.roof-surface-mode button.active { background: #346f4b; color: #fff; }
+.roof-surface-mode button.active { background: #e85d04; color: #fff; }
 .roof-surface-mode button:focus-visible { outline: 2px solid #e85d04; outline-offset: 2px; }
 
 .roof-3d-cir-note {
