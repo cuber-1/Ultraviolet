@@ -1,0 +1,126 @@
+{
+  "model": "CropFit EcoCrop surrogate v0.5",
+  "evaluation": "independent nationwide observed county yield; not used in training or model selection",
+  "years": [
+    2018,
+    2019,
+    2020,
+    2021,
+    2022
+  ],
+  "scope": "contiguous U.S. counties excluding California",
+  "assumptions": {
+    "soilPh": 6.5,
+    "irrigated": false,
+    "score": "best planting month",
+    "yieldNormalization": "percentile within crop and year"
+  },
+  "sources": {
+    "quickStats": "https://www.nass.usda.gov/sites/default/files/datasets/qs.crops_20261114.txt.gz",
+    "countyCoordinates": "https://www2.census.gov/geo/docs/maps-data/data/gazetteer/2022_Gazetteer/2022_Gaz_counties_national.zip",
+    "weather": "https://power.larc.nasa.gov/api/temporal/monthly/regional"
+  },
+  "pooledWithinCropYear": {
+    "observations": 17857,
+    "spearman": 0.0804,
+    "bootstrap95": [
+      0.0582,
+      0.1031
+    ],
+    "medianScore": 89.1
+  },
+  "perCrop": [
+    {
+      "crop": "corn",
+      "observations": 7234,
+      "spearman": -0.0264,
+      "bootstrap95": [
+        -0.0597,
+        0.0088
+      ],
+      "medianScore": 83.9
+    },
+    {
+      "crop": "soybean",
+      "observations": 6442,
+      "spearman": 0.1625,
+      "bootstrap95": [
+        0.1317,
+        0.192
+      ],
+      "medianScore": 100.0
+    },
+    {
+      "crop": "wheat",
+      "observations": 4181,
+      "spearman": 0.2824,
+      "bootstrap95": [
+        0.2375,
+        0.3229
+      ],
+      "medianScore": 79.7
+    }
+  ],
+  "perYear": [
+    {
+      "year": 2018,
+      "observations": 3300,
+      "spearman": 0.1231,
+      "bootstrap95": [
+        0.0876,
+        0.1573
+      ],
+      "medianScore": 88.5
+    },
+    {
+      "year": 2019,
+      "observations": 3108,
+      "spearman": -0.0618,
+      "bootstrap95": [
+        -0.0968,
+        -0.0256
+      ],
+      "medianScore": 86.05
+    },
+    {
+      "year": 2020,
+      "observations": 4054,
+      "spearman": 0.1022,
+      "bootstrap95": [
+        0.0711,
+        0.1327
+      ],
+      "medianScore": 87.0
+    },
+    {
+      "year": 2021,
+      "observations": 3671,
+      "spearman": 0.0991,
+      "bootstrap95": [
+        0.0648,
+        0.1337
+      ],
+      "medianScore": 88.3
+    },
+    {
+      "year": 2022,
+      "observations": 3724,
+      "spearman": 0.1207,
+      "bootstrap95": [
+        0.0899,
+        0.1518
+      ],
+      "medianScore": 93.7
+    }
+  ],
+  "gate": {
+    "passed": false,
+    "rule": "pooled Spearman >= 0.30, grouped-bootstrap lower bound > 0, every crop positive, and at least 4 of 5 years positive"
+  },
+  "protocol": "Declared after the California gate failed and before nationwide outcomes were scored.",
+  "limitations": [
+    "County yield reflects management, soil, genetics, pests, and economics in addition to weather.",
+    "All-production-practice yield is evaluated with a non-irrigated model assumption.",
+    "Quick Stats suppresses some county estimates; missing rows are not treated as zero yield."
+  ]
+}

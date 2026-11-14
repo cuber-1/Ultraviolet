@@ -61,12 +61,12 @@ def train_booster(x_train, y_train, x_validation, y_validation, rounds: int, see
     return booster, history, learning_rates[:len(history["train"]["rmse"])], device
 
 
-def save_run(run_dir: Path, metadata: dict, config: dict, history: dict, learning_rates: list[float], booster, residuals: np.ndarray):
+def save_run(run_dir: Path, metadata: dict, config: dict, history: dict, learning_rates: list[float], booster, model, residuals: np.ndarray):
     run_dir.mkdir(parents=True, exist_ok=True)
     (run_dir / "metrics.json").write_text(json.dumps(metadata, indent=2) + "\n")
     (run_dir / "config.json").write_text(json.dumps(config, indent=2) + "\n")
     with (run_dir / "history.csv").open("w", newline="") as output:
-        writer = csv.writer(output); writer.writerow(["iteration", "learning_rate", "train_rmse", "validation_rmse", "train_mae", "validation_mae"])
+        writer = csv.writer(output, lineterminator="\n"); writer.writerow(["iteration", "learning_rate", "train_rmse", "validation_rmse", "train_mae", "validation_mae"])
         for index, learning_rate in enumerate(learning_rates):
             writer.writerow([index + 1, learning_rate, history["train"]["rmse"][index], history["validation"]["rmse"][index], history["train"]["mae"][index], history["validation"]["mae"][index]])
     iterations = np.arange(1, len(learning_rates) + 1)
@@ -83,6 +83,8 @@ def save_run(run_dir: Path, metadata: dict, config: dict, history: dict, learnin
     importance = booster.get_score(importance_type="gain")
     ranked = sorted(importance.items(), key=lambda item: item[1])[-12:]
     figure, axis = plt.subplots(figsize=(8, 5)); axis.barh([item[0] for item in ranked], [item[1] for item in ranked], color="#6f9551"); axis.set(title="XGBoost candidate feature importance (gain)", xlabel="gain"); figure.tight_layout(); figure.savefig(run_dir / "feature-importance.png", dpi=180); plt.close(figure)
+    forest_importance = sorted(zip(FEATURE_NAMES, model.feature_importances_, strict=True), key=lambda item: item[1])[-12:]
+    figure, axis = plt.subplots(figsize=(8, 5)); axis.barh([item[0] for item in forest_importance], [item[1] for item in forest_importance], color="#315d49"); axis.set(title="Selected Random Forest feature importance", xlabel="mean decrease in impurity"); figure.tight_layout(); figure.savefig(run_dir / "selected-feature-importance.png", dpi=180); plt.close(figure)
 
 
 def train(raw: Path, artifact: Path, metadata_path: Path, runs: Path, samples_per_crop: int, seed: int, rounds: int):
@@ -125,10 +127,18 @@ def train(raw: Path, artifact: Path, metadata_path: Path, runs: Path, samples_pe
             })
     residuals = np.abs(baseline_predictions - y[test_indices])
     boosted_residuals = np.abs(boosted_predictions - y[test_indices])
+    test_tree_predictions = np.asarray([tree.predict(x[test_indices]) for tree in model.estimators_])
+    test_tree_std = test_tree_predictions.std(axis=0)
+    test_p80 = np.empty_like(test_tree_std)
+    test_p90 = np.empty_like(test_tree_std)
+    for index, value in enumerate(test_tree_std):
+        match = next((item for item in uncertainty_bins if value >= item["lowerTreeStd"] and (item["upperTreeStd"] is None or value < item["upperTreeStd"])), None)
+        test_p80[index] = match["p80AbsoluteError"] if match else value
+        test_p90[index] = match["p90AbsoluteError"] if match else min(100.0, value * 1.5)
     created = datetime.now(timezone.utc)
     run_id = created.strftime("%Y%m%dT%H%M%SZ")
     metadata = {
-        "model": "CropFit EcoCrop surrogate v0.4",
+        "model": "CropFit EcoCrop surrogate v0.5",
         "selectedModel": "randomForest",
         "createdAt": created.isoformat(),
         "runId": run_id,
@@ -157,8 +167,12 @@ def train(raw: Path, artifact: Path, metadata_path: Path, runs: Path, samples_pe
             "source": "validation crop profiles only",
             "method": "tree-disagreement bins",
             "bins": uncertainty_bins,
+            "heldOutCoverage": {
+                "p80": round(float(np.mean(residuals <= test_p80)), 4),
+                "p90": round(float(np.mean(residuals <= test_p90)), 4),
+            },
         },
-        "selectionEvidence": "Random Forest improved held-out MAE over v0.3 ExtraTrees on all five seeds in the 20261110-20261114 robustness sweep (20.0% mean improvement).",
+        "selectionEvidence": "Range-relative agronomic features improved held-out MAE on all five seeds in the 20261110-20261114 robustness sweep; see evaluation/feature-validation-v0.5.json.",
         "boostedCandidate": {
             "mae": round(float(mean_absolute_error(y[test_indices], boosted_predictions)), 4),
             "r2": round(float(r2_score(y[test_indices], boosted_predictions)), 4),
@@ -174,7 +188,7 @@ def train(raw: Path, artifact: Path, metadata_path: Path, runs: Path, samples_pe
     # Ship only the promoted estimator. Candidate diagnostics remain in the run directory.
     joblib.dump({"model": model, "metadata": metadata}, artifact, compress=3)
     metadata_path.write_text(json.dumps(metadata, indent=2) + "\n")
-    save_run(runs / run_id, metadata, config, history, learning_rates, booster, residuals)
+    save_run(runs / run_id, metadata, config, history, learning_rates, booster, model, residuals)
     return metadata
 
 

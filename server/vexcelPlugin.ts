@@ -4,7 +4,7 @@ import { resolve } from 'node:path';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { geometryBounds, geometryRequiredRadius, insideMetricGeometry, metricPointToLonLat, roofWktToMetricGeometry, type MetricRoofGeometry } from '../src/services/roofGeometry';
 import { sharedMeetingArea, simulate, type AreaSelection, type Obstruction } from '../src/services/sunSimulation';
-import { handleMonthlyClimate } from './monthlyClimate';
+import { handleMonthlyClimate, monthlyClimateAt } from './monthlyClimate';
 import { handleRunsRoute } from './runStore';
 import { handleGeoRoute } from './geocode';
 import { combinedRoofScore, handleMlRoute, mlModelStatus, modelBaseUrl, predictCropSuitability, siteSuitability, type MlCrop } from './mlModel';
@@ -13,6 +13,7 @@ import { createPhotonConversation, photonStatus, sendPhotonMessage, type PhotonP
 
 const API_ROOT = 'https://api.vexcelgroup.com/v2';
 const LAYERS = 'urban,urban-r,wide-area,urban-g';
+const CLIMATE_MONTHS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
 
 type JsonRecord = Record<string, unknown>;
 type RuralGoal = 'balanced' | 'sun' | 'low-irrigation';
@@ -481,8 +482,13 @@ export function vexcelApiPlugin(root: string) {
       }
       if (url.pathname === '/api/cropfit/predict' && req.method === 'POST') {
         const input = await body(req);
+        const latitude = Number(input.latitude); const longitude = Number(input.longitude);
+        const climate = Number.isFinite(latitude) && Number.isFinite(longitude) ? await monthlyClimateAt(latitude, longitude).catch(() => null) : null;
         const response = await fetch(`${modelBaseUrl()}/predict`, {
-          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(input), signal: AbortSignal.timeout(35_000),
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...input,
+            climate: climate ? CLIMATE_MONTHS.map((month, index) => ({ month: month.toUpperCase(), temperatureC: climate.temperatureC[index], precipitationMmDay: climate.precipitationMmDay[index], solarMjM2Day: climate.solarMjM2Day[index] })) : undefined,
+            climateHistory: climate?.history.map((year) => CLIMATE_MONTHS.map((month, index) => ({ month: month.toUpperCase(), year: year.year, temperatureC: year.temperatureC[index], precipitationMmDay: year.precipitationMmDay[index], solarMjM2Day: year.solarMjM2Day[index] }))),
+          }), signal: AbortSignal.timeout(35_000),
         });
         const payload = await response.json();
         return json(res, response.status, response.ok ? payload : { error: payload.detail || 'CropFit prediction failed.' });

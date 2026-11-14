@@ -7,7 +7,7 @@ revenue, or a buy/sell recommendation.
 
 ## Run the trained model
 
-On macOS or Linux, install the released v0.4 artifact, EcoCrop profiles, and
+On macOS or Linux, install the released v0.5 artifact, EcoCrop profiles, and
 inference dependencies without access to the Spark:
 
 ```bash
@@ -70,8 +70,16 @@ learning-rate schedule, error distribution, and feature importance to
 `machine-learning/runs/<run-id>/`. A candidate is only promoted when it improves held-out
 crop-profile error.
 
-The trained API obtains monthly climatology from NASA POWER unless the caller
-supplies a 12-month `climate` array in the prediction request.
+The trained API obtains NASA POWER monthly history for 2015–2024 unless the
+caller supplies a 12-month `climate` array and `climateHistory`. It evaluates
+each month across all ten years and returns a risk-adjusted planting month,
+historical success rate, and p10/median/p90 suitability bands. These describe
+climate consistency, not observed yield accuracy.
+
+For corn, soybeans, and wheat, the response may also include
+`observedYieldEvidence`: the nearest USDA reporting county within 100 km, its
+2018–2025 within-crop/year percentile range, and published yield history. This
+is displayed as historical context and never changes the suitability score.
 
 ## Next evidence gate
 
@@ -80,6 +88,8 @@ External observed-outcome validation is reproducible with:
 ```bash
 npm run ml:download:observed
 npm run ml:evaluate:observed
+npm run ml:download:observed:national
+npm run ml:evaluate:observed:national
 ```
 
 This compares CropFit with California's 2018–2022 county agricultural
@@ -87,3 +97,29 @@ commissioner yield reports using actual-year NASA POWER weather. The data are
 not used for training or model selection. The current gate did not pass, so the
 UI must retain the `agroclimatic-screening` evidence label until independent,
 broader-state evidence supports a new claim.
+
+The national command streams USDA NASS Quick Stats into a small filtered cache
+and evaluates 17,857 county-year yields outside California. That independent
+gate also did not pass; its committed report is the primary observed-outcome
+evidence for v0.5. The cache is versioned with the model so a new artifact
+cannot silently reuse an older model's scores.
+
+## Reproduce feature selection
+
+```bash
+npm run ml:evaluate:features
+```
+
+This compares the v0.4 absolute-feature design with v0.5 range-relative
+agronomic features on five identical grouped crop-profile splits. The committed
+report explicitly measures EcoCrop-teacher fidelity, not observed yield.
+
+## Rebuild the county yield atlas
+
+```bash
+npm run ml:build:yield-atlas
+```
+
+The builder uses the filtered USDA Quick Stats and Census county files from the
+national observed-validation download. It writes the compact atlas, a
+forward-year validation report, and a presentation PNG under `evaluation/`.

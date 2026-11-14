@@ -11,7 +11,7 @@ import './ModelPage.css';
 type Health = {
   configured: boolean; online: boolean; latencyMs: number | null; model: { name?: string; version?: string } | null;
   metrics?: Record<string, number> | null; error: string | null;
-  evidence?: { grade?: string; observedOutcomeGate?: { passed: boolean; observations: number; spearman: number; bootstrap95: [number, number] } | null } | null;
+  evidence?: { grade?: string; observedOutcomeGate?: { passed: boolean; scope?: string; observations: number; spearman: number; bootstrap95: [number, number] } | null; historicalYieldAtlas?: { available: boolean; records: number; crops: string[]; years: number[]; validation: { observations: number; spearman: number; bootstrap95: [number, number] } } } | null;
 };
 type Status = { agent?: { configured: boolean; model: string | null; provider: string | null; baseUrl?: string | null; tracing?: { enabled: boolean; project: string } }; ml?: { configured: boolean; url: string | null } };
 
@@ -102,7 +102,7 @@ function ModelExplorer({ health }: { health: Health | null }) {
       const profiles = CROPS.filter((crop) => crops.includes(crop.id)).map(({ id, name, sunHours, tempMinC, tempMaxC, growMonths }) => ({ id, name, sunHours, tempMinC, tempMaxC, growMonths }));
       const request = {
         crops: profiles, preferredMonth: month, targetAreaSqft: 5_000, targetSunHours: Math.max(...profiles.map((crop) => crop.sunHours)),
-        sites: climate.results.map((item) => ({ id: item.query, kind: 'region', lat: item.lat, lon: item.lon, climate: { temperatureC: item.temperatureC, solarMjM2Day: item.solarMjM2Day, precipitationMmDay: item.precipitationMmDay }, roof: null })),
+        sites: climate.results.map((item) => ({ id: item.query, kind: 'region', lat: item.lat, lon: item.lon, climate: { temperatureC: item.temperatureC, solarMjM2Day: item.solarMjM2Day, precipitationMmDay: item.precipitationMmDay, history: item.history }, roof: null })),
       };
       const started = performance.now();
       const response = await fetch('/api/ml/predict', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(request) });
@@ -121,7 +121,7 @@ function ModelExplorer({ health }: { health: Health | null }) {
 
   return <section className="model-section">
     <header><div><span className="mono">02 / MODEL EXPLORER</span><h2>Ask the crop model directly</h2></div>
-      <div className="model-pill-group"><span className={`model-pill ${health?.online ? 'live' : ''}`}>{health?.online ? `● ${health.model?.name ?? 'Model'} online` : '○ Crop calendar fallback'}</span>{health?.metrics && <span className="model-metrics mono">{Object.entries(health.metrics).map(([key, value]) => `${({ mae: 'MAE', r2: 'R²', p90AbsoluteError: 'P90 ERR' } as Record<string, string>)[key] ?? key.toUpperCase()} ${Number(value).toFixed(key === 'r2' ? 2 : 1)}`).join(' · ')}</span>}{health?.evidence?.observedOutcomeGate && <span className={`model-evidence mono ${health.evidence.observedOutcomeGate.passed ? 'passed' : ''}`}>{health.evidence.observedOutcomeGate.passed ? 'OBSERVED-OUTCOME GATE PASSED' : `SCREENING ONLY · YIELD GATE NOT PASSED · N=${health.evidence.observedOutcomeGate.observations}`}</span>}</div></header>
+      <div className="model-pill-group"><span className={`model-pill ${health?.online ? 'live' : ''}`}>{health?.online ? `● ${health.model?.name ?? 'Model'} online` : '○ Crop calendar fallback'}</span>{health?.metrics && <span className="model-metrics mono">{Object.entries(health.metrics).map(([key, value]) => `${({ mae: 'MAE', r2: 'R²', p90AbsoluteError: 'P90 ERR' } as Record<string, string>)[key] ?? key.toUpperCase()} ${Number(value).toFixed(key === 'r2' ? 2 : 1)}`).join(' · ')}</span>}{health?.evidence?.observedOutcomeGate && <span className={`model-evidence mono ${health.evidence.observedOutcomeGate.passed ? 'passed' : ''}`}>{health.evidence.observedOutcomeGate.passed ? 'OBSERVED-OUTCOME GATE PASSED' : `SCREENING ONLY · YIELD GATE NOT PASSED · N=${health.evidence.observedOutcomeGate.observations}`}</span>}{health?.evidence?.historicalYieldAtlas && <span className="model-evidence mono passed">USDA HISTORY · {health.evidence.historicalYieldAtlas.records.toLocaleString()} COUNTY-CROP RECORDS · FORWARD ρ={health.evidence.historicalYieldAtlas.validation.spearman.toFixed(2)}</span>}</div></header>
     <div className="explorer-controls">
       <div><small className="mono">CROPS (UP TO 5)</small><div className="chip-row">{CROPS.map((crop) => <button key={crop.id} className={crops.includes(crop.id) ? 'chip active' : 'chip'} onClick={() => toggle(crops, setCrops, crop.id, 5)}>{crop.name}</button>)}</div></div>
       <div><small className="mono">PLACES (UP TO 8)</small><div className="chip-row">{PLACES.map((place) => <button key={place.value} className={places.includes(place.value) ? 'chip active' : 'chip'} onClick={() => toggle(places, setPlaces, place.value, 8)}>{place.label}<em>{place.kind}</em></button>)}</div></div>

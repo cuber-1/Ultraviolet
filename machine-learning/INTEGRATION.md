@@ -3,12 +3,25 @@
 > **CropFit is supported directly.** If the model's `GET /health` returns a
 > `model` string containing "CropFit" (or `ML_MODEL_API=cropfit`), the app calls
 > CropFit's own API instead: one `POST /predict` per site × crop with
-> `{ crop, latitude, longitude, soilPh, irrigated }`, and maps `monthlyCurve`,
-> `suitableMonths`, `growingDays`, `confidence`, and `limitingFactors` onto the
+> `{ crop, latitude, longitude, soilPh, irrigated, climate, climateHistory }`, and maps `monthlyCurve`,
+> `plantingReliability`, `suitableMonths`, `growingDays`, `confidence`, and `limitingFactors` onto the
 > prediction fields below. Crop ids map to EcoCrop names (greens→lettuce,
 > tomatoes→tomato, peppers→pepper, strawberries→strawberry, cucumbers→cucumber,
 > corn, soybeans→soybean, wheat, potatoes→potato); other crops use the calendar.
 > Optional: `ML_SOIL_PH` (default 6.5), `ML_IRRIGATED` (default true).
+
+For corn, soybean, and wheat, CropFit v0.5.1 also returns optional
+`observedYieldEvidence` from the nearest USDA reporting county within 100 km.
+It is historical context only and does not modify suitability or site ranking.
+
+The app supplies a 2015–2024 NASA POWER monthly history. CropFit scores every
+planting month in every year and returns p10/median/p90 suitability plus the
+fraction of years scoring at least 55. `bestReliablePlantingMonth` maximizes the
+historical downside (p10) before median fit. If the caller omits climate data,
+the standalone CropFit service fetches the same history itself, so Mac-only
+inference returns the same fields when the Spark is offline. Growing cycles
+crossing December continue into the following historical year; the fixed 2024
+start year uses the ten-year baseline for its 2025 continuation.
 
 Ultraviolet calls the crop-suitability model over HTTP from its server. Implement
 these two endpoints and set `ML_MODEL_URL` (or `CROPFIT_URL`) in the app's `.env`.
@@ -24,7 +37,7 @@ tries `ML_MODEL_FALLBACK_URL`. If neither model answers, it falls back to a crop
 calendar (NASA monthly temperature within each crop's range) and labels the
 results "Crop calendar · model offline". The UI and Deep Agent keep working.
 
-CropFit (this folder) is the production model; the generic contract below is
+CropFit v0.5 (this folder) is the production model; the generic contract below is
 for any other model you want to plug in.
 
 ## `GET /health`
@@ -73,7 +86,8 @@ Return `200` with any JSON body, for example `{"ok": true}`.
 | `targetAreaSqft` | Growing area the user needs. Rural sites send the land size. |
 | `targetSunHours` | The most demanding crop's daily sun need. |
 | `sites[].kind` | `"roof"` for urban rooftops, `"region"` for rural farming towns. |
-| `sites[].climate` | NASA POWER monthly climatology, 12 values each, January first. `null` if the lookup failed. |
+| `sites[].climate` | NASA POWER 2015–2024 monthly mean, 12 values each, January first. `null` if the lookup failed. |
+| `sites[].climate.history` | Ten annual monthly series (2015–2024), used for planting reliability and p10–p90 bands. |
 | `sites[].climate.temperatureC` | Monthly mean air temperature at 2 m, °C. |
 | `sites[].climate.solarMjM2Day` | Monthly mean all-sky surface shortwave, MJ/m²/day. |
 | `sites[].climate.precipitationMmDay` | Monthly mean precipitation, mm/day. |

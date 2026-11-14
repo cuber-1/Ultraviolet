@@ -772,6 +772,7 @@
 .cropfit-bars>div { display: grid; grid-template-rows: 1fr 16px 13px 13px; justify-items: center; min-width: 0; }
 .cropfit-bar-track { position: relative; width: min(32px,70%); height: 100%; }
 .cropfit-bar-track>i { position: absolute; right: 0; bottom: 0; left: 0; min-height: 2px; border-radius: 3px 3px 0 0; background: #698b62; transition: height .35s ease; }
+.cropfit-history { position: absolute; right: -5px; left: -5px; min-height: 2px; border-top: 1px solid #f1b27e; border-bottom: 1px solid #f1b27e; background: rgba(241,178,126,.14); }
 .cropfit-bars .best .cropfit-bar-track>i { background: #b7dc75; box-shadow: 0 0 18px rgba(183,220,117,.25); }
 .cropfit-bar-track>i>span { position: absolute; right: 45%; bottom: calc(100% - 8px); width: 1px; min-height: 3px; background: #f1b27e; }
 .cropfit-bars strong { color: #dfe8e2; font-size: 8px; }
@@ -782,6 +783,21 @@
 .cropfit-window span { color: #b7dc75; font: 7px var(--font-mono); letter-spacing: .1em; }
 .cropfit-window strong { color: #ecf2ed; font-size: 9px; }
 .cropfit-window p { grid-column: 1/-1; color: #778a7d; font-size: 7px; }
+.cropfit-yield { margin-top: 16px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,.1); }
+.cropfit-yield>header { display: flex; align-items: end; justify-content: space-between; gap: 12px; }
+.cropfit-yield>header div { display: grid; gap: 4px; }
+.cropfit-yield>header span { color: #f1b27e; font: 7px var(--font-mono); letter-spacing: .1em; }
+.cropfit-yield>header strong { color: #e8efe9; font-size: 9px; }
+.cropfit-yield>header em { color: #93a59a; font: normal 7px var(--font-mono); }
+.cropfit-yield svg { display: block; width: 100%; height: 154px; margin-top: 8px; overflow: visible; }
+.cropfit-yield svg text { fill: #75887c; font: 7px var(--font-mono); }
+.cropfit-yield .yield-midline { stroke: rgba(255,255,255,.15); stroke-dasharray: 3 3; }
+.cropfit-yield .yield-bar { fill: #537863; transition: opacity .2s; }
+.cropfit-yield .yield-bar:hover { opacity: .72; }
+.cropfit-yield .yield-value { fill: #dce8df; }
+.cropfit-yield .yield-year { fill: #87998d; }
+.cropfit-yield>footer { display: flex; flex-wrap: wrap; gap: 6px 18px; color: #75887c; font: 6px var(--font-mono); letter-spacing: .05em; }
+.cropfit-yield>footer p { flex-basis: 100%; color: #65786c; font: 7px var(--font-sans); letter-spacing: 0; }
 
 @media (max-width: 1050px) {
   .cropfit-lab>header { grid-template-columns: 1fr; }

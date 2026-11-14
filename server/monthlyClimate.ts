@@ -1,6 +1,6 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 
-// Monthly NASA POWER climatology for onboarding crop timing.
+// Recent NASA POWER monthly history and derived climatology for crop timing.
 // POST /api/climate/monthly { locations: string[] } -> { results, errors }
 
 const MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'] as const;
@@ -15,6 +15,7 @@ export type MonthlyClimate = {
   temperatureC: number[];
   solarMjM2Day: number[];
   precipitationMmDay: number[];
+  history: Array<{ year: number; temperatureC: number[]; solarMjM2Day: number[]; precipitationMmDay: number[] }>;
   annual: { temperatureC: number; solarMjM2Day: number; precipitationMmDay: number };
   source: string;
 };
@@ -37,31 +38,34 @@ async function geocode(place: string) {
   };
 }
 
-type ClimateSeries = Pick<MonthlyClimate, 'temperatureC' | 'solarMjM2Day' | 'precipitationMmDay' | 'annual' | 'source'>;
+type ClimateSeries = Pick<MonthlyClimate, 'temperatureC' | 'solarMjM2Day' | 'precipitationMmDay' | 'history' | 'annual' | 'source'>;
 const pointCache = new Map<string, { expires: number; value: Promise<ClimateSeries> }>();
 
 async function fetchNasaMonthly(lat: number, lon: number, label: string): Promise<ClimateSeries> {
   const params = new URLSearchParams({
     parameters: 'T2M,ALLSKY_SFC_SW_DWN,PRECTOTCORR', community: 'AG',
-    longitude: String(lon), latitude: String(lat), format: 'JSON',
+    longitude: String(lon), latitude: String(lat), format: 'JSON', start: '2015', end: '2024',
   });
-  const response = await fetch(`https://power.larc.nasa.gov/api/temporal/climatology/point?${params}`);
+  const response = await fetch(`https://power.larc.nasa.gov/api/temporal/monthly/point?${params}`);
   if (!response.ok) throw new Error(`NASA POWER climate lookup failed for ${label}.`);
   const payload = await response.json() as { properties?: { parameter?: Record<string, Record<string, number>> } };
   const values = payload.properties?.parameter ?? {};
-  const series = (name: string) => MONTHS.map((month) => Number(values[name]?.[month]));
-  const temperatureC = series('T2M');
-  const solarMjM2Day = series('ALLSKY_SFC_SW_DWN');
-  const precipitationMmDay = series('PRECTOTCORR');
+  const years = Array.from({ length: 10 }, (_, index) => 2015 + index);
+  const series = (name: string, year: number) => MONTHS.map((_month, index) => Number(values[name]?.[`${year}${String(index + 1).padStart(2, '0')}`]));
+  const history = years.map((year) => ({ year, temperatureC: series('T2M', year), solarMjM2Day: series('ALLSKY_SFC_SW_DWN', year), precipitationMmDay: series('PRECTOTCORR', year) }));
+  const mean = (name: 'temperatureC' | 'solarMjM2Day' | 'precipitationMmDay') => MONTHS.map((_month, index) => history.reduce((sum, year) => sum + year[name][index], 0) / history.length);
+  const temperatureC = mean('temperatureC');
+  const solarMjM2Day = mean('solarMjM2Day');
+  const precipitationMmDay = mean('precipitationMmDay');
   if (![...temperatureC, ...solarMjM2Day, ...precipitationMmDay].every(Number.isFinite)) throw new Error(`NASA POWER returned incomplete monthly data for ${label}.`);
   return {
-    temperatureC, solarMjM2Day, precipitationMmDay,
+    temperatureC, solarMjM2Day, precipitationMmDay, history,
     annual: {
-      temperatureC: Number(values.T2M?.ANN),
-      solarMjM2Day: Number(values.ALLSKY_SFC_SW_DWN?.ANN),
-      precipitationMmDay: Number(values.PRECTOTCORR?.ANN),
+      temperatureC: temperatureC.reduce((sum, value) => sum + value, 0) / 12,
+      solarMjM2Day: solarMjM2Day.reduce((sum, value) => sum + value, 0) / 12,
+      precipitationMmDay: precipitationMmDay.reduce((sum, value) => sum + value, 0) / 12,
     },
-    source: 'NASA POWER Agroclimatology monthly climatology',
+    source: 'NASA POWER Agroclimatology 2015–2024 monthly history',
   };
 }
 

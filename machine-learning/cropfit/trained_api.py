@@ -1,18 +1,20 @@
 from __future__ import annotations
 
+import json
 import os
 from functools import lru_cache
-import json
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
 from .inference import CropFitPredictor
+from .yield_atlas import load_atlas, nearest_evidence
 
 
 ROOT = Path(__file__).resolve().parents[1]
-app = FastAPI(title="Ultraviolet CropFit", version="0.4.0")
+YIELD_ATLAS = ROOT / "evaluation/yield-atlas-v1.json"
+app = FastAPI(title="Ultraviolet CropFit", version="0.5.3")
 
 
 class PredictionRequest(BaseModel):
@@ -22,6 +24,7 @@ class PredictionRequest(BaseModel):
     soilPh: float = Field(default=6.5, ge=2.5, le=10.5)
     irrigated: bool = False
     climate: list[dict] | None = None
+    climateHistory: list[list[dict]] | None = None
 
 
 @lru_cache(maxsize=1)
@@ -34,31 +37,47 @@ def predictor() -> CropFitPredictor:
 
 @lru_cache(maxsize=1)
 def observed_evidence() -> dict:
-    path = ROOT / "evaluation/observed-validation-v0.4.json"
+    candidates = [
+        ROOT / "evaluation/national-observed-validation-v0.5.json",
+        ROOT / "evaluation/observed-validation-v0.5.json",
+        ROOT / "evaluation/national-observed-validation-v0.4.json",
+        ROOT / "evaluation/observed-validation-v0.4.json",
+    ]
+    path = next((candidate for candidate in candidates if candidate.exists()), candidates[0])
     if not path.exists():
         return {"grade": "agroclimatic-screening", "observedOutcomeGate": None}
     report = json.loads(path.read_text())
-    return {
+    evidence = {
         "grade": "agroclimatic-screening",
         "observedOutcomeGate": {
             "passed": report["gate"]["passed"],
-            "observations": report["pooledWithinCrop"]["observations"],
-            "spearman": report["pooledWithinCrop"]["spearman"],
-            "bootstrap95": report["pooledWithinCrop"]["bootstrap95"],
+            "scope": report["scope"],
+            "observations": (report.get("pooledWithinCropYear") or report["pooledWithinCrop"])["observations"],
+            "spearman": (report.get("pooledWithinCropYear") or report["pooledWithinCrop"])["spearman"],
+            "bootstrap95": (report.get("pooledWithinCropYear") or report["pooledWithinCrop"])["bootstrap95"],
         },
     }
+    if YIELD_ATLAS.exists():
+        atlas = load_atlas(str(YIELD_ATLAS.resolve()))
+        evidence["historicalYieldAtlas"] = {
+            "available": True, "records": len(atlas["records"]), "crops": atlas["crops"],
+            "years": atlas["years"], "validation": atlas["validation"],
+        }
+    return evidence
 
 
 @app.get("/health")
 def health():
     model = predictor()
-    return {"status": "ok", "mode": "trained", "model": model.metadata["model"], "metrics": model.metadata["metrics"], "evidence": observed_evidence()}
+    return {"status": "ok", "mode": "trained", "apiVersion": app.version, "model": model.metadata["model"], "metrics": model.metadata["metrics"], "evidence": observed_evidence()}
 
 
 @app.post("/predict")
 def predict(value: PredictionRequest):
     try:
-        return predictor().predict(value.crop, value.latitude, value.longitude, value.soilPh, value.irrigated, value.climate)
+        result = predictor().predict(value.crop, value.latitude, value.longitude, value.soilPh, value.irrigated, value.climate, value.climateHistory)
+        result["observedYieldEvidence"] = nearest_evidence(value.crop, value.latitude, value.longitude, YIELD_ATLAS) if YIELD_ATLAS.exists() else None
+        return result
     except KeyError as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
     except Exception as error:

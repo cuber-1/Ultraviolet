@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-release_url="https://github.com/cuber-1/Ultraviolet/releases/download/cropfit-v0.4/ultraviolet-cropfit-v0.4.tar.gz"
-expected_sha256="9b15bfbe3a0641add1bace244ad17aa51aa544f9bd80cf344420973e6ddcf671"
+release_url="https://github.com/cuber-1/Ultraviolet/releases/download/cropfit-v0.5/ultraviolet-cropfit-v0.5.tar.gz"
+expected_sha256="3e603f81361fa0375f6883d64f896cc15fd8db9523bc147b1dfd4daa61bbefc2"
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 bundle_tmp="$(mktemp -d)"
 trap 'rm -rf "${bundle_tmp}"' EXIT
 
-echo "Downloading CropFit v0.4 model bundle..."
+echo "Downloading CropFit v0.5 model bundle..."
 if command -v gh >/dev/null 2>&1; then
-  gh release download cropfit-v0.4 --repo cuber-1/Ultraviolet --pattern ultraviolet-cropfit-v0.4.tar.gz --output "${bundle_tmp}/cropfit.tar.gz"
+  gh release download cropfit-v0.5 --repo cuber-1/Ultraviolet --pattern ultraviolet-cropfit-v0.5.tar.gz --output "${bundle_tmp}/cropfit.tar.gz"
 elif [[ -n "${GITHUB_TOKEN:-}" ]]; then
   curl --fail --location --retry 3 --header "Authorization: Bearer ${GITHUB_TOKEN}" --output "${bundle_tmp}/cropfit.tar.gz" "${release_url}"
 else
@@ -38,4 +38,4 @@ tar -xzf "${bundle_tmp}/cropfit.tar.gz" -C "${repo_root}"
 python3 -m venv "${repo_root}/machine-learning/.venv"
 "${repo_root}/machine-learning/.venv/bin/python" -m pip install -r "${repo_root}/machine-learning/requirements-inference.txt"
 
-echo "CropFit v0.4 is installed. Start it with: npm run ml:serve"
+echo "CropFit v0.5 is installed. Start it with: npm run ml:serve"

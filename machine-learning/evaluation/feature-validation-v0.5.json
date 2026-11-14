@@ -1,0 +1,141 @@
+{
+  "protocol": {
+    "target": "mechanistic EcoCrop screening teacher; not observed yield",
+    "split": "entire crop profiles held out; identical grouped split per feature set",
+    "samplesPerCrop": 72,
+    "estimators": 120,
+    "seeds": [
+      20261110,
+      20261111,
+      20261112,
+      20261113,
+      20261114
+    ],
+    "baselineFeatures": [
+      "temperature_c",
+      "annual_precipitation_mm",
+      "soil_ph",
+      "solar_mj_m2_day",
+      "irrigated",
+      "temp_opt_min",
+      "temp_opt_max",
+      "temp_abs_min",
+      "temp_abs_max",
+      "rain_opt_min",
+      "rain_opt_max",
+      "rain_abs_min",
+      "rain_abs_max",
+      "ph_opt_min",
+      "ph_opt_max",
+      "ph_abs_min",
+      "ph_abs_max",
+      "growing_days_min",
+      "growing_days_max"
+    ],
+    "candidateFeatures": [
+      "temperature_c",
+      "annual_precipitation_mm",
+      "soil_ph",
+      "solar_mj_m2_day",
+      "irrigated",
+      "temp_opt_min",
+      "temp_opt_max",
+      "temp_abs_min",
+      "temp_abs_max",
+      "rain_opt_min",
+      "rain_opt_max",
+      "rain_abs_min",
+      "rain_abs_max",
+      "ph_opt_min",
+      "ph_opt_max",
+      "ph_abs_min",
+      "ph_abs_max",
+      "growing_days_min",
+      "growing_days_max",
+      "temperature_range_fit",
+      "water_range_fit",
+      "ph_range_fit",
+      "solar_range_fit"
+    ]
+  },
+  "results": [
+    {
+      "seed": 20261110,
+      "absoluteFeatures": {
+        "mae": 5.2896,
+        "r2": 0.8451,
+        "p90AbsoluteError": 18.6521
+      },
+      "rangeRelativeFeatures": {
+        "mae": 0.1496,
+        "r2": 0.9996,
+        "p90AbsoluteError": 0.4092
+      },
+      "maeImprovementPercent": 97.17
+    },
+    {
+      "seed": 20261111,
+      "absoluteFeatures": {
+        "mae": 5.5638,
+        "r2": 0.8448,
+        "p90AbsoluteError": 19.092
+      },
+      "rangeRelativeFeatures": {
+        "mae": 0.1588,
+        "r2": 0.9996,
+        "p90AbsoluteError": 0.431
+      },
+      "maeImprovementPercent": 97.15
+    },
+    {
+      "seed": 20261112,
+      "absoluteFeatures": {
+        "mae": 5.3811,
+        "r2": 0.8423,
+        "p90AbsoluteError": 19.0866
+      },
+      "rangeRelativeFeatures": {
+        "mae": 0.1543,
+        "r2": 0.9996,
+        "p90AbsoluteError": 0.4297
+      },
+      "maeImprovementPercent": 97.13
+    },
+    {
+      "seed": 20261113,
+      "absoluteFeatures": {
+        "mae": 5.3939,
+        "r2": 0.8443,
+        "p90AbsoluteError": 18.787
+      },
+      "rangeRelativeFeatures": {
+        "mae": 0.1536,
+        "r2": 0.9996,
+        "p90AbsoluteError": 0.4386
+      },
+      "maeImprovementPercent": 97.15
+    },
+    {
+      "seed": 20261114,
+      "absoluteFeatures": {
+        "mae": 5.3558,
+        "r2": 0.847,
+        "p90AbsoluteError": 18.6914
+      },
+      "rangeRelativeFeatures": {
+        "mae": 0.1519,
+        "r2": 0.9996,
+        "p90AbsoluteError": 0.4443
+      },
+      "maeImprovementPercent": 97.16
+    }
+  ],
+  "summary": {
+    "wins": 5,
+    "seeds": 5,
+    "baselineMeanMae": 5.3968,
+    "candidateMeanMae": 0.1536,
+    "meanMaeImprovementPercent": 97.15
+  },
+  "interpretation": "This measures fidelity to the synthetic EcoCrop teacher on unseen crop profiles. It does not establish yield accuracy."
+}
