@@ -39,6 +39,8 @@ def verify(artifact: Path, profiles: Path) -> None:
     ordinary = predictor.curve(profile, climate(20.0) + climate(20.0), 6.5, True)
     hot_next_year = predictor.curve(profile, climate(20.0) + climate(45.0), 6.5, True)
     assert ordinary[-1]["score"] != hot_next_year[-1]["score"], "late planting did not use following-year climate"
+    scenarios = [climate(18.0), climate(20.0) + climate(21.0), climate(25.0)]
+    assert predictor.curves(profile, scenarios, 6.5, True) == [predictor.curve(profile, values, 6.5, True) for values in scenarios]
 
     invalid = climate(20.0) + climate(20.0)
     invalid[-1]["precipitationMmDay"] = -1
@@ -116,7 +118,7 @@ def verify(artifact: Path, profiles: Path) -> None:
         else:
             raise AssertionError("invalid caller climate was not mapped to HTTP 422")
 
-    print(f"CropFit inference verified: {predictor.metadata['model']} ({len(FEATURE_NAMES)} features, 10-year reliability, county evidence)")
+    print(f"CropFit inference verified: {predictor.metadata['model']} ({len(FEATURE_NAMES)} features, batched 10-year reliability, county evidence)")
 
 
 def main() -> None:

@@ -127,3 +127,11 @@ must be finite and remain within documented physical limits. Invalid caller
 data returns HTTP 422 instead of being mislabeled as a model/upstream failure;
 the limits are advertised by `GET /health` and enforced in offline inference
 tests used by the Mac installer and CI.
+
+## Batched reliability inference
+
+API v0.5.7 evaluates the baseline and ten historical climate scenarios in one
+random-forest pass rather than invoking every tree once per scenario. The
+committed benchmark requires exact nested output equality and measured a
+machine-dependent median reduction from 26.4 ms to 4.5 ms (**5.9x faster**) on
+the development host. See `evaluation/inference-benchmark-v1.md`.

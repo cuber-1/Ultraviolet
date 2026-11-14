@@ -166,6 +166,7 @@ that series includes chickpeas, unlike the current USDA category.
 ```bash
 npm run ml:evaluate:recency
 npm run ml:benchmark:atlas
+npm run ml:benchmark:inference
 ```
 
 The recency command tests exponential history weighting under fixed temporal

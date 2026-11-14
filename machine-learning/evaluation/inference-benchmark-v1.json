@@ -1,0 +1,9 @@
+{
+  "name": "CropFit reliability inference benchmark v1",
+  "method": "Median of 30 warm runs over one baseline plus ten historical climate scenarios; exact nested output equality required.",
+  "scenarios": 11,
+  "legacyMilliseconds": 26.3895,
+  "batchedMilliseconds": 4.5007,
+  "speedup": 5.86,
+  "outputsIdentical": true
+}

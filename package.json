@@ -17,6 +17,7 @@
     "ml:evaluate:crop-expansion": "PYTHONPATH=machine-learning machine-learning/.venv/bin/python -m cropfit.crop_expansion_validation",
     "ml:evaluate:recency": "PYTHONPATH=machine-learning machine-learning/.venv/bin/python -m cropfit.recency_validation",
     "ml:benchmark:atlas": "PYTHONPATH=machine-learning machine-learning/.venv/bin/python -m cropfit.atlas_lookup_benchmark",
+    "ml:benchmark:inference": "PYTHONPATH=machine-learning machine-learning/.venv/bin/python -m cropfit.inference_benchmark",
     "ml:train": "PYTHONPATH=machine-learning machine-learning/.venv/bin/python -m cropfit.training",
     "ml:serve": "PYTHONPATH=machine-learning machine-learning/.venv/bin/python -m uvicorn cropfit.trained_api:app --host 0.0.0.0 --port 8100",
     "ml:serve:local": "./scripts/runCropFitLocal.sh",

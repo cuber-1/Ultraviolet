@@ -10,7 +10,7 @@
 > corn, soybeans→soybean, wheat, potatoes→potato); other crops use the calendar.
 > Optional: `ML_SOIL_PH` (default 6.5), `ML_IRRIGATED` (default true).
 
-For corn, soybean, and wheat, CropFit API v0.5.6 also returns optional
+For corn, soybean, and wheat, CropFit API v0.5.7 also returns optional
 `observedYieldEvidence` from the nearest USDA reporting county within 100 km.
 Atlas v2 includes 2010–2025 history plus a calibrated observed-yield percentile
 prior with 80% and 90% uncertainty intervals. It does not modify the underlying

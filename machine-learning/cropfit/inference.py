@@ -83,7 +83,7 @@ class CropFitPredictor:
             if not 0 <= solar <= 100:
                 raise ValueError(f"Climate record {MONTHS[index % 12]} has solar resource outside 0 to 100 MJ/m2/day.")
 
-    def curve(self, profile, climate_values: list[dict], soil_ph: float, irrigated: bool) -> list[dict]:
+    def curve_inputs(self, profile, climate_values: list[dict], soil_ph: float, irrigated: bool) -> tuple[list, list, list, list]:
         self.validate_climate(climate_values)
         cycle_days = min(365, max(30, round((profile.growing_days_min + profile.growing_days_max) / 2)))
         rows = []
@@ -112,32 +112,46 @@ class CropFitPredictor:
             teacher.append(teacher_scores(profile, temperature, annualized_precipitation, soil_ph, solar, irrigated))
             start_precipitation = float(month["precipitationMmDay"]) * 365.25
             establishment.append(teacher_scores(profile, float(month["temperatureC"]), start_precipitation, soil_ph, float(month["solarMjM2Day"]), irrigated))
-        tree_predictions = np.asarray([tree.predict(np.asarray(rows, dtype=np.float32)) for tree in self.model.estimators_])
+        return rows, teacher, establishment, seasonal_climate
+
+    def curves(self, profile, climate_series: list[list[dict]], soil_ph: float, irrigated: bool) -> list[list[dict]]:
+        inputs = [self.curve_inputs(profile, values, soil_ph, irrigated) for values in climate_series]
+        all_rows = np.asarray([row for rows, *_ in inputs for row in rows], dtype=np.float32)
+        tree_predictions = np.asarray([tree.predict(all_rows) for tree in self.model.estimators_])
         if self.booster is not None and self.metadata.get("selectedModel") == "xgboost":
             import xgboost as xgb
-            predictions = self.booster.predict(xgb.DMatrix(np.asarray(rows, dtype=np.float32), feature_names=self.metadata["featureNames"]))
+            predictions = self.booster.predict(xgb.DMatrix(all_rows, feature_names=self.metadata["featureNames"]))
         else:
             predictions = tree_predictions.mean(axis=0)
         uncertainty = tree_predictions.std(axis=0)
-        curve = []
-        for index, month in enumerate(climate_values[:12]):
-            component = {name: min(value, establishment[index][name]) for name, value in teacher[index].items()}
-            temperature, precipitation_mm_day, solar = seasonal_climate[index]
-            score = min(float(predictions[index]), establishment[index]["suitability"])
-            error_p80, error_p90 = self.calibrated_error(float(uncertainty[index]))
-            curve.append({
-                "month": str(month["month"]),
-                "monthIndex": index + 1,
-                "score": round(score, 1),
-                "uncertainty": round(float(uncertainty[index]), 1),
-                "expectedAbsoluteErrorP80": round(error_p80, 1),
-                "expectedAbsoluteErrorP90": round(error_p90, 1),
-                "temperatureC": round(temperature, 1),
-                "precipitationMmDay": round(precipitation_mm_day, 2),
-                "solarMjM2Day": round(solar, 1),
-                "components": {name: round(value, 1) for name, value in component.items() if name != "suitability"},
-            })
-        return curve
+        result = []
+        offset = 0
+        for climate_values, (_, teacher, establishment, seasonal_climate) in zip(climate_series, inputs, strict=True):
+            curve = []
+            for index, month in enumerate(climate_values[:12]):
+                position = offset + index
+                component = {name: min(value, establishment[index][name]) for name, value in teacher[index].items()}
+                temperature, precipitation_mm_day, solar = seasonal_climate[index]
+                score = min(float(predictions[position]), establishment[index]["suitability"])
+                error_p80, error_p90 = self.calibrated_error(float(uncertainty[position]))
+                curve.append({
+                    "month": str(month["month"]),
+                    "monthIndex": index + 1,
+                    "score": round(score, 1),
+                    "uncertainty": round(float(uncertainty[position]), 1),
+                    "expectedAbsoluteErrorP80": round(error_p80, 1),
+                    "expectedAbsoluteErrorP90": round(error_p90, 1),
+                    "temperatureC": round(temperature, 1),
+                    "precipitationMmDay": round(precipitation_mm_day, 2),
+                    "solarMjM2Day": round(solar, 1),
+                    "components": {name: round(value, 1) for name, value in component.items() if name != "suitability"},
+                })
+            result.append(curve)
+            offset += len(curve)
+        return result
+
+    def curve(self, profile, climate_values: list[dict], soil_ph: float, irrigated: bool) -> list[dict]:
+        return self.curves(profile, [climate_values], soil_ph, irrigated)[0]
 
     def predict(self, crop: str, latitude: float, longitude: float, soil_ph: float = 6.5, irrigated: bool = False,
                 climate: list[dict] | None = None, climate_history: list[list[dict]] | None = None):
@@ -147,9 +161,9 @@ class CropFitPredictor:
             climate_history = climate_history or fetched_history
         else:
             climate_values = climate
-        curve = self.curve(profile, climate_values, soil_ph, irrigated)
         history = climate_history or []
-        historical_curves = [self.curve(profile, year + (history[index + 1] if index + 1 < len(history) else climate_values), soil_ph, irrigated) for index, year in enumerate(history)]
+        climate_series = [climate_values] + [year + (history[index + 1] if index + 1 < len(history) else climate_values) for index, year in enumerate(history)]
+        curve, *historical_curves = self.curves(profile, climate_series, soil_ph, irrigated)
         for month_index, item in enumerate(curve):
             if not historical_curves:
                 continue
