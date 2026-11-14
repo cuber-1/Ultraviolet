@@ -82,3 +82,8 @@
   .model-header { grid-template-columns: auto 1fr; }
   .model-header .wordmark { display: none; }
 }
+
+.model-pill-group { display: grid; justify-items: end; gap: 5px; }
+.model-metrics { color: var(--gray-400); font-size: 9px; letter-spacing: .08em; }
+.model-confidence { color: var(--gray-400) !important; font-size: 10px !important; letter-spacing: .08em; }
+.model-warning { display: flex; gap: 8px; padding: 10px 12px; border: 1px solid #e9b99a; border-radius: 8px; background: #fff6ef; color: #7d3821; font-size: 12px; overflow-wrap: anywhere; }

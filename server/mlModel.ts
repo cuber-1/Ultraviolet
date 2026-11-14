@@ -45,8 +45,9 @@ export async function mlModelHealth() {
   const started = Date.now();
   try {
     const response = await fetch(`${url}/health`, { signal: AbortSignal.timeout(4_000) });
-    const payload = await response.json().catch(() => ({})) as { model?: { name?: string; version?: string } };
-    return { configured: true, online: response.ok, latencyMs: Date.now() - started, model: payload.model ?? null, error: response.ok ? null : `HTTP ${response.status}` };
+    const payload = await response.json().catch(() => ({})) as { model?: string | { name?: string; version?: string }; metrics?: Record<string, number> };
+    const model = typeof payload.model === 'string' ? { name: payload.model } : payload.model ?? null;
+    return { configured: true, online: response.ok, latencyMs: Date.now() - started, model, metrics: payload.metrics ?? null, error: response.ok ? null : `HTTP ${response.status}` };
   } catch (reason) {
     return { configured: true, online: false, latencyMs: null, model: null, error: reason instanceof Error ? reason.message : 'Unreachable.' };
   }
@@ -107,11 +108,109 @@ function parsePrediction(value: unknown): Omit<MlPrediction, 'source'> | null {
   };
 }
 
+// ---- CropFit adapter -------------------------------------------------------
+// CropFit (EcoCrop surrogate) takes one crop per call:
+//   POST /predict { crop, latitude, longitude, soilPh, irrigated }
+//   -> { score 0-100, bestPlantingMonth, suitableMonths[], confidence, growingDays{min,max},
+//        limitingFactors[{factor, score}], monthlyCurve[{month, score, uncertainty, temperatureC}] }
+// Detected from GET /health ("model": "CropFit ...") or forced with ML_MODEL_API=cropfit.
+
+const CROPFIT_NAMES: Record<string, string> = {
+  greens: 'lettuce', tomatoes: 'tomato', peppers: 'pepper', strawberries: 'strawberry', cucumbers: 'cucumber',
+  corn: 'corn', soybeans: 'soybean', wheat: 'wheat', potatoes: 'potato', microgreens: 'lettuce',
+};
+const MONTH_KEYS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+const monthIndex = (value: unknown) => {
+  if (Number.isInteger(value)) { const n = Number(value); return n >= 1 && n <= 12 ? n - 1 : n >= 0 && n <= 11 ? n : null; }
+  const key = String(value ?? '').trim().slice(0, 3).toLowerCase();
+  const index = MONTH_KEYS.indexOf(key);
+  return index >= 0 ? index : null;
+};
+type CropFitResult = {
+  score?: number; bestPlantingMonth?: unknown; suitableMonths?: unknown[]; confidence?: number;
+  growingDays?: { min?: number; max?: number }; limitingFactors?: Array<{ factor?: string; score?: number }>;
+  monthlyCurve?: Array<{ month?: unknown; score?: number }>;
+};
+let apiKindCache: { url: string; kind: 'contract' | 'cropfit'; expires: number } | null = null;
+const cropFitCache = new Map<string, { expires: number; value: Promise<CropFitResult> }>();
+
+async function modelApiKind(url: string): Promise<'contract' | 'cropfit'> {
+  const forced = process.env.ML_MODEL_API?.trim().toLowerCase();
+  if (forced === 'cropfit' || forced === 'contract') return forced;
+  if (apiKindCache && apiKindCache.url === url && apiKindCache.expires > Date.now()) return apiKindCache.kind;
+  let kind: 'contract' | 'cropfit' = 'contract';
+  try {
+    const health = await (await fetch(`${url}/health`, { signal: AbortSignal.timeout(4_000) })).json() as { model?: unknown };
+    if (typeof health.model === 'string' && /cropfit/i.test(health.model)) kind = 'cropfit';
+  } catch { /* keep contract */ }
+  apiKindCache = { url, kind, expires: Date.now() + 300_000 };
+  return kind;
+}
+
+function cropFitCall(url: string, crop: string, lat: number, lon: number) {
+  const key = `${crop}:${lat.toFixed(2)},${lon.toFixed(2)}`;
+  const cached = cropFitCache.get(key);
+  if (cached && cached.expires > Date.now()) return cached.value;
+  const value = fetch(`${url}/predict`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(modelTimeoutMs()),
+    body: JSON.stringify({ crop, latitude: Number(lat.toFixed(4)), longitude: Number(lon.toFixed(4)), soilPh: Number(process.env.ML_SOIL_PH) || 6.5, irrigated: process.env.ML_IRRIGATED !== 'false' }),
+  }).then(async (response) => {
+    const payload = await response.json().catch(() => ({})) as CropFitResult & { detail?: unknown };
+    if (!response.ok) throw new Error(typeof payload.detail === 'string' ? payload.detail : `CropFit HTTP ${response.status}`);
+    return payload;
+  });
+  cropFitCache.set(key, { expires: Date.now() + 3_600_000, value });
+  value.catch(() => cropFitCache.delete(key));
+  return value;
+}
+
+function fromCropFit(site: MlSite, crop: MlCrop, preferredMonth: number, result: CropFitResult): MlPrediction {
+  const curve = new Map((result.monthlyCurve ?? []).flatMap((item) => { const m = monthIndex(item.month); return m === null || !Number.isFinite(item.score) ? [] : [[m, Number(item.score)] as const]; }));
+  const suitable = (result.suitableMonths ?? []).map(monthIndex).filter((m): m is number => m !== null);
+  // First workable month on or after the user's preferred month; else CropFit's best month.
+  let plant: number | null = null;
+  for (let offset = 0; offset < 12 && plant === null; offset += 1) if (suitable.includes((preferredMonth + offset) % 12)) plant = (preferredMonth + offset) % 12;
+  plant ??= monthIndex(result.bestPlantingMonth);
+  const days = Number(result.growingDays?.max) || crop.growMonths * 30;
+  const score = plant !== null && curve.has(plant) ? curve.get(plant)! : Number(result.score ?? 0);
+  const limiting = [...(result.limitingFactors ?? [])].filter((item) => Number.isFinite(item.score)).sort((a, b) => Number(a.score) - Number(b.score))[0];
+  return {
+    siteId: site.id, cropId: crop.id,
+    suitability: clamp01(score / 100),
+    plantMonth: suitable.length || plant !== null ? plant : null,
+    harvestMonth: plant === null ? null : (plant + Math.max(1, Math.round(days / 30)) - 1) % 12,
+    confidence: Number.isFinite(result.confidence) ? clamp01(Number(result.confidence)) : null,
+    expectedYield: null,
+    notes: limiting?.factor ? `Most limited by ${limiting.factor.replace(/_/g, ' ')} (${Math.round(Number(limiting.score))}/100).` : null,
+    source: 'ml',
+  };
+}
+
+async function predictViaCropFit(url: string, request: MlRequest): Promise<MlResponse> {
+  const pairs = request.sites.flatMap((site) => request.crops.map((crop) => ({ site, crop, name: CROPFIT_NAMES[crop.id] })));
+  const errors: string[] = [];
+  const predictions: MlPrediction[] = [];
+  for (let i = 0; i < pairs.length; i += 6) {
+    const batch = await Promise.all(pairs.slice(i, i + 6).map(async ({ site, crop, name }) => {
+      if (!name) return calendarPrediction(site, crop, request.preferredMonth);
+      try { return fromCropFit(site, crop, request.preferredMonth, await cropFitCall(url, name, site.lat, site.lon)); }
+      catch (reason) { errors.push(reason instanceof Error ? reason.message : 'CropFit failed'); return calendarPrediction(site, crop, request.preferredMonth); }
+    }));
+    predictions.push(...batch);
+  }
+  if (!predictions.some((item) => item.source === 'ml')) throw new Error(errors[0] ?? 'CropFit returned no predictions for these crops.');
+  if (errors.length) console.warn(`CropFit failed for ${errors.length} pair(s): ${errors[0]}`);
+  let name = 'CropFit';
+  try { const health = await (await fetch(`${url}/health`, { signal: AbortSignal.timeout(3_000) })).json() as { model?: string }; if (health.model) name = health.model; } catch { /* keep default */ }
+  return { model: { name, version: null, source: 'ml', error: errors.length ? `${errors.length} pair(s) used the crop calendar: ${errors[0]}` : null }, predictions };
+}
+
 /** Ask the trained model; fill any gaps (or everything, on failure) from the crop calendar. */
 export async function predictCropSuitability(request: MlRequest): Promise<MlResponse> {
   const url = modelUrl();
   if (!url || !request.sites.length || !request.crops.length) return calendarResponse(request, url ? null : 'ML_MODEL_URL is not set.');
   try {
+    if (await modelApiKind(url) === 'cropfit') return await predictViaCropFit(url, request);
     const response = await fetch(`${url}/predict`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

@@ -8,7 +8,7 @@ import { getRun, listRuns, savedTime, type SavedRunMeta } from '../services/runs
 import './PlanPage.css';
 import './ModelPage.css';
 
-type Health = { configured: boolean; online: boolean; latencyMs: number | null; model: { name?: string; version?: string } | null; error: string | null };
+type Health = { configured: boolean; online: boolean; latencyMs: number | null; model: { name?: string; version?: string } | null; metrics?: Record<string, number> | null; error: string | null };
 type Status = { agent?: { configured: boolean; model: string | null; provider: string | null; baseUrl?: string | null; tracing?: { enabled: boolean; project: string } }; ml?: { configured: boolean; url: string | null } };
 
 const PLACES = [
@@ -116,7 +116,7 @@ function ModelExplorer({ health }: { health: Health | null }) {
 
   return <section className="model-section">
     <header><div><span className="mono">02 / MODEL EXPLORER</span><h2>Ask the crop model directly</h2></div>
-      <span className={`model-pill ${health?.online ? 'live' : ''}`}>{health?.online ? `● ${health.model?.name ?? 'Model'} online` : '○ Crop calendar fallback'}</span></header>
+      <div className="model-pill-group"><span className={`model-pill ${health?.online ? 'live' : ''}`}>{health?.online ? `● ${health.model?.name ?? 'Model'} online` : '○ Crop calendar fallback'}</span>{health?.metrics && <span className="model-metrics mono">{Object.entries(health.metrics).map(([key, value]) => `${key.toUpperCase()} ${Number(value).toFixed(key === 'r2' ? 2 : 1)}`).join(' · ')}</span>}</div></header>
     <div className="explorer-controls">
       <div><small className="mono">CROPS (UP TO 5)</small><div className="chip-row">{CROPS.map((crop) => <button key={crop.id} className={crops.includes(crop.id) ? 'chip active' : 'chip'} onClick={() => toggle(crops, setCrops, crop.id, 5)}>{crop.name}</button>)}</div></div>
       <div><small className="mono">PLACES (UP TO 8)</small><div className="chip-row">{PLACES.map((place) => <button key={place.value} className={places.includes(place.value) ? 'chip active' : 'chip'} onClick={() => toggle(places, setPlaces, place.value, 8)}>{place.label}<em>{place.kind}</em></button>)}</div></div>
@@ -128,6 +128,7 @@ function ModelExplorer({ health }: { health: Health | null }) {
 
     {result && <div className="explorer-result">
       <div className="explorer-meta mono"><span>{result.model.source === 'ml' ? `MODEL · ${result.model.name}${result.model.version ? ` ${result.model.version}` : ''}` : 'CROP CALENDAR · MODEL OFFLINE'}</span><span>{result.predictions.length} PREDICTIONS · {result.latencyMs} MS</span></div>
+      {result.model.error && <div className="model-warning"><CircleAlert size={14} /><span>{result.model.source === 'ml' ? 'Some crops used the crop calendar: ' : 'Model call failed, showing the crop calendar: '}{result.model.error}</span></div>}
       <div className="heatmap-wrap"><table className="heatmap">
         <thead><tr><th />{resultCrops.map((crop) => <th key={crop.id}>{crop.name}</th>)}</tr></thead>
         <tbody>{result.climates.map((climate) => <tr key={climate.query}><th>{climate.name}<small>{climate.region.split(',')[0]}</small></th>{resultCrops.map((crop) => {
@@ -142,7 +143,7 @@ function ModelExplorer({ health }: { health: Health | null }) {
       {detail?.climate && detail.crop && <div className="explorer-detail">
         <div><span className="mono">WHY · {detail.climate.name.toUpperCase()} · {detail.crop.name.toUpperCase()}</span>
           <h3>{detail.prediction ? `${pct(detail.prediction.suitability)} suitable` : 'No prediction'}{detail.prediction?.plantMonth != null ? ` · plant ${MONTH_LONG[detail.prediction.plantMonth]}` : ''}</h3>
-          {detail.prediction?.notes && <p>{detail.prediction.notes}</p>}
+          {detail.prediction?.notes && <p>{detail.prediction.notes}</p>}{detail.prediction?.confidence != null && <p className="mono model-confidence">CONFIDENCE {pct(detail.prediction.confidence)} · SOURCE {detail.prediction.source === 'ml' ? 'MODEL' : 'CROP CALENDAR'}</p>}
           <ClimateChart climate={detail.climate} cropMin={detail.crop.tempMinC} cropMax={detail.crop.tempMaxC} plant={detail.prediction?.plantMonth ?? null} grow={detail.crop.growMonths} />
         </div>
         <details><summary>Raw model input and output</summary><div className="json-pair">

@@ -1,5 +1,15 @@
 # Crop model contract
 
+> **CropFit is supported directly.** If the model's `GET /health` returns a
+> `model` string containing "CropFit" (or `ML_MODEL_API=cropfit`), the app calls
+> CropFit's own API instead: one `POST /predict` per site × crop with
+> `{ crop, latitude, longitude, soilPh, irrigated }`, and maps `monthlyCurve`,
+> `suitableMonths`, `growingDays`, `confidence`, and `limitingFactors` onto the
+> prediction fields below. Crop ids map to EcoCrop names (greens→lettuce,
+> tomatoes→tomato, peppers→pepper, strawberries→strawberry, cucumbers→cucumber,
+> corn, soybeans→soybean, wheat, potatoes→potato); other crops use the calendar.
+> Optional: `ML_SOIL_PH` (default 6.5), `ML_IRRIGATED` (default true).
+
 Ultraviolet calls the crop-suitability model over HTTP from its server. Implement
 these two endpoints and set `ML_MODEL_URL` in `land-intelligence/.env`.
 
