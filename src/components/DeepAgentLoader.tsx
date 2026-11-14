@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { Check, LoaderCircle } from 'lucide-react';
+import AgentCompanion from './AgentCompanion';
 import './DeepAgentLoader.css';
 
 export type LoaderStage = { key: string; label: string };
@@ -29,6 +30,7 @@ export default function DeepAgentLoader({ kicker, title, subtitle, stages, activ
 
   return <div className="agent-loader" role="dialog" aria-modal="true" aria-labelledby="agent-loader-title">
     <button className="agent-loader-cancel mono" onClick={onCancel}>CANCEL</button>
+    <AgentCompanion message={stages[activeIndex]?.label ? `${stages[activeIndex].label}…` : 'Working on it…'} detail={message} />
 
     <div className="agent-loader-stage" aria-hidden="true">
       <div className="agent-loader-sky"><span className="agent-loader-sun" /></div>
