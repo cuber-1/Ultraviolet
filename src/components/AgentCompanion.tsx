@@ -4,6 +4,17 @@ type Props = { message: string; detail?: string };
 
 export default function AgentCompanion({ message, detail }: Props) {
   return <div className="agent-companion" aria-hidden="true">
+    <div className="agent-companion-peek">
+      <svg viewBox="0 0 112 76">
+        <circle className="agent-companion-peek-hand" cx="25" cy="8" r="7" />
+        <circle className="agent-companion-peek-hand" cx="87" cy="8" r="7" />
+        <circle className="agent-companion-peek-head" cx="56" cy="35" r="31" />
+        <path className="agent-companion-highlight" d="M34 27 C41 14 56 10 68 16" />
+        <ellipse className="agent-companion-eye" cx="46" cy="36" rx="3.5" ry="5" />
+        <ellipse className="agent-companion-eye" cx="66" cy="36" rx="3.5" ry="5" />
+        <path className="agent-companion-smile" d="M49 48 Q56 53 63 48" />
+      </svg>
+    </div>
     <div className="agent-companion-bubble">
       <span>{message}</span>
       {detail && <small>{detail}</small>}
