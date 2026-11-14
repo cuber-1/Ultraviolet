@@ -8,7 +8,8 @@
     "build": "tsc -b && vite build",
     "ml:download": "machine-learning/.venv/bin/python machine-learning/download_ecocrop.py",
     "ml:train": "PYTHONPATH=machine-learning machine-learning/.venv/bin/python -m cropfit.training",
-    "ml:serve": "PYTHONPATH=machine-learning machine-learning/.venv/bin/python -m uvicorn cropfit.api:app --host 127.0.0.1 --port 8100",
+    "ml:serve": "PYTHONPATH=machine-learning machine-learning/.venv/bin/python -m uvicorn cropfit.trained_api:app --host 0.0.0.0 --port 8100",
+    "ml:serve:demo": "PYTHONPATH=machine-learning machine-learning/.venv/bin/python -m uvicorn cropfit.api:app --host 127.0.0.1 --port 8100",
     "test:simulation": "node --experimental-strip-types scripts/verifySunSimulation.ts",
     "preview": "vite preview"
   },

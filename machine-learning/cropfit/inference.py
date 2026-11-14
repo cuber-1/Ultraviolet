@@ -6,6 +6,7 @@ from pathlib import Path
 import joblib
 import numpy as np
 import requests
+import certifi
 
 from .features import feature_row, teacher_scores
 from .profiles import load_profiles, resolve_profile
@@ -30,6 +31,7 @@ class CropFitPredictor:
                 "community": "AG", "longitude": longitude, "latitude": latitude, "format": "JSON",
             },
             timeout=25,
+            verify=certifi.where(),
         )
         response.raise_for_status()
         parameters = response.json()["properties"]["parameter"]

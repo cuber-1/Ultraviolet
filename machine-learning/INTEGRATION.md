@@ -129,7 +129,7 @@ ranges are clamped; malformed entries are dropped.
 ## Try it
 
 ```bash
-npm run ml:serve                     # CropFit on 127.0.0.1:8100
+npm run ml:serve                     # CropFit on 0.0.0.0:8100
 curl -s localhost:8100/health
 ```
 
