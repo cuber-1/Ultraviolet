@@ -1,0 +1,258 @@
+{
+  "name": "USDA observed-prior recency validation v1",
+  "target": "next-year county yield percentile within crop and year",
+  "baseline": "unweighted mean of all earlier county percentiles",
+  "candidate": "exponentially weighted mean of earlier county percentiles",
+  "developmentYears": [
+    2018,
+    2019,
+    2020
+  ],
+  "candidateSelection": [
+    {
+      "halfLifeYears": 1,
+      "observations": 10362,
+      "baseline": {
+        "observations": 10362,
+        "spearman": 0.8393,
+        "maePercentile": 0.1201
+      },
+      "recency": {
+        "observations": 10362,
+        "spearman": 0.8289,
+        "maePercentile": 0.1224
+      },
+      "spearmanDelta": -0.0104,
+      "maeDelta": 0.0023
+    },
+    {
+      "halfLifeYears": 2,
+      "observations": 10362,
+      "baseline": {
+        "observations": 10362,
+        "spearman": 0.8393,
+        "maePercentile": 0.1201
+      },
+      "recency": {
+        "observations": 10362,
+        "spearman": 0.8444,
+        "maePercentile": 0.1169
+      },
+      "spearmanDelta": 0.0051,
+      "maeDelta": -0.0032
+    },
+    {
+      "halfLifeYears": 3,
+      "observations": 10362,
+      "baseline": {
+        "observations": 10362,
+        "spearman": 0.8393,
+        "maePercentile": 0.1201
+      },
+      "recency": {
+        "observations": 10362,
+        "spearman": 0.8469,
+        "maePercentile": 0.1164
+      },
+      "spearmanDelta": 0.0076,
+      "maeDelta": -0.0037
+    },
+    {
+      "halfLifeYears": 5,
+      "observations": 10362,
+      "baseline": {
+        "observations": 10362,
+        "spearman": 0.8393,
+        "maePercentile": 0.1201
+      },
+      "recency": {
+        "observations": 10362,
+        "spearman": 0.8463,
+        "maePercentile": 0.1171
+      },
+      "spearmanDelta": 0.007,
+      "maeDelta": -0.003
+    },
+    {
+      "halfLifeYears": 8,
+      "observations": 10362,
+      "baseline": {
+        "observations": 10362,
+        "spearman": 0.8393,
+        "maePercentile": 0.1201
+      },
+      "recency": {
+        "observations": 10362,
+        "spearman": 0.8446,
+        "maePercentile": 0.1179
+      },
+      "spearmanDelta": 0.0053,
+      "maeDelta": -0.0022
+    },
+    {
+      "halfLifeYears": 16,
+      "observations": 10362,
+      "baseline": {
+        "observations": 10362,
+        "spearman": 0.8393,
+        "maePercentile": 0.1201
+      },
+      "recency": {
+        "observations": 10362,
+        "spearman": 0.8423,
+        "maePercentile": 0.1189
+      },
+      "spearmanDelta": 0.003,
+      "maeDelta": -0.0012
+    }
+  ],
+  "selectedHalfLifeYears": 3,
+  "confirmationYears": [
+    2021,
+    2022
+  ],
+  "confirmation": {
+    "observations": 7338,
+    "baseline": {
+      "observations": 7338,
+      "spearman": 0.8497,
+      "maePercentile": 0.1167
+    },
+    "recency": {
+      "observations": 7338,
+      "spearman": 0.8494,
+      "maePercentile": 0.1154
+    },
+    "spearmanDelta": -0.0003,
+    "maeDelta": -0.0013
+  },
+  "finalTestYears": [
+    2023,
+    2024,
+    2025
+  ],
+  "finalTest": {
+    "observations": 8889,
+    "baseline": {
+      "observations": 8889,
+      "spearman": 0.8269,
+      "maePercentile": 0.1249
+    },
+    "recency": {
+      "observations": 8889,
+      "spearman": 0.8346,
+      "maePercentile": 0.1208
+    },
+    "spearmanDelta": 0.0077,
+    "maeDelta": -0.0041,
+    "spearmanDeltaBootstrap95": [
+      0.0052,
+      0.0102
+    ]
+  },
+  "perCropFinalTest": [
+    {
+      "crop": "corn",
+      "observations": 3889,
+      "baseline": {
+        "observations": 3889,
+        "spearman": 0.8362,
+        "maePercentile": 0.1232
+      },
+      "recency": {
+        "observations": 3889,
+        "spearman": 0.8439,
+        "maePercentile": 0.1189
+      },
+      "spearmanDelta": 0.0077,
+      "maeDelta": -0.0043
+    },
+    {
+      "crop": "soybean",
+      "observations": 3454,
+      "baseline": {
+        "observations": 3454,
+        "spearman": 0.8215,
+        "maePercentile": 0.1257
+      },
+      "recency": {
+        "observations": 3454,
+        "spearman": 0.8277,
+        "maePercentile": 0.1222
+      },
+      "spearmanDelta": 0.0062,
+      "maeDelta": -0.0035
+    },
+    {
+      "crop": "wheat",
+      "observations": 1546,
+      "baseline": {
+        "observations": 1546,
+        "spearman": 0.8221,
+        "maePercentile": 0.1271
+      },
+      "recency": {
+        "observations": 1546,
+        "spearman": 0.8283,
+        "maePercentile": 0.1222
+      },
+      "spearmanDelta": 0.0062,
+      "maeDelta": -0.0049
+    }
+  ],
+  "perYearFinalTest": [
+    {
+      "year": 2023,
+      "observations": 3484,
+      "baseline": {
+        "observations": 3484,
+        "spearman": 0.835,
+        "maePercentile": 0.1236
+      },
+      "recency": {
+        "observations": 3484,
+        "spearman": 0.8544,
+        "maePercentile": 0.1148
+      },
+      "spearmanDelta": 0.0194,
+      "maeDelta": -0.0088
+    },
+    {
+      "year": 2024,
+      "observations": 2433,
+      "baseline": {
+        "observations": 2433,
+        "spearman": 0.8112,
+        "maePercentile": 0.1283
+      },
+      "recency": {
+        "observations": 2433,
+        "spearman": 0.8093,
+        "maePercentile": 0.1286
+      },
+      "spearmanDelta": -0.0019,
+      "maeDelta": 0.0003
+    },
+    {
+      "year": 2025,
+      "observations": 2972,
+      "baseline": {
+        "observations": 2972,
+        "spearman": 0.8304,
+        "maePercentile": 0.1235
+      },
+      "recency": {
+        "observations": 2972,
+        "spearman": 0.8325,
+        "maePercentile": 0.1213
+      },
+      "spearmanDelta": 0.0021,
+      "maeDelta": -0.0022
+    }
+  ],
+  "gate": {
+    "passed": false,
+    "rule": "Confirmation must not regress rank or MAE. On the locked 2023\u20132025 test, pooled rank delta and grouped-bootstrap lower bound must be >0, MAE must not regress, and every crop and year rank delta must be non-negative."
+  },
+  "interpretation": "This tests county-level regional ordering only, not parcel yield or purchase returns."
+}
