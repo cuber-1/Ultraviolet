@@ -45,6 +45,9 @@ rooftop Deep Agent; an acre or more runs the rural region match.
   suitability. Without it, the app uses the crop calendar and says so.
   `CROPFIT_URL` is accepted as the same setting; both default to
   `http://127.0.0.1:8100` (`npm run ml:serve`).
+  For demos, `ML_MODEL_FALLBACK_URL` can point at a second hosted model. The
+  request order is primary model, backup model, then the built-in crop calendar.
+  See `DEMO_FAILSAFE.md` for the no-Spark runbook.
 
 ### Run the complete CropFit demo
 

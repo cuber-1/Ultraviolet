@@ -15,12 +15,13 @@ these two endpoints and set `ML_MODEL_URL` (or `CROPFIT_URL`) in the app's `.env
 
 ```bash
 ML_MODEL_URL="http://127.0.0.1:8765"   # no trailing slash
+ML_MODEL_FALLBACK_URL="https://backup.example.com" # optional second model
 ML_MODEL_TIMEOUT_MS=15000              # optional, default 15000
 ```
 
-Restart Vite after changing either value. If the variable is unset, the model is
-unreachable, times out, or returns no usable predictions, the app falls back to a
-crop calendar (NASA monthly temperature within each crop's range) and labels the
+Restart Vite after changing these values. If the primary model fails, the app
+tries `ML_MODEL_FALLBACK_URL`. If neither model answers, it falls back to a crop
+calendar (NASA monthly temperature within each crop's range) and labels the
 results "Crop calendar · model offline". The UI and Deep Agent keep working.
 
 CropFit (this folder) is the production model; the generic contract below is
@@ -129,7 +130,7 @@ ranges are clamped; malformed entries are dropped.
 ## Try it
 
 ```bash
-npm run ml:serve                     # CropFit on 127.0.0.1:8100
+npm run ml:serve                     # CropFit on 0.0.0.0:8100
 curl -s localhost:8100/health
 ```
 

@@ -1,8 +1,8 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 
 // Crop-suitability model client. See machine-learning/INTEGRATION.md for the wire format.
-// When ML_MODEL_URL is unset or the model fails, predictions come from the
-// built-in crop calendar and are labelled source "calendar-fallback".
+// Failover order: ML_MODEL_URL -> ML_MODEL_FALLBACK_URL -> built-in calendar.
+// Calendar predictions are labelled source "calendar-fallback".
 
 export type MlCrop = { id: string; name: string; sunHours: number; tempMinC: number; tempMaxC: number; growMonths: number };
 export type MlClimate = { temperatureC: number[]; solarMjM2Day: number[]; precipitationMmDay: number[] };
@@ -35,11 +35,13 @@ export type MlPrediction = {
 };
 export type MlResponse = { model: { name: string; version: string | null; source: 'ml' | 'calendar-fallback'; error: string | null }; predictions: MlPrediction[] };
 
-// One setting for the crop model: ML_MODEL_URL, or CROPFIT_URL (docker compose / npm run ml:serve).
-const explicitModelUrl = () => (process.env.ML_MODEL_URL || process.env.CROPFIT_URL)?.trim().replace(/\/$/, '') || null;
+const cleanUrl = (value: string | undefined) => value?.trim().replace(/\/$/, '') || null;
+// Primary model: ML_MODEL_URL, or CROPFIT_URL (docker compose / npm run ml:serve).
+const explicitModelUrl = () => cleanUrl(process.env.ML_MODEL_URL || process.env.CROPFIT_URL);
+const fallbackModelUrl = () => cleanUrl(process.env.ML_MODEL_FALLBACK_URL);
+const modelUrls = () => [...new Set([explicitModelUrl(), fallbackModelUrl()].filter((url): url is string => Boolean(url)))];
 /** Base URL for raw CropFit proxies; defaults to the local `npm run ml:serve` port. */
 export const modelBaseUrl = () => explicitModelUrl() ?? 'http://127.0.0.1:8100';
-const modelUrl = explicitModelUrl;
 const modelTimeoutMs = () => Number(process.env.ML_MODEL_TIMEOUT_MS) || 15_000;
 const clamp01 = (value: number) => Math.max(0, Math.min(1, value));
 const isMonth = (value: unknown): value is number => Number.isInteger(value) && Number(value) >= 0 && Number(value) <= 11;
@@ -48,23 +50,29 @@ const isMonth = (value: unknown): value is number => Number.isInteger(value) && 
 export const mlStrict = () => ['1', 'true', 'yes'].includes(String(process.env.ML_STRICT ?? '').toLowerCase());
 
 export function mlModelStatus() {
-  const url = modelUrl();
-  return { configured: Boolean(url), url, fallback: mlStrict() ? 'none' : 'calendar', strict: mlStrict() };
+  const url = explicitModelUrl();
+  const backupUrl = fallbackModelUrl();
+  return { configured: Boolean(url || backupUrl), url, backupUrl, fallback: mlStrict() ? (backupUrl ? 'model' : 'none') : backupUrl ? 'model-then-calendar' : 'calendar', strict: mlStrict() };
 }
 
 /** Ping the model's /health endpoint and time it. */
 export async function mlModelHealth() {
-  const url = modelUrl();
-  if (!url) return { configured: false, online: false, latencyMs: null, model: null, error: 'ML_MODEL_URL is not set.' };
-  const started = Date.now();
-  try {
-    const response = await fetch(`${url}/health`, { signal: AbortSignal.timeout(4_000) });
-    const payload = await response.json().catch(() => ({})) as { model?: string | { name?: string; version?: string }; metrics?: Record<string, number> };
-    const model = typeof payload.model === 'string' ? { name: payload.model } : payload.model ?? null;
-    return { configured: true, online: response.ok, latencyMs: Date.now() - started, model, metrics: payload.metrics ?? null, error: response.ok ? null : `HTTP ${response.status}` };
-  } catch (reason) {
-    return { configured: true, online: false, latencyMs: null, model: null, error: reason instanceof Error ? reason.message : 'Unreachable.' };
+  const urls = modelUrls();
+  if (!urls.length) return { configured: false, online: false, latencyMs: null, model: null, error: 'No model URL is set.' };
+  const errors: string[] = [];
+  for (const [index, url] of urls.entries()) {
+    const started = Date.now();
+    try {
+      const response = await fetch(`${url}/health`, { signal: AbortSignal.timeout(4_000) });
+      const payload = await response.json().catch(() => ({})) as { model?: string | { name?: string; version?: string }; metrics?: Record<string, number> };
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const model = typeof payload.model === 'string' ? { name: payload.model } : payload.model ?? null;
+      return { configured: true, online: true, latencyMs: Date.now() - started, model, metrics: payload.metrics ?? null, error: null, url, role: index === 0 ? 'primary' : 'backup', primaryError: index ? errors[0] : null };
+    } catch (reason) {
+      errors.push(`${index === 0 ? 'primary' : 'backup'}: ${reason instanceof Error ? reason.message : 'unreachable'}`);
+    }
   }
+  return { configured: true, online: false, latencyMs: null, model: null, error: errors.join('; ') };
 }
 
 /** Transparent crop-calendar estimate used when the trained model is unavailable. */
@@ -137,7 +145,7 @@ const CROPFIT_NAMES: Record<string, string> = {
 export const cropFitCropIds = () => Object.keys(CROPFIT_NAMES).filter((id) => !(mlStrict() && id === 'microgreens'));
 
 export async function mlCapabilities() {
-  const url = modelUrl();
+  const url = explicitModelUrl() ?? fallbackModelUrl();
   return { strict: mlStrict(), configured: Boolean(url), api: url ? await modelApiKind(url) : null, supportedCrops: url && await modelApiKind(url) === 'cropfit' ? cropFitCropIds() : null };
 }
 const MONTH_KEYS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
@@ -153,24 +161,25 @@ type CropFitResult = {
   monthlyCurve?: Array<{ month?: unknown; score?: number; uncertainty?: number; components?: Record<string, number> }>;
   profile?: Record<string, unknown>; evidenceGrade?: string;
 };
-let apiKindCache: { url: string; kind: 'contract' | 'cropfit'; expires: number } | null = null;
+const apiKindCache = new Map<string, { kind: 'contract' | 'cropfit'; expires: number }>();
 const cropFitCache = new Map<string, { expires: number; value: Promise<CropFitResult> }>();
 
 async function modelApiKind(url: string): Promise<'contract' | 'cropfit'> {
   const forced = process.env.ML_MODEL_API?.trim().toLowerCase();
   if (forced === 'cropfit' || forced === 'contract') return forced;
-  if (apiKindCache && apiKindCache.url === url && apiKindCache.expires > Date.now()) return apiKindCache.kind;
+  const cached = apiKindCache.get(url);
+  if (cached && cached.expires > Date.now()) return cached.kind;
   let kind: 'contract' | 'cropfit' = 'contract';
   try {
     const health = await (await fetch(`${url}/health`, { signal: AbortSignal.timeout(4_000) })).json() as { model?: unknown };
     if (typeof health.model === 'string' && /cropfit/i.test(health.model)) kind = 'cropfit';
   } catch { /* keep contract */ }
-  apiKindCache = { url, kind, expires: Date.now() + 300_000 };
+  apiKindCache.set(url, { kind, expires: Date.now() + 300_000 });
   return kind;
 }
 
 function cropFitCall(url: string, crop: string, lat: number, lon: number) {
-  const key = `${crop}:${lat.toFixed(2)},${lon.toFixed(2)}`;
+  const key = `${url}:${crop}:${lat.toFixed(2)},${lon.toFixed(2)}`;
   const cached = cropFitCache.get(key);
   if (cached && cached.expires > Date.now()) return cached.value;
   const value = fetch(`${url}/predict`, {
@@ -249,38 +258,46 @@ async function predictViaCropFit(url: string, request: MlRequest): Promise<MlRes
   return { model: { name, version: null, source: 'ml', error: errors.length ? `${errors.length} pair(s) used the crop calendar: ${errors[0]}` : null }, predictions };
 }
 
-/** Ask the trained model; fill any gaps (or everything, on failure) from the crop calendar. */
+async function predictFromUrl(url: string, request: MlRequest): Promise<MlResponse> {
+  if (await modelApiKind(url) === 'cropfit') return await predictViaCropFit(url, request);
+  const response = await fetch(`${url}/predict`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(request), signal: AbortSignal.timeout(modelTimeoutMs()),
+  });
+  if (!response.ok) throw new Error(`Model returned HTTP ${response.status}.`);
+  const payload = await response.json() as { model?: { name?: unknown; version?: unknown }; predictions?: unknown[] };
+  const parsed = (payload.predictions ?? []).map(parsePrediction).filter((item): item is NonNullable<typeof item> => Boolean(item));
+  if (!parsed.length) throw new Error('Model returned no usable predictions.');
+  const byKey = new Map(parsed.map((item) => [`${item.siteId}::${item.cropId}`, item]));
+  const predictions = request.sites.flatMap((site) => request.crops.map((crop): MlPrediction => {
+    const hit = byKey.get(`${site.id}::${crop.id}`);
+    return hit ? { ...hit, source: 'ml' } : calendarPrediction(site, crop, request.preferredMonth);
+  }));
+  return {
+    model: { name: typeof payload.model?.name === 'string' ? payload.model.name : 'crop-model', version: typeof payload.model?.version === 'string' ? payload.model.version : null, source: 'ml', error: null },
+    predictions,
+  };
+}
+
+/** Ask primary, then backup; fill everything from the crop calendar if both fail. */
 export async function predictCropSuitability(request: MlRequest): Promise<MlResponse> {
-  const url = modelUrl();
-  if (mlStrict() && !url) throw new Error('Strict live mode: ML_MODEL_URL is not set.');
-  if (!url || !request.sites.length || !request.crops.length) return calendarResponse(request, url ? null : 'ML_MODEL_URL is not set.');
-  try {
-    if (await modelApiKind(url) === 'cropfit') return await predictViaCropFit(url, request);
-    const response = await fetch(`${url}/predict`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(request),
-      signal: AbortSignal.timeout(modelTimeoutMs()),
-    });
-    if (!response.ok) throw new Error(`Model returned HTTP ${response.status}.`);
-    const payload = await response.json() as { model?: { name?: unknown; version?: unknown }; predictions?: unknown[] };
-    const parsed = (payload.predictions ?? []).map(parsePrediction).filter((item): item is NonNullable<typeof item> => Boolean(item));
-    if (!parsed.length) throw new Error('Model returned no usable predictions.');
-    const byKey = new Map(parsed.map((item) => [`${item.siteId}::${item.cropId}`, item]));
-    const predictions = request.sites.flatMap((site) => request.crops.map((crop): MlPrediction => {
-      const hit = byKey.get(`${site.id}::${crop.id}`);
-      return hit ? { ...hit, source: 'ml' } : calendarPrediction(site, crop, request.preferredMonth);
-    }));
-    return {
-      model: { name: typeof payload.model?.name === 'string' ? payload.model.name : 'crop-model', version: typeof payload.model?.version === 'string' ? payload.model.version : null, source: 'ml', error: null },
-      predictions,
-    };
-  } catch (reason) {
-    const message = reason instanceof Error ? reason.message : 'Model request failed.';
-    if (mlStrict()) throw reason instanceof Error ? reason : new Error(message);
-    console.warn(`Crop model unavailable, using crop calendar: ${message}`);
-    return calendarResponse(request, message);
+  const urls = modelUrls();
+  if (mlStrict() && !urls.length) throw new Error('Strict live mode: no model URL is set.');
+  if (!request.sites.length || !request.crops.length) return calendarResponse(request, null);
+  if (!urls.length) return calendarResponse(request, 'No model URL is set.');
+  const errors: string[] = [];
+  for (const [index, url] of urls.entries()) {
+    try {
+      const result = await predictFromUrl(url, request);
+      if (index) console.warn(`Primary crop model unavailable; backup model answered: ${errors[0]}`);
+      return result;
+    } catch (reason) {
+      errors.push(`${index === 0 ? 'primary' : 'backup'}: ${reason instanceof Error ? reason.message : 'model request failed'}`);
+    }
   }
+  const message = errors.join('; ');
+  if (mlStrict()) throw new Error(message);
+  console.warn(`Crop models unavailable, using crop calendar: ${message}`);
+  return calendarResponse(request, message);
 }
 
 /** Mean suitability per site across the requested crops. */
