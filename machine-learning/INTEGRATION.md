@@ -10,11 +10,13 @@
 > corn, soybeans→soybean, wheat, potatoes→potato); other crops use the calendar.
 > Optional: `ML_SOIL_PH` (default 6.5), `ML_IRRIGATED` (default true).
 
-For corn, soybean, and wheat, CropFit API v0.5.4 also returns optional
+For corn, soybean, and wheat, CropFit API v0.5.5 also returns optional
 `observedYieldEvidence` from the nearest USDA reporting county within 100 km.
 Atlas v2 includes 2010–2025 history plus a calibrated observed-yield percentile
 prior with 80% and 90% uncertainty intervals. It does not modify the underlying
 EcoCrop suitability and is not a parcel yield forecast.
+Nearest-county retrieval uses a cached exact haversine spatial index; it returns
+the same county as brute force while avoiding a full atlas scan per request.
 
 For `kind: "region"` results, the Ultraviolet client uses that observed prior
 to rank corn, soybean, and wheat locations while retaining CropFit suitability

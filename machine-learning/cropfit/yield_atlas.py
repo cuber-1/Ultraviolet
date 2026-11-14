@@ -10,6 +10,7 @@ from pathlib import Path
 
 import numpy as np
 from scipy.stats import rankdata, spearmanr
+from sklearn.neighbors import BallTree
 
 from .national_observed_validation import CROP_NAMES
 from .observed_validation import bootstrap_interval, county_points, number
@@ -322,14 +323,31 @@ def haversine_km(latitude_a: float, longitude_a: float, latitude_b: float, longi
     return 6371.0 * 2 * math.atan2(math.sqrt(value), math.sqrt(1 - value))
 
 
+@lru_cache(maxsize=4)
+def atlas_spatial_index(path: str) -> dict[str, tuple[tuple[dict, ...], BallTree]]:
+    grouped: dict[str, list[dict]] = defaultdict(list)
+    for record in load_atlas(path)["records"]:
+        grouped[record["crop"]].append(record)
+    return {
+        crop: (
+            tuple(records),
+            BallTree(np.radians([[record["latitude"], record["longitude"]] for record in records]), metric="haversine"),
+        )
+        for crop, records in grouped.items()
+    }
+
+
 def nearest_evidence(crop: str, latitude: float, longitude: float, path: Path, max_distance_km: float = 100.0) -> dict | None:
-    atlas = load_atlas(str(path.resolve()))
+    resolved = str(path.resolve())
+    atlas = load_atlas(resolved)
     crop_key = {"maize": "corn", "soybeans": "soybean", "winter wheat": "wheat"}.get(crop.strip().lower(), crop.strip().lower())
-    candidates = [record for record in atlas["records"] if record["crop"] == crop_key]
-    if not candidates:
+    indexed = atlas_spatial_index(resolved).get(crop_key)
+    if indexed is None:
         return None
-    record = min(candidates, key=lambda item: haversine_km(latitude, longitude, item["latitude"], item["longitude"]))
-    distance = haversine_km(latitude, longitude, record["latitude"], record["longitude"])
+    records, tree = indexed
+    distances, indices = tree.query(np.radians([[latitude, longitude]]), k=1)
+    record = records[int(indices[0, 0])]
+    distance = float(distances[0, 0] * 6371.0)
     if distance > max_distance_km:
         return None
     return {

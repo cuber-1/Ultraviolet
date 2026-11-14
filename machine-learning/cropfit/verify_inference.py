@@ -7,7 +7,7 @@ from pathlib import Path
 from .features import FEATURE_NAMES
 from .inference import MONTHS, CropFitPredictor
 from .profiles import resolve_profile
-from .yield_atlas import load_atlas, nearest_evidence
+from .yield_atlas import haversine_km, load_atlas, nearest_evidence
 
 
 def climate(temperature: float) -> list[dict]:
@@ -56,9 +56,17 @@ def verify(artifact: Path, profiles: Path) -> None:
         assert evidence["latest"]["year"] == 2025
         assert [item["year"] for item in evidence["history"]][-3:] == [2023, 2024, 2025]
         assert evidence["observedYieldPrior"]["interval80"][0] <= evidence["meanPercentile"] <= evidence["observedYieldPrior"]["interval80"][1]
+        assert evidence["observedYieldPrior"]["expectedPercentile"] == evidence["meanPercentile"], "failed recency candidate entered production"
         assert evidence["observedYieldPrior"]["interval90"][0] <= evidence["observedYieldPrior"]["interval80"][0]
         assert evidence["observedYieldPrior"]["interval90"][1] >= evidence["observedYieldPrior"]["interval80"][1]
         assert nearest_evidence("tomato", 29.7604, -95.3698, atlas) is None
+        for crop, latitude, longitude in (("corn", 40.1, -88.2), ("soybean", 35.5, -90.4), ("wheat", 46.8, -100.8)):
+            indexed = nearest_evidence(crop, latitude, longitude, atlas, max_distance_km=10_000)
+            brute = min(
+                (record for record in atlas_report["records"] if record["crop"] == crop),
+                key=lambda record: haversine_km(latitude, longitude, record["latitude"], record["longitude"]),
+            )
+            assert indexed and indexed["fips"] == brute["fips"], f"spatial index changed nearest county for {crop}"
 
     ranking_validation = artifact.parents[1] / "evaluation/ranking-validation-v1.json"
     if ranking_validation.exists():
@@ -66,6 +74,14 @@ def verify(artifact: Path, profiles: Path) -> None:
         assert not ranking_report["blendGate"]["passed"]
         assert ranking_report["productionGate"]["passed"]
         assert ranking_report["priorVsClimateFinalTest"]["priorAdvantageBootstrap95"][0] > 0
+
+    recency_validation = artifact.parents[1] / "evaluation/recency-validation-v1.json"
+    if recency_validation.exists():
+        recency_report = json.loads(recency_validation.read_text())
+        assert recency_report["selectedHalfLifeYears"] == 3
+        assert not recency_report["gate"]["passed"]
+        assert recency_report["finalTest"]["spearmanDeltaBootstrap95"][0] > 0
+        assert any(item["spearmanDelta"] < 0 for item in recency_report["perYearFinalTest"])
 
     print(f"CropFit inference verified: {predictor.metadata['model']} ({len(FEATURE_NAMES)} features, 10-year reliability, county evidence)")
 

@@ -103,3 +103,18 @@ was not joined to it: USDA NASS states that dry edible beans began excluding
 chickpeas in 2019. Potatoes had only four predictions, while sunflower reached
 135 but only 0.2724 Spearman. Production coverage therefore remains corn,
 soybeans, and wheat. See `evaluation/crop-expansion-validation-v1.md`.
+
+## Recency experiment
+
+A three-year exponential half-life was selected on 2018–2020. It improved the
+locked 2023–2025 pooled county-rank Spearman from 0.8269 to 0.8346 (delta
++0.0077; grouped-bootstrap 95% interval +0.0052 to +0.0102) and reduced
+percentile MAE by 0.0041. It was not promoted because confirmation Spearman
+regressed by 0.0003 and 2024 regressed by 0.0019, violating the predeclared
+no-regression gate. The production atlas retains the unweighted historical
+mean. See `evaluation/recency-validation-v1.md`.
+
+Atlas lookup now uses a cached exact haversine spatial index instead of scanning
+all 5,562 records per request. The reproducible benchmark and exact-identity
+check are in `evaluation/atlas-lookup-benchmark-v1.md`; timing ratios are
+machine-dependent.

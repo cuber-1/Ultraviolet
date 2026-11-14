@@ -148,3 +148,15 @@ This evaluates candidate USDA county series as forward-year rank priors without
 changing production coverage. The committed v1 report rejects beans, potatoes,
 and sunflowers. It also keeps the pre-2019 bean definition separate because
 that series includes chickpeas, unlike the current USDA category.
+
+## Test recency weighting and atlas lookup
+
+```bash
+npm run ml:evaluate:recency
+npm run ml:benchmark:atlas
+```
+
+The recency command tests exponential history weighting under fixed temporal
+splits and does not alter the production atlas unless every gate passes. The
+benchmark compares the cached haversine spatial index with exact brute force
+and verifies identical nearest counties for each supported crop.

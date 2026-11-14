@@ -14,7 +14,7 @@ from .yield_atlas import load_atlas, nearest_evidence
 
 ROOT = Path(__file__).resolve().parents[1]
 YIELD_ATLAS = ROOT / "evaluation/yield-atlas-v2.json"
-app = FastAPI(title="Ultraviolet CropFit", version="0.5.4")
+app = FastAPI(title="Ultraviolet CropFit", version="0.5.5")
 
 
 class PredictionRequest(BaseModel):

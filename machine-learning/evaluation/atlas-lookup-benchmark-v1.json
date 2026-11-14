@@ -1,0 +1,23 @@
+{
+  "name": "USDA atlas lookup benchmark v1",
+  "method": "Median of five warm-cache rounds across four fixed U.S. coordinates; exact nearest-county identity checked for all supported crops.",
+  "atlasRecords": 5562,
+  "cases": [
+    {
+      "case": "supported crop",
+      "crop": "corn",
+      "iterationsPerRound": 1000,
+      "bruteMillisecondsPerLookup": 0.829099,
+      "indexedMillisecondsPerLookup": 0.032625,
+      "speedup": 25.41
+    },
+    {
+      "case": "unsupported crop",
+      "crop": "tomato",
+      "iterationsPerRound": 1000,
+      "bruteMillisecondsPerLookup": 0.110093,
+      "indexedMillisecondsPerLookup": 0.012065,
+      "speedup": 9.13
+    }
+  ]
+}
