@@ -45,8 +45,15 @@ used by the interactive roof view. The default NRP configuration is:
 ```bash
 NRP_API_KEY="your-nrp-key"
 LANDLENS_AGENT_BASE_URL="https://ellm.nrp-nautilus.io/v1" # optional default
-LANDLENS_AGENT_MODEL="deepseek-v4-flash"                  # or kimi
+LANDLENS_AGENT_MODEL="qwen3"                              # default; glm-5 or minimax-m2 also work
+LANDLENS_AGENT_TIMEOUT_MS=420000                          # optional, default 420000
+LANDLENS_AGENT_RECURSION_LIMIT=80                         # optional, default 80
 ```
+
+A single agent calls the four tools directly. On NRP, `qwen3` finishes a
+four-site comparison in about 35 seconds of model time; a live 12-candidate
+search takes about 4 minutes because each roof's geometry and sunlight are computed. `kimi` and the `agents` alias did not
+respond in testing, and `deepseek-v4-flash` was several times slower.
 
 If no model key is present, the UI runs the deterministic comparison endpoint
 directly and labels the result accordingly. It does not fabricate an agent
@@ -119,19 +126,9 @@ acceptance comparison uses April 15 and October 15, 2026. “Try December
 instead” reruns the tools for April 15 and December 15, 2026 rather than
 relabeling the earlier result. Matterport is only a near-tie tiebreaker.
 
-## Add Vexcel imagery
+## Keep keys server-side
 
-Set the key and run the downloader in the same terminal:
-
-```bash
-cd ../Vexcel_API_Hackathon_Tutorial_PDF_PY
-export VEXCEL_API_KEY="paste-your-key-here"
-python3 vexcel_four_sites.py
-
-cd ../land-intelligence
-npm run sync:vexcel
-```
-
-The key must remain in the terminal environment. Never store it in React code,
+All imagery, property and sunlight data is fetched live through the server-side
+`/api/vexcel/*` routes; the app ships no bundled sample sites or images. The key must remain in the terminal environment. Never store it in React code,
 `VITE_*`, or a frontend `.env` file because Vite exposes those values to the
 browser.
