@@ -642,6 +642,9 @@
 .sun-direction-badge strong { color: var(--earth); }
 .sun-direction-badge span { color: var(--gray-600); }
 .roof-outline { fill: rgba(232,93,4,.08); stroke: var(--earth); }
+.sun-direction-badge.night { border-color: rgba(23,37,29,.2); }
+.sun-direction-badge.night strong { color: #17251d; }
+.roof-outline.night { fill: rgba(20,32,27,.1); stroke: #17251d; stroke-width: 1.2; }
 .roof-key { border-color: var(--earth); background: rgba(232,93,4,.14) !important; }
 .growing-outline { stroke: #ff8a2b; }
 .sun-cell { fill: rgba(255,173,51,.46); }

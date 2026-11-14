@@ -210,6 +210,7 @@ function RoofSurface({ geometry, ...props }: Omit<Parameters<typeof RoofPolygonS
 
 function Scene({ props, surfaceMode }: { props: Roof3DVisualizerProps; surfaceMode: SurfaceMode }) {
   const isInfrared = props.surfaceLabel.startsWith('CIR');
+  const isNight = props.sun.altitude <= 0;
   const centerX = props.roofBounds.x + props.roofBounds.width / 2;
   const centerY = props.roofBounds.y + props.roofBounds.height / 2;
   const span = Math.max(props.roofBounds.width, props.roofBounds.height, 12);
@@ -259,8 +260,8 @@ function Scene({ props, surfaceMode }: { props: Roof3DVisualizerProps; surfaceMo
       {outlineRings.map((ring, index) => <Line
         key={`outline-${index}`}
         points={[...ring, ring[0]].map((point) => [point.x - centerX, .2, point.y - centerY])}
-        color={surfaceMode === 'clean' ? '#236143' : '#e85d04'}
-        lineWidth={2.2}
+        color={isNight ? '#17251d' : surfaceMode === 'clean' ? '#236143' : '#e85d04'}
+        lineWidth={isNight ? 3.2 : 2.2}
         transparent
         opacity={.94}
       />)}
@@ -311,6 +312,7 @@ export default function Roof3DVisualizer(props: Roof3DVisualizerProps) {
   const span = Math.max(props.roofBounds.width, props.roofBounds.height, 12);
   const buildingHeight = props.buildingHeightM ?? 0;
   const [surfaceMode, setSurfaceMode] = useState<SurfaceMode>('imagery');
+  const isNight = props.sun.altitude <= 0;
 
   return <div className="roof-3d-view">
     <Canvas
@@ -335,8 +337,8 @@ export default function Roof3DVisualizer(props: Roof3DVisualizerProps) {
     </div>
     <div className="roof-3d-status">
       <span>{surfaceMode === 'clean' ? 'CLEAN' : props.surfaceLabel.startsWith('CIR') ? 'NIR' : 'RGB'}</span>
-      <strong>{props.sun.altitude.toFixed(1)}° sun</strong>
-      <small>{props.sun.azimuth.toFixed(0)}° azimuth · {props.obstructions.length} measured features</small>
+      <strong>{isNight ? 'Night' : `${props.sun.altitude.toFixed(1)}° sun`}</strong>
+      <small>{isNight ? `Sun below horizon · ${props.obstructions.length} measured features` : `${props.sun.azimuth.toFixed(0)}° azimuth · ${props.obstructions.length} measured features`}</small>
     </div>
     <div className="roof-surface-mode" aria-label="Roof surface style">
       <button className={surfaceMode === 'imagery' ? 'active' : ''} onClick={() => setSurfaceMode('imagery')} aria-pressed={surfaceMode === 'imagery'}>Imagery</button>
