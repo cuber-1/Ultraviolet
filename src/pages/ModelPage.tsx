@@ -102,7 +102,7 @@ function ModelExplorer({ health }: { health: Health | null }) {
       const profiles = CROPS.filter((crop) => crops.includes(crop.id)).map(({ id, name, sunHours, tempMinC, tempMaxC, growMonths }) => ({ id, name, sunHours, tempMinC, tempMaxC, growMonths }));
       const request = {
         crops: profiles, preferredMonth: month, targetAreaSqft: 5_000, targetSunHours: Math.max(...profiles.map((crop) => crop.sunHours)),
-        sites: climate.results.map((item) => ({ id: item.query, kind: 'region', lat: item.lat, lon: item.lon, climate: { temperatureC: item.temperatureC, solarMjM2Day: item.solarMjM2Day, precipitationMmDay: item.precipitationMmDay }, roof: null })),
+        sites: climate.results.map((item) => ({ id: item.query, kind: 'region', lat: item.lat, lon: item.lon, climate: { temperatureC: item.temperatureC, solarMjM2Day: item.solarMjM2Day, precipitationMmDay: item.precipitationMmDay, history: item.history }, roof: null })),
       };
       const started = performance.now();
       const response = await fetch('/api/ml/predict', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(request) });

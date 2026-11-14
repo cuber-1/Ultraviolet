@@ -7,6 +7,10 @@ export type CropFitMonth = {
   precipitationMmDay: number;
   solarMjM2Day: number;
   components: { temperature: number; water: number; soil_ph: number; solar: number };
+  historicalP10?: number;
+  historicalMedian?: number;
+  historicalP90?: number;
+  reliability?: number;
 };
 
 export type CropFitPrediction = {
@@ -16,6 +20,8 @@ export type CropFitPrediction = {
   score: number;
   confidence: number;
   bestPlantingMonth: string;
+  bestReliablePlantingMonth: string;
+  plantingReliability: { years: number; successRate: number; p10Score: number; medianScore: number; p90Score: number; threshold: number } | null;
   suitableMonths: string[];
   growingDays: { min: number; max: number };
   limitingFactors: Array<{ factor: string; score: number }>;

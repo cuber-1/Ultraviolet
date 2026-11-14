@@ -772,6 +772,7 @@
 .cropfit-bars>div { display: grid; grid-template-rows: 1fr 16px 13px 13px; justify-items: center; min-width: 0; }
 .cropfit-bar-track { position: relative; width: min(32px,70%); height: 100%; }
 .cropfit-bar-track>i { position: absolute; right: 0; bottom: 0; left: 0; min-height: 2px; border-radius: 3px 3px 0 0; background: #698b62; transition: height .35s ease; }
+.cropfit-history { position: absolute; right: -5px; left: -5px; min-height: 2px; border-top: 1px solid #f1b27e; border-bottom: 1px solid #f1b27e; background: rgba(241,178,126,.14); }
 .cropfit-bars .best .cropfit-bar-track>i { background: #b7dc75; box-shadow: 0 0 18px rgba(183,220,117,.25); }
 .cropfit-bar-track>i>span { position: absolute; right: 45%; bottom: calc(100% - 8px); width: 1px; min-height: 3px; background: #f1b27e; }
 .cropfit-bars strong { color: #dfe8e2; font-size: 8px; }

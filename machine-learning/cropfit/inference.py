@@ -33,39 +33,60 @@ class CropFitPredictor:
         return tree_std, min(100.0, tree_std * 1.5)
 
     @lru_cache(maxsize=512)
-    def climate(self, latitude: float, longitude: float) -> list[dict[str, float | str]]:
+    def climate_bundle(self, latitude: float, longitude: float) -> tuple[list[dict], list[list[dict]]]:
         response = requests.get(
-            "https://power.larc.nasa.gov/api/temporal/climatology/point",
+            "https://power.larc.nasa.gov/api/temporal/monthly/point",
             params={
                 "parameters": "T2M,PRECTOTCORR,ALLSKY_SFC_SW_DWN",
                 "community": "AG", "longitude": longitude, "latitude": latitude, "format": "JSON",
+                "start": "2015", "end": "2024",
             },
             timeout=25,
             verify=certifi.where(),
         )
         response.raise_for_status()
         parameters = response.json()["properties"]["parameter"]
-        return [{
+        history = [[{
             "month": month,
-            "temperatureC": float(parameters["T2M"][month]),
-            "precipitationMmDay": float(parameters["PRECTOTCORR"][month]),
-            "solarMjM2Day": float(parameters["ALLSKY_SFC_SW_DWN"][month]),
-        } for month in MONTHS]
+            "year": year,
+            "temperatureC": float(parameters["T2M"][f"{year}{index + 1:02d}"]),
+            "precipitationMmDay": float(parameters["PRECTOTCORR"][f"{year}{index + 1:02d}"]),
+            "solarMjM2Day": float(parameters["ALLSKY_SFC_SW_DWN"][f"{year}{index + 1:02d}"]),
+        } for index, month in enumerate(MONTHS)] for year in range(2015, 2025)]
+        baseline = [{
+            "month": month,
+            "temperatureC": float(np.mean([year[index]["temperatureC"] for year in history])),
+            "precipitationMmDay": float(np.mean([year[index]["precipitationMmDay"] for year in history])),
+            "solarMjM2Day": float(np.mean([year[index]["solarMjM2Day"] for year in history])),
+        } for index, month in enumerate(MONTHS)]
+        return baseline, history
 
-    def predict(self, crop: str, latitude: float, longitude: float, soil_ph: float = 6.5, irrigated: bool = False, climate: list[dict] | None = None):
-        profile = resolve_profile(crop, self.profiles)
-        climate_values = climate or self.climate(latitude, longitude)
+    @staticmethod
+    def validate_climate(climate: list[dict]) -> None:
+        if len(climate) not in (12, 24):
+            raise ValueError("Climate series must contain 12 months, optionally followed by the next 12 months.")
+        for index, item in enumerate(climate):
+            if str(item.get("month", "")).upper()[:3] != MONTHS[index % 12]:
+                raise ValueError("Climate months must be ordered JAN through DEC.")
+            values = [item.get("temperatureC"), item.get("precipitationMmDay"), item.get("solarMjM2Day")]
+            if not all(np.isfinite(float(value)) for value in values):
+                raise ValueError(f"Climate record {MONTHS[index % 12]} contains a non-finite value.")
+            if float(item["precipitationMmDay"]) < 0 or float(item["solarMjM2Day"]) < 0:
+                raise ValueError(f"Climate record {MONTHS[index % 12]} contains a negative precipitation or solar value.")
+
+    def curve(self, profile, climate_values: list[dict], soil_ph: float, irrigated: bool) -> list[dict]:
+        self.validate_climate(climate_values)
         cycle_days = min(365, max(30, round((profile.growing_days_min + profile.growing_days_max) / 2)))
         rows = []
         teacher = []
         establishment = []
         seasonal_climate = []
-        for start_index, month in enumerate(climate_values):
+        for start_index, month in enumerate(climate_values[:12]):
             remaining = cycle_days
             cursor = start_index
             temperature_total = precipitation_total = solar_total = 0.0
             while remaining > 0:
-                current = climate_values[cursor % 12]
+                current = climate_values[cursor] if cursor < len(climate_values) else climate_values[cursor % 12]
                 days = min(remaining, calendar.monthrange(2025, cursor % 12 + 1)[1])
                 temperature_total += float(current["temperatureC"]) * days
                 precipitation_total += float(current["precipitationMmDay"]) * days
@@ -90,7 +111,7 @@ class CropFitPredictor:
             predictions = tree_predictions.mean(axis=0)
         uncertainty = tree_predictions.std(axis=0)
         curve = []
-        for index, month in enumerate(climate_values):
+        for index, month in enumerate(climate_values[:12]):
             component = {name: min(value, establishment[index][name]) for name, value in teacher[index].items()}
             temperature, precipitation_mm_day, solar = seasonal_climate[index]
             score = min(float(predictions[index]), establishment[index]["suitability"])
@@ -107,10 +128,43 @@ class CropFitPredictor:
                 "solarMjM2Day": round(solar, 1),
                 "components": {name: round(value, 1) for name, value in component.items() if name != "suitability"},
             })
+        return curve
+
+    def predict(self, crop: str, latitude: float, longitude: float, soil_ph: float = 6.5, irrigated: bool = False,
+                climate: list[dict] | None = None, climate_history: list[list[dict]] | None = None):
+        profile = resolve_profile(crop, self.profiles)
+        if climate is None:
+            climate_values, fetched_history = self.climate_bundle(latitude, longitude)
+            climate_history = climate_history or fetched_history
+        else:
+            climate_values = climate
+        curve = self.curve(profile, climate_values, soil_ph, irrigated)
+        history = climate_history or []
+        historical_curves = [self.curve(profile, year + (history[index + 1] if index + 1 < len(history) else climate_values), soil_ph, irrigated) for index, year in enumerate(history)]
+        for month_index, item in enumerate(curve):
+            if not historical_curves:
+                continue
+            scores = np.asarray([year[month_index]["score"] for year in historical_curves], dtype=float)
+            item.update({
+                "historicalP10": round(float(np.percentile(scores, 10)), 1),
+                "historicalMedian": round(float(np.median(scores)), 1),
+                "historicalP90": round(float(np.percentile(scores, 90)), 1),
+                "reliability": round(float(np.mean(scores >= 55.0)), 2),
+            })
         best = max(curve, key=lambda item: item["score"])
+        reliable_best = max(curve, key=lambda item: (item.get("historicalP10", item["score"]), item.get("historicalMedian", item["score"])))
         limiting = sorted(best["components"].items(), key=lambda item: item[1])[:2]
         threshold = max(55.0, float(best["score"]) - 12.0)
-        suitable_months = [item["month"] for item in curve if item["score"] >= threshold]
+        reliable_months = [item["month"] for item in curve if item.get("reliability", 0) >= .7 and item.get("historicalMedian", 0) >= 55.0]
+        suitable_months = reliable_months or [item["month"] for item in curve if item["score"] >= threshold]
+        planting_reliability = None if not historical_curves else {
+            "years": len(historical_curves),
+            "successRate": reliable_best["reliability"],
+            "p10Score": reliable_best["historicalP10"],
+            "medianScore": reliable_best["historicalMedian"],
+            "p90Score": reliable_best["historicalP90"],
+            "threshold": 55.0,
+        }
         return {
             "crop": crop,
             "profile": profile.to_dict(),
@@ -119,11 +173,13 @@ class CropFitPredictor:
             "confidence": round(max(0.15, min(.99, 1.0 - float(best["expectedAbsoluteErrorP80"]) / 50.0)), 2),
             "expectedAbsoluteError": {"p80": best["expectedAbsoluteErrorP80"], "p90": best["expectedAbsoluteErrorP90"]},
             "bestPlantingMonth": best["month"],
+            "bestReliablePlantingMonth": reliable_best["month"],
+            "plantingReliability": planting_reliability,
             "suitableMonths": suitable_months,
             "growingDays": {"min": profile.growing_days_min, "max": profile.growing_days_max},
             "limitingFactors": [{"factor": name, "score": value} for name, value in limiting],
             "monthlyCurve": curve,
             "model": self.metadata,
             "evidenceGrade": "agroclimatic-screening",
-            "disclaimer": "EcoCrop screening estimate; not a parcel-specific yield forecast or purchase recommendation.",
+            "disclaimer": "EcoCrop screening estimate. Historical bands use NASA POWER 2015–2024 weather; they are not a yield forecast or purchase recommendation.",
         }

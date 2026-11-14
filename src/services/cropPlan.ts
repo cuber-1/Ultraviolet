@@ -77,6 +77,7 @@ export function formatArea(areaSqft: number) {
 export type MonthlyClimate = {
   query: string; name: string; region: string; lat: number; lon: number;
   temperatureC: number[]; solarMjM2Day: number[]; precipitationMmDay: number[];
+  history: Array<{ year: number; temperatureC: number[]; solarMjM2Day: number[]; precipitationMmDay: number[] }>;
   annual: { temperatureC: number; solarMjM2Day: number; precipitationMmDay: number };
   source: string;
 };
@@ -181,7 +182,7 @@ export async function fetchRegionPredictions(brief: Brief, climates: MonthlyClim
     body: JSON.stringify({
       crops: cropProfiles(brief), preferredMonth: brief.preferredMonth, targetAreaSqft: brief.areaSqft,
       targetSunHours: Math.max(...briefCrops(brief).map((crop) => crop.sunHours)),
-      sites: climates.map((climate) => ({ id: climate.query, kind: 'region', lat: climate.lat, lon: climate.lon, climate: { temperatureC: climate.temperatureC, solarMjM2Day: climate.solarMjM2Day, precipitationMmDay: climate.precipitationMmDay }, roof: null })),
+      sites: climates.map((climate) => ({ id: climate.query, kind: 'region', lat: climate.lat, lon: climate.lon, climate: { temperatureC: climate.temperatureC, solarMjM2Day: climate.solarMjM2Day, precipitationMmDay: climate.precipitationMmDay, history: climate.history }, roof: null })),
     }),
   });
   const payload = await response.json();

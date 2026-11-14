@@ -72,7 +72,7 @@ export async function roofSites(candidates: AgentCandidate[], simulations: Map<s
     const climate = await monthlyClimateAt(candidate.lat, candidate.lon).catch(() => null);
     return {
       id: candidate.id, kind: 'roof' as const, lat: candidate.lat, lon: candidate.lon,
-      climate: climate ? { temperatureC: climate.temperatureC, solarMjM2Day: climate.solarMjM2Day, precipitationMmDay: climate.precipitationMmDay } : null,
+      climate: climate ? { temperatureC: climate.temperatureC, solarMjM2Day: climate.solarMjM2Day, precipitationMmDay: climate.precipitationMmDay, history: climate.history } : null,
       roof: {
         roofAreaSqft: candidate.property?.roofAreaSqft ?? null,
         sharedAreaSqft: simulation?.sharedAreaSqft ?? null,

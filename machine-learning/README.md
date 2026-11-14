@@ -70,8 +70,11 @@ learning-rate schedule, error distribution, and feature importance to
 `machine-learning/runs/<run-id>/`. A candidate is only promoted when it improves held-out
 crop-profile error.
 
-The trained API obtains monthly climatology from NASA POWER unless the caller
-supplies a 12-month `climate` array in the prediction request.
+The trained API obtains NASA POWER monthly history for 2015–2024 unless the
+caller supplies a 12-month `climate` array and `climateHistory`. It evaluates
+each month across all ten years and returns a risk-adjusted planting month,
+historical success rate, and p10/median/p90 suitability bands. These describe
+climate consistency, not observed yield accuracy.
 
 ## Next evidence gate
 

@@ -135,12 +135,13 @@ export type AgentProgress = { stage: 'planning' | 'imagery' | 'property' | 'geom
 export type CropPrediction = {
   siteId: string; cropId: string; suitability: number; plantMonth: number | null; harvestMonth: number | null;
   confidence: number | null; expectedYield: { value: number; unit: string } | null; notes: string | null; source: 'ml' | 'calendar-fallback';
-  curve?: Array<{ month: number; score: number; uncertainty: number | null; components: Record<string, number> | null }>;
+  curve?: Array<{ month: number; score: number; uncertainty: number | null; errorP80: number | null; errorP90: number | null; historicalP10: number | null; historicalMedian: number | null; historicalP90: number | null; reliability: number | null; components: Record<string, number> | null }>;
   suitableMonths?: number[];
   growingDays?: { min: number; max: number } | null;
   limitingFactors?: Array<{ factor: string; score: number }>;
   profile?: { scientificName: string | null; tempOptC: [number, number] | null; rainOptMm: [number, number] | null; phOpt: [number, number] | null } | null;
   evidenceGrade?: string | null;
+  plantingReliability?: { years: number; successRate: number; p10Score: number; medianScore: number; p90Score: number; threshold: number } | null;
 };
 export type AgentTraceEvent =
   | { kind: 'prompt'; role: 'system' | 'user'; title: string; text: string; at: number }
