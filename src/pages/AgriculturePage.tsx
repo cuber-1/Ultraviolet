@@ -153,13 +153,13 @@ function PhotonWatchDialog({ query, onClose, onCreated }: { query: string; onClo
   const placeholder = platform === 'email' ? 'you@example.com' : platform === 'telegram' ? '@username' : '+1 555 555 0123';
   return <div className="photon-watch-backdrop" role="dialog" aria-modal="true" aria-labelledby="photon-watch-title"><form className="photon-watch-dialog" onSubmit={async (event) => { event.preventDefault(); setSaving(true); setError(null); try { const watch = await createPhotonWatch({ goal: query || ACCEPTANCE_QUERY, location: 'Available Vexcel coverage', lat: 0, lon: 0, radiusM: 20_000, dates: ['2026-04-15', '2026-10-15'], targetHours: 6, targetAreaSqft: 5_000, platform, handle }); onCreated(watch.id); } catch (reason) { setError(reason instanceof Error ? reason.message : 'Photon watch setup failed.'); } finally { setSaving(false); } }}>
     <button type="button" className="photon-watch-close" onClick={onClose} aria-label="Close"><X /></button>
-    <span className="mono">PHOTON 2.0 · OPENING ALERTS</span><h2 id="photon-watch-title">Hear when a roof opens.</h2><p>LandLens will watch this search, have Deep Agent investigate new listing evidence, and message only after the roof and sunlight checks run.</p>
+    <span className="mono">PHOTON 2.0 · OPENING ALERTS</span><h2 id="photon-watch-title">Hear when a roof opens.</h2><p>Ultraviolet will watch this search, have Deep Agent investigate new listing evidence, and message only after the roof and sunlight checks run.</p>
     <blockquote>{query || ACCEPTANCE_QUERY}</blockquote>
     <label>Message channel<select value={platform} onChange={(event) => setPlatform(event.target.value as PhotonWatchInput['platform'])}><option value="imessage">iMessage</option><option value="sms">SMS</option><option value="telegram">Telegram</option><option value="email">Email</option><option value="whatsapp_business">WhatsApp Business</option></select></label>
     <label>Destination<input required value={handle} onChange={(event) => setHandle(event.target.value)} placeholder={placeholder} /></label>
     {error && <div className="photon-watch-error"><CircleAlert /><span>{error}</span></div>}
     <button className="photon-watch-submit" disabled={saving || !handle.trim()}>{saving ? <><LoaderCircle className="spin" /> Connecting Photon…</> : <><Bell /> Watch new openings</>}</button>
-    <small>Checks every 15 minutes while the LandLens server is running. Photon credentials stay on the server.</small>
+    <small>Checks every 15 minutes while the Ultraviolet server is running. Photon credentials stay on the server.</small>
   </form></div>;
 }
 
