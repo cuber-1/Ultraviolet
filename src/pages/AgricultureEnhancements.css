@@ -393,6 +393,27 @@
 .layer-tabs .surface-switch button { padding: 6px 9px; border: 0; border-radius: 3px; background: transparent; color: #75877d; font: 7px var(--font-mono); }
 .layer-tabs .surface-switch button.active { background: #803a4b; color: #ffdce3; }
 .site-workspace .roof-stage { min-height: 0; }
+.site-workspace .roof-stage {
+  display: grid;
+  place-items: center;
+}
+
+/* Vexcel ortho/extract returns an 800x800 bounding-box image. Keep that image
+   and every metric overlay in the same square frame so neither is cropped or
+   independently stretched by the workspace aspect ratio. */
+.site-workspace .roof-stage>img,
+.site-workspace .roof-stage>.roof-overlay {
+  position: relative;
+  inset: auto;
+  grid-area: 1 / 1;
+  width: min(100%, calc(100vh - 54px));
+  height: auto;
+  aspect-ratio: 1;
+}
+
+.site-workspace .roof-stage>img { object-fit: fill; }
+.site-workspace .roof-stage>.roof-overlay { pointer-events: none; cursor: default; }
+.site-workspace .roof-stage>.roof-overlay.interactive { pointer-events: auto; cursor: crosshair; }
 
 .site-workspace .simulation-panel {
   max-height: 100vh;
