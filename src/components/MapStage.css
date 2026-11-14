@@ -76,3 +76,13 @@
 @media (max-width: 760px) { .ms-companion { display: none; } }
 .ms-home { display: inline-flex; align-items: center; gap: 7px; align-self: flex-start; padding: 8px 14px; border: 1px solid #e2d6c9; border-radius: 999px; background: rgba(255, 255, 255, .7); color: var(--gray-600); font-size: 15px; }
 .ms-home:hover { border-color: var(--earth); color: var(--earth); }
+
+/* Live activity tab */
+.ms-progress { display: grid; gap: 6px; }
+.ms-progress span { color: var(--gray-600); font-size: 14px; font-weight: 600; }
+.ms-progress i { height: 5px; border-radius: 5px; background: #ebe4da; overflow: hidden; }
+.ms-progress b { display: block; height: 100%; background: linear-gradient(90deg, #f4a261, var(--earth)); transition: width .5s ease; }
+.ms-tabs { display: flex; gap: 4px; padding: 4px; border-radius: 999px; background: #ebe4da; }
+.ms-tabs button { flex: 1; padding: 8px 10px; border: 0; border-radius: 999px; background: transparent; color: var(--gray-600); font-size: 14px; font-weight: 600; }
+.ms-tabs button.active { background: var(--white); color: var(--black); box-shadow: 0 2px 8px rgba(40, 35, 31, .08); }
+.ms-feed { flex: 1; min-height: 120px; overflow-y: auto; scroll-behavior: smooth; }

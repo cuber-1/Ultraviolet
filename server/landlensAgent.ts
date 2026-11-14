@@ -58,7 +58,9 @@ export type LandLensAgentServices = {
 export type AgentTraceEvent =
   | { kind: 'prompt'; role: 'system' | 'user'; title: string; text: string; at: number }
   | { kind: 'llm'; text: string; toolCalls: Array<{ name: string; args: string }>; ms: number; tokens: number | null; at: number }
-  | { kind: 'tool'; name: string; args: string; result: string; ms: number; ok: boolean; at: number };
+  | { kind: 'tool'; name: string; args: string; result: string; ms: number; ok: boolean; at: number }
+  /** Human-readable result of a tool call, written by the tool itself from its real output. */
+  | { kind: 'activity'; tool: string; title: string; detail: string; at: number };
 
 const clip = (value: unknown, max = 600) => { const text = typeof value === 'string' ? value : JSON.stringify(value); return text && text.length > max ? `${text.slice(0, max)}…` : text ?? ''; };
 
@@ -163,6 +165,10 @@ export async function runLandLensAgent(input: {
   const trace: AgentTraceEvent[] = [];
   const started = Date.now();
   const emit = (event: AgentTraceEvent) => { trace.push(event); onTrace(event); };
+  const nf = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 });
+  const size = (sqft: number | null | undefined) => sqft ? (sqft >= 10_000 ? `${Math.round(sqft / 1000)}k ft²` : `${nf.format(sqft)} ft²`) : 'unknown size';
+  const roofName = (candidate: AgentCandidate | undefined) => candidate?.costar?.buildingName || candidate?.costar?.address?.split(',')[0] || `${size(candidate?.property?.roofAreaSqft)} roof`;
+  const activity = (tool: string, title: string, detail: string) => emit({ kind: 'activity', tool, title, detail, at: Date.now() - started });
   const model = configuredModel();
   if (!model) throw new Error('Agent model access is not configured. Set NRP_API_KEY or LANDLENS_AGENT_API_KEY.');
 
@@ -174,6 +180,10 @@ export async function runLandLensAgent(input: {
   const searchImagery = tool(async ({ query }: { query: string }) => {
     progress({ stage: 'imagery', message: `Searching Vexcel imagery near ${input.location}` });
     const results = searchResults ?? (await services.search(query)).slice(0, AGENT_MAX_CANDIDATES);
+    if (!searchResults) {
+      const areas = results.map((candidate) => candidate.property?.roofAreaSqft ?? 0).filter(Boolean).sort((a, b) => b - a);
+      activity('search_rooftop_imagery', `Searching aerial imagery for "${query}"`, `${results.length} rooftops found near ${input.location} · ${results.filter((candidate) => candidate.costar).length} with CoStar building records${areas.length ? ` · largest ${areas.slice(0, 3).map(size).join(', ')}` : ''}`);
+    }
     searchResults = results;
     results.forEach((candidate) => candidates.set(candidate.id, candidate));
     return results.map((candidate) => ({
@@ -193,6 +203,10 @@ export async function runLandLensAgent(input: {
     progress({ stage: 'property', message: `Checking property and tour records for ${candidateId}` });
     const candidate = candidates.get(candidateId);
     if (!candidate) return { candidateId, available: false, reason: 'Run rooftop imagery search first.' };
+    const record = candidate.costar;
+    activity('lookup_property_record', `Property record · ${roofName(candidate)}`, record
+      ? `CoStar: ${record.buildingName || record.address} · ${record.propertyType}${record.listing?.active ? ' · listed now' : ''}${record.matterport.length ? ` · ${record.matterport.length} 3D tour${record.matterport.length > 1 ? 's' : ''}` : ''}`
+      : 'No CoStar property within 125 m');
     return {
       candidateId,
       available: Boolean(candidate.costar),
@@ -215,6 +229,9 @@ export async function runLandLensAgent(input: {
     if (existing) return existing;
     const resolved = await services.geometry(candidate);
     geometryResults.set(candidateId, resolved);
+    activity('resolve_roof_geometry', `Measured roof · ${roofName(candidate)}`, resolved.available
+      ? `${size(resolved.roofAreaSqft)} · ${resolved.obstructionCount} obstacle${resolved.obstructionCount === 1 ? '' : 's'}${resolved.buildingHeightM ? ` · ${resolved.buildingHeightM.toFixed(0)} m tall` : ''} · ${resolved.validSamples} height points`
+      : resolved.reason ?? 'No elevation data');
     return resolved;
   }, {
     name: 'resolve_roof_geometry',
@@ -231,6 +248,10 @@ export async function runLandLensAgent(input: {
     if (cached) return cached;
     const result = await services.simulate(candidate, dates, targetHours, targetAreaSqft);
     simulations.set(cacheKey, result);
+    const hours = result.perDate.map((item) => item.meanHours).filter((value): value is number => value !== null);
+    activity('simulate_rooftop_sunlight', `Simulated sunlight · ${roofName(candidate)}`, result.sharedAreaSqft === null
+      ? 'Not assessed: missing roof geometry'
+      : `${size(result.sharedAreaSqft)} gets ${targetHours}h+ sun on every date${hours.length ? ` · avg ${(hours.reduce((a, b) => a + b, 0) / hours.length).toFixed(1)} h` : ''}${result.sharedAreaSqft >= targetAreaSqft ? ' · meets your area' : ''}`);
     simulations.set(candidateId, result);
     return result;
   }, {
@@ -267,12 +288,21 @@ export async function runLandLensAgent(input: {
     }
     modelInfo = response.model;
     response.predictions.forEach((item) => predictions.set(`${item.siteId}::${item.cropId}`, item));
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    activity('predict_crop_suitability', `Scoring ${cropProfiles.map((crop) => crop.name.toLowerCase()).join(', ')} with ${response.model.name}`, cropProfiles.map((crop) => {
+      const items = response.predictions.filter((item) => item.cropId === crop.id);
+      if (!items.length) return `${crop.name}: not scored`;
+      const avg = Math.round((items.reduce((sum, item) => sum + item.suitability, 0) / items.length) * 100);
+      const plant = items.find((item) => item.plantMonth !== null)?.plantMonth;
+      return `${crop.name} ${avg}${plant != null ? ` · plant ${months[plant]}` : ''}`;
+    }).join(' · ') + ` · ${known.length} roofs`);
     const bySite = siteSuitability(response);
     // Pre-computed ranking so the model explains it instead of doing arithmetic.
     const ranked = known
       .map((candidate) => ({ candidate, shared: latestSimulation.get(candidate.id)?.sharedAreaSqft ?? null, suitability: bySite.get(candidate.id) ?? null }))
       .map((item) => ({ ...item, score: combinedRoofScore(item.shared, input.targetAreaSqft, item.suitability) }))
       .sort((a, b) => b.score - a.score);
+    if (ranked[0]) activity('rank', `Ranking ${ranked.length} roofs`, `Best: ${roofName(ranked[0].candidate)} · ${size(ranked[0].shared)} in full sun · crop fit ${Math.round((ranked[0].suitability ?? 0) * 100)}`);
     return {
       model: response.model,
       ranking: 'Final order. Already combines sunlit area (60%) and crop suitability (40%); do not recompute.',

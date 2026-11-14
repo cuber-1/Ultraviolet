@@ -41,6 +41,10 @@ export default function MapStage({ mode, focus, discovered, pins, title, subtitl
   const pinLayer = useRef<LayerGroup | null>(null);
   const [waves, setWaves] = useState<Array<{ x: number; y: number; size: number }>>([]);
   const [now, setNow] = useState(Date.now());
+  const [tab, setTab] = useState<'activity' | 'steps'>('activity');
+  const feedRef = useRef<HTMLDivElement>(null);
+  // Keep the newest activity in view.
+  useEffect(() => { const node = feedRef.current; if (node) node.scrollTop = node.scrollHeight; });
   useEffect(() => { const timer = window.setInterval(() => setNow(Date.now()), 1000); return () => window.clearInterval(timer); }, []);
   const seconds = Math.max(0, Math.floor((now - startedAt) / 1000));
 
@@ -120,12 +124,16 @@ export default function MapStage({ mode, focus, discovered, pins, title, subtitl
       <span className="ms-kicker">{mode === 'loading' ? <><i /> Searching live</> : <><Check size={15} /> Search complete</>}</span>
       <h1>{title}</h1>
       <p className="ms-sub">{subtitle}</p>
-      <ol className="ms-steps">{stages.map((stage, index) => {
+      {mode === 'loading' && feed && <div className="ms-progress"><span>Step {Math.min(activeIndex + 1, stages.length)} of {stages.length} · {stages[Math.min(activeIndex, stages.length - 1)]?.label}</span><i><b style={{ width: `${(Math.min(activeIndex, stages.length) / stages.length) * 100}%` }} /></i></div>}
+      {mode === 'loading' && feed && <div className="ms-tabs" role="tablist"><button role="tab" aria-selected={tab === 'activity'} className={tab === 'activity' ? 'active' : ''} onClick={() => setTab('activity')}>Live activity</button><button role="tab" aria-selected={tab === 'steps'} className={tab === 'steps' ? 'active' : ''} onClick={() => setTab('steps')}>Steps</button></div>}
+      {(!feed || mode === 'done' || tab === 'steps') && <>
+        <ol className="ms-steps">{stages.map((stage, index) => {
         const state = mode === 'done' || index < activeIndex ? 'done' : index === activeIndex ? 'active' : '';
         return <li key={stage.key} className={state}><span>{state === 'done' ? <Check size={14} /> : state === 'active' ? <LoaderCircle size={14} className="spin" /> : index + 1}</span>{stage.label}</li>;
       })}</ol>
+      </>}
+      {mode === 'loading' && feed && tab === 'activity' && <div className="ms-feed" ref={feedRef}>{feed}</div>}
       {mode === 'loading' && <div className="ms-now"><strong>{message}</strong><small>{Math.floor(seconds / 60)}:{String(seconds % 60).padStart(2, '0')} elapsed</small></div>}
-      {mode === 'loading' && feed && <div className="ms-feed">{feed}</div>}
       {mode === 'loading' && <button className="ms-cancel" onClick={onCancel}><X size={15} /> Cancel</button>}
     </aside>
 

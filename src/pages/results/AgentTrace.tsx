@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Brain, ChevronDown, FileText, MessageSquare, Wrench } from 'lucide-react';
+import { Brain, Building2, ChevronDown, CloudSun, Cpu, FileText, LoaderCircle, MessageSquare, Ruler, Search, Sun, Trophy, Wrench } from 'lucide-react';
 import type { AgentTraceEvent } from '../../services/vexcel';
 
 const TOOL_NAMES: Record<string, string> = {
@@ -102,4 +102,55 @@ export function AgentConsole({ events }: { events: AgentTraceEvent[] }) {
       ? <><Brain size={15} /><span>{event.toolCalls.length ? `Model decided: ${[...new Set(event.toolCalls.map((call) => toolLabel(call.name)))].join(', ')}` : event.text ? `Model: ${event.text.slice(0, 110)}${event.text.length > 110 ? '…' : ''}` : 'Model is thinking'}</span></>
       : event.kind === 'tool' ? <><Wrench size={15} /><span>{toolLabel(event.name)} <small>{(event.ms / 1000).toFixed(1)}s</small></span></> : null}
   </li>)}</ol>;
+}
+
+// ---- Live activity feed (Claude-style "Searching for …  · 12 results") -------
+type Activity = Extract<AgentTraceEvent, { kind: 'activity' }>;
+const ACTIVITY_ICON: Record<string, typeof Search> = {
+  climate: CloudSun, search_rooftop_imagery: Search, lookup_property_record: Building2, resolve_roof_geometry: Ruler,
+  simulate_rooftop_sunlight: Sun, predict_crop_suitability: Cpu, rank: Trophy, done: Trophy,
+};
+const GROUP_TITLE: Record<string, (items: Activity[]) => { title: string; summary: string }> = {
+  lookup_property_record: (items) => { const hits = items.filter((item) => item.detail.startsWith('CoStar:')); return { title: `Looked up ${items.length} property records`, summary: hits.length ? `${hits.length} matched CoStar: ${hits.map((item) => item.detail.slice(8).split(' · ')[0]).slice(0, 3).join(', ')}` : 'No CoStar matches nearby' }; },
+  resolve_roof_geometry: (items) => { const obstacles = items.reduce((sum, item) => sum + (Number(item.detail.match(/(\d+) obstacle/)?.[1]) || 0), 0); return { title: `Measured ${items.length} roofs in 3D`, summary: `${obstacles} obstacles found across them` }; },
+  simulate_rooftop_sunlight: (items) => { const meets = items.filter((item) => item.detail.includes('meets your area')).length; return { title: `Simulated sunlight on ${items.length} roofs`, summary: `${meets} of ${items.length} have enough area in full sun` }; },
+};
+
+type FeedRow = { kind: 'activity'; tool: string; items: Activity[] } | { kind: 'thought'; event: Extract<AgentTraceEvent, { kind: 'llm' }> };
+
+function feedRows(events: AgentTraceEvent[]): FeedRow[] {
+  const rows: FeedRow[] = [];
+  for (const event of events) {
+    if (event.kind === 'activity') {
+      const last = rows.at(-1);
+      if (last?.kind === 'activity' && last.tool === event.tool && GROUP_TITLE[event.tool]) last.items.push(event);
+      else rows.push({ kind: 'activity', tool: event.tool, items: [event] });
+    }
+    if (event.kind === 'llm' && event.toolCalls.length) rows.push({ kind: 'thought', event });
+  }
+  return rows;
+}
+
+export function ActivityFeed({ events, live = false }: { events: AgentTraceEvent[]; live?: boolean }) {
+  const rows = feedRows(events);
+  if (!rows.length) return <p className="feed-empty">{live ? 'Waiting for the agent’s first step…' : 'No activity was recorded for this run.'}</p>;
+  return <ol className="feed">{rows.map((row, index) => {
+    const latest = live && index === rows.length - 1;
+    if (row.kind === 'thought') {
+      const names = [...new Set(row.event.toolCalls.map((call) => toolLabel(call.name)))];
+      return <li key={index} className={`feed-row thought${latest ? ' latest' : ''}`}><span className="feed-icon"><Brain size={15} /></span><div><strong>Thinking</strong><small>Next: {names.map((name) => { const count = row.event.toolCalls.filter((call) => toolLabel(call.name) === name).length; return count > 1 ? `${name.toLowerCase()} × ${count}` : name.toLowerCase(); }).join(', ')}</small></div>{latest && <LoaderCircle size={15} className="spin feed-spin" />}</li>;
+    }
+    const Icon = ACTIVITY_ICON[row.tool] ?? Wrench;
+    const grouped = row.items.length > 1 && GROUP_TITLE[row.tool];
+    const head = grouped ? GROUP_TITLE[row.tool](row.items) : { title: row.items[0].title, summary: row.items[0].detail };
+    return <li key={index} className={`feed-row${latest ? ' latest' : ''}`}>
+      <span className="feed-icon"><Icon size={15} /></span>
+      <div>
+        <strong>{head.title}</strong>
+        <small>{head.summary}</small>
+        {grouped && <details><summary>{row.items.length} results</summary><ul>{row.items.map((item, itemIndex) => <li key={itemIndex}><b>{item.title.split(' · ').slice(1).join(' · ') || item.title}</b> {item.detail}</li>)}</ul></details>}
+      </div>
+      {latest && <LoaderCircle size={15} className="spin feed-spin" />}
+    </li>;
+  })}</ol>;
 }
