@@ -2,11 +2,28 @@ import { Suspense, useEffect, useMemo, useState } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { Edges, Line, OrbitControls, useTexture } from '@react-three/drei';
 import * as THREE from 'three';
-import type { CellResult, MetricPolygon, MetricRoofGeometry, Obstruction, SunPosition } from '../services/sunSimulation';
+import { shadowVector, type CellResult, type MetricPolygon, type MetricRoofGeometry, type Obstruction, type SunPosition } from '../services/sunSimulation';
 import './Roof3DVisualizer.css';
 
 type Bounds = { x: number; y: number; width: number; height: number };
 type SurfaceMode = 'imagery' | 'clean';
+type Point2 = { x: number; y: number };
+
+function convexHull(points: Point2[]) {
+  const sorted = [...points].sort((a, b) => a.x - b.x || a.y - b.y);
+  const cross = (origin: Point2, a: Point2, b: Point2) => (a.x - origin.x) * (b.y - origin.y) - (a.y - origin.y) * (b.x - origin.x);
+  const lower: Point2[] = [];
+  for (const point of sorted) {
+    while (lower.length >= 2 && cross(lower.at(-2)!, lower.at(-1)!, point) <= 0) lower.pop();
+    lower.push(point);
+  }
+  const upper: Point2[] = [];
+  for (const point of sorted.reverse()) {
+    while (upper.length >= 2 && cross(upper.at(-2)!, upper.at(-1)!, point) <= 0) upper.pop();
+    upper.push(point);
+  }
+  return [...lower.slice(0, -1), ...upper.slice(0, -1)];
+}
 
 type Roof3DVisualizerProps = {
   roofGeometry: MetricRoofGeometry;
@@ -144,10 +161,7 @@ function RoofPolygonSurface({
     </mesh>}
     {surfaceMode === 'clean' ? <>
       <mesh key="clean-roof" geometry={roofGeometry} rotation={[Math.PI / 2, 0, 0]} position={[0, .025, 0]}>
-        <meshBasicMaterial color="#63a878" side={THREE.DoubleSide} toneMapped={false} />
-      </mesh>
-      <mesh geometry={roofGeometry} rotation={[Math.PI / 2, 0, 0]} position={[0, .04, 0]} receiveShadow>
-        <shadowMaterial color="#17251d" transparent opacity={.32} depthWrite={false} />
+        <meshBasicMaterial color="#63a878" side={THREE.DoubleSide} toneMapped={false} stencilWrite stencilRef={1} stencilFunc={THREE.AlwaysStencilFunc} stencilZPass={THREE.ReplaceStencilOp} />
       </mesh>
     </> : <>
       <mesh key="imagery-roof" geometry={roofGeometry} rotation={[Math.PI / 2, 0, 0]} position={[0, .025, 0]} receiveShadow>
@@ -160,6 +174,34 @@ function RoofPolygonSurface({
       </mesh>}
     </>}
   </>;
+}
+
+function ProjectedShadow({ obstruction, sun, centerX, centerY }: { obstruction: Obstruction; sun: SunPosition; centerX: number; centerY: number }) {
+  const geometry = useMemo(() => {
+    const vector = shadowVector(sun, obstruction.heightM);
+    if (!vector) return null;
+    const corners = [
+      { x: obstruction.x, y: obstruction.y },
+      { x: obstruction.x + obstruction.width, y: obstruction.y },
+      { x: obstruction.x + obstruction.width, y: obstruction.y + obstruction.depth },
+      { x: obstruction.x, y: obstruction.y + obstruction.depth },
+    ];
+    const hull = convexHull([...corners, ...corners.map((point) => ({ x: point.x + vector.dx, y: point.y + vector.dy }))]);
+    const shape = new THREE.Shape();
+    hull.forEach((point, index) => {
+      const x = point.x - centerX;
+      const y = point.y - centerY;
+      if (index === 0) shape.moveTo(x, y);
+      else shape.lineTo(x, y);
+    });
+    shape.closePath();
+    return new THREE.ShapeGeometry(shape);
+  }, [centerX, centerY, obstruction, sun]);
+  useEffect(() => () => geometry?.dispose(), [geometry]);
+  if (!geometry) return null;
+  return <mesh geometry={geometry} rotation={[Math.PI / 2, 0, 0]} position={[0, .055, 0]} renderOrder={2}>
+    <meshBasicMaterial color="#17251d" transparent opacity={.42} depthWrite={false} toneMapped={false} side={THREE.DoubleSide} stencilWrite stencilRef={1} stencilFunc={THREE.EqualStencilFunc} stencilFail={THREE.KeepStencilOp} stencilZFail={THREE.KeepStencilOp} stencilZPass={THREE.KeepStencilOp} />
+  </mesh>;
 }
 
 function RoofSurface({ geometry, ...props }: Omit<Parameters<typeof RoofPolygonSurface>[0], 'polygon'> & { geometry: MetricRoofGeometry }) {
@@ -213,6 +255,7 @@ function Scene({ props, surfaceMode }: { props: Roof3DVisualizerProps; surfaceMo
         isInfrared={isInfrared}
         surfaceMode={surfaceMode}
       />
+      {surfaceMode === 'clean' && props.obstructions.map((obstruction, index) => <ProjectedShadow key={`shadow-${index}`} obstruction={obstruction} sun={props.sun} centerX={centerX} centerY={centerY} />)}
       {outlineRings.map((ring, index) => <Line
         key={`outline-${index}`}
         points={[...ring, ring[0]].map((point) => [point.x - centerX, .2, point.y - centerY])}
@@ -278,7 +321,7 @@ export default function Roof3DVisualizer(props: Roof3DVisualizerProps) {
         far: span * 15,
       }}
       dpr={[1, 1.75]}
-      gl={{ antialias: true, alpha: false, toneMapping: THREE.ACESFilmicToneMapping }}
+      gl={{ antialias: true, alpha: false, stencil: true, toneMapping: THREE.ACESFilmicToneMapping }}
       shadows
     >
       <color attach="background" args={['#f7f5f2']} />
