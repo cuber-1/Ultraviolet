@@ -3,6 +3,10 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
+from unittest.mock import patch
+
+from fastapi import HTTPException
+from pydantic import ValidationError
 
 from .features import FEATURE_NAMES
 from .inference import MONTHS, CropFitPredictor
@@ -82,6 +86,35 @@ def verify(artifact: Path, profiles: Path) -> None:
         assert not recency_report["gate"]["passed"]
         assert recency_report["finalTest"]["spearmanDeltaBootstrap95"][0] > 0
         assert any(item["spearmanDelta"] < 0 for item in recency_report["perYearFinalTest"])
+
+    from .trained_api import PredictionRequest, predict as api_predict
+
+    valid_climate = climate(20.0)
+    PredictionRequest(crop="corn", latitude=29.76, longitude=-95.37, climate=valid_climate, climateHistory=[valid_climate] * 10)
+    for invalid in (
+        {"climate": valid_climate[:11]},
+        {"climateHistory": [valid_climate] * 21},
+        {"climateHistory": [valid_climate[:11]]},
+    ):
+        try:
+            PredictionRequest(crop="corn", latitude=29.76, longitude=-95.37, **invalid)
+        except ValidationError:
+            pass
+        else:
+            raise AssertionError(f"unbounded or malformed climate request was accepted: {invalid.keys()}")
+
+    class InvalidClimatePredictor:
+        @staticmethod
+        def predict(*_args, **_kwargs):
+            raise ValueError("invalid climate")
+
+    with patch("cropfit.trained_api.predictor", return_value=InvalidClimatePredictor()):
+        try:
+            api_predict(PredictionRequest(crop="corn", latitude=29.76, longitude=-95.37, climate=valid_climate))
+        except HTTPException as error:
+            assert error.status_code == 422
+        else:
+            raise AssertionError("invalid caller climate was not mapped to HTTP 422")
 
     print(f"CropFit inference verified: {predictor.metadata['model']} ({len(FEATURE_NAMES)} features, 10-year reliability, county evidence)")
 

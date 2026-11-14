@@ -118,3 +118,12 @@ Atlas lookup now uses a cached exact haversine spatial index instead of scanning
 all 5,562 records per request. The reproducible benchmark and exact-identity
 check are in `evaluation/atlas-lookup-benchmark-v1.md`; timing ratios are
 machine-dependent.
+
+## Inference request safety
+
+API v0.5.6 bounds caller-supplied climate to 12 or 24 ordered months and at
+most 20 complete history years. Temperature, precipitation, and solar inputs
+must be finite and remain within documented physical limits. Invalid caller
+data returns HTTP 422 instead of being mislabeled as a model/upstream failure;
+the limits are advertised by `GET /health` and enforced in offline inference
+tests used by the Mac installer and CI.

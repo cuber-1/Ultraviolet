@@ -4,6 +4,7 @@ import json
 import os
 from functools import lru_cache
 from pathlib import Path
+from typing import Annotated
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
@@ -14,17 +15,21 @@ from .yield_atlas import load_atlas, nearest_evidence
 
 ROOT = Path(__file__).resolve().parents[1]
 YIELD_ATLAS = ROOT / "evaluation/yield-atlas-v2.json"
-app = FastAPI(title="Ultraviolet CropFit", version="0.5.5")
+app = FastAPI(title="Ultraviolet CropFit", version="0.5.6")
+
+ClimateSeries = Annotated[list[dict], Field(min_length=12, max_length=24)]
+ClimateYear = Annotated[list[dict], Field(min_length=12, max_length=12)]
+ClimateHistory = Annotated[list[ClimateYear], Field(max_length=20)]
 
 
 class PredictionRequest(BaseModel):
-    crop: str = Field(min_length=2)
+    crop: str = Field(min_length=2, max_length=100)
     latitude: float = Field(ge=-90, le=90)
     longitude: float = Field(ge=-180, le=180)
     soilPh: float = Field(default=6.5, ge=2.5, le=10.5)
     irrigated: bool = False
-    climate: list[dict] | None = None
-    climateHistory: list[list[dict]] | None = None
+    climate: ClimateSeries | None = None
+    climateHistory: ClimateHistory | None = None
 
 
 @lru_cache(maxsize=1)
@@ -71,7 +76,12 @@ def observed_evidence() -> dict:
 @app.get("/health")
 def health():
     model = predictor()
-    return {"status": "ok", "mode": "trained", "apiVersion": app.version, "model": model.metadata["model"], "metrics": model.metadata["metrics"], "evidence": observed_evidence()}
+    return {
+        "status": "ok", "mode": "trained", "apiVersion": app.version,
+        "model": model.metadata["model"], "metrics": model.metadata["metrics"],
+        "requestLimits": {"climateMonths": [12, 24], "historyYearsMax": 20},
+        "evidence": observed_evidence(),
+    }
 
 
 @app.post("/predict")
@@ -82,5 +92,7 @@ def predict(value: PredictionRequest):
         return result
     except KeyError as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
     except Exception as error:
         raise HTTPException(status_code=502, detail=f"CropFit prediction failed: {error}") from error

@@ -68,11 +68,20 @@ class CropFitPredictor:
         for index, item in enumerate(climate):
             if str(item.get("month", "")).upper()[:3] != MONTHS[index % 12]:
                 raise ValueError("Climate months must be ordered JAN through DEC.")
-            values = [item.get("temperatureC"), item.get("precipitationMmDay"), item.get("solarMjM2Day")]
-            if not all(np.isfinite(float(value)) for value in values):
+            try:
+                temperature = float(item.get("temperatureC"))
+                precipitation = float(item.get("precipitationMmDay"))
+                solar = float(item.get("solarMjM2Day"))
+            except (TypeError, ValueError) as error:
+                raise ValueError(f"Climate record {MONTHS[index % 12]} contains a missing or invalid value.") from error
+            if not all(np.isfinite(value) for value in (temperature, precipitation, solar)):
                 raise ValueError(f"Climate record {MONTHS[index % 12]} contains a non-finite value.")
-            if float(item["precipitationMmDay"]) < 0 or float(item["solarMjM2Day"]) < 0:
-                raise ValueError(f"Climate record {MONTHS[index % 12]} contains a negative precipitation or solar value.")
+            if not -100 <= temperature <= 80:
+                raise ValueError(f"Climate record {MONTHS[index % 12]} has temperature outside -100 to 80 C.")
+            if not 0 <= precipitation <= 1000:
+                raise ValueError(f"Climate record {MONTHS[index % 12]} has precipitation outside 0 to 1000 mm/day.")
+            if not 0 <= solar <= 100:
+                raise ValueError(f"Climate record {MONTHS[index % 12]} has solar resource outside 0 to 100 MJ/m2/day.")
 
     def curve(self, profile, climate_values: list[dict], soil_ph: float, irrigated: bool) -> list[dict]:
         self.validate_climate(climate_values)
