@@ -7,6 +7,7 @@ import { sharedMeetingArea, simulate, type AreaSelection, type Obstruction } fro
 import { handleMonthlyClimate, monthlyClimateAt } from './monthlyClimate';
 import { handleRunsRoute } from './runStore';
 import { handleGeoRoute } from './geocode';
+import { handleSensorsRoute } from './sensors';
 import { combinedRoofScore, handleMlRoute, mlModelStatus, modelBaseUrl, predictCropSuitability, siteSuitability, type MlCrop } from './mlModel';
 import { landLensAgentStatus, roofSites, runLandLensAgent, type AgentCandidate, type GeometryEvidence, type SunlightEvidence } from './landlensAgent';
 import { createPhotonConversation, photonStatus, sendPhotonMessage, type PhotonPlatform } from './photon';
@@ -66,7 +67,9 @@ function distanceMeters(lat: number, lon: number, address: JsonRecord) {
 
 function addressLabel(address: JsonRecord) {
   const street = [address.streetNumber, address.streetDirection, address.streetName, address.streetType].filter(Boolean).join(' ');
-  return [street, address.city, address.state, address.postcode].filter(Boolean).join(', ');
+  // CoStar stores ZIP+4 without a dash (e.g. 770603551); show the 5-digit ZIP.
+  const zip = typeof address.postcode === 'string' || typeof address.postcode === 'number' ? String(address.postcode).slice(0, 5) : null;
+  return [street, address.city, address.state, zip].filter(Boolean).join(', ');
 }
 
 function matchCostar(index: ReturnType<typeof costarIndex>, lat: number, lon: number) {
@@ -299,6 +302,58 @@ async function elevationsAt(key: string, points: Array<{ lat: number; lon: numbe
   };
 }
 
+/**
+ * CoStar-first candidates: the city's CoStar commercial properties whose estimated roof
+ * footprint (gross building area / stories) fits the growing target, favouring active
+ * listings and Matterport tours, each paired with its Vexcel roof outline.
+ */
+async function costarCandidates(key: string, costar: ReturnType<typeof costarIndex>, input: { location?: string; targetAreaSqft: number; limit: number }) {
+  if (!costar.available || !input.location || /all (?:available )?(?:areas|vexcel coverage)/i.test(input.location)) return [];
+  const center = await geocodePlace(input.location).catch(() => null);
+  if (!center) return [];
+  const pool = costar.properties.flatMap((property) => {
+    const address = property.primaryAddress ?? {};
+    const distance = distanceMeters(center.lat, center.lon, address);
+    if (!Number.isFinite(distance) || distance > 25_000) return [];
+    const gross = Number(property.grossBuildingAreaSquareFeet) || 0;
+    const stories = Math.max(1, Number(property.numStoriesAboveGrade) || 1);
+    const footprint = gross / stories;
+    if (footprint < input.targetAreaSqft * 1.2) return [];
+    const listings = costar.listingsByProperty.get(property.id) ?? [];
+    const active = listings.some((listing) => Number(listing.listingStatus) === 1);
+    const tours = (property.attachments ?? []).filter((attachment) => [36, 234].includes(Number(attachment.videoExternalReferenceType))).length;
+    // Prefer roofs comfortably above target (not giant warehouses), active listings, and tours.
+    const fit = Math.min(footprint / (input.targetAreaSqft * 3), 1.5);
+    const score = fit + (active ? .6 : 0) + Math.min(tours, 2) * .25 + (stories <= 4 ? .3 : 0);
+    return [{ property, lat: Number(address.latitude), lon: Number(address.longitude), footprint, score }];
+  }).sort((a, b) => b.score - a.score);
+  const picked: typeof pool = [];
+  for (const item of pool) {
+    // Spread the shortlist out: skip properties within 400 m of one already chosen.
+    if (picked.some((other) => Math.hypot((other.lat - item.lat) * 111_320, (other.lon - item.lon) * 111_320 * Math.cos(item.lat * Math.PI / 180)) < 400)) continue;
+    picked.push(item);
+    if (picked.length >= input.limit * 2) break;
+  }
+  const results: Array<Awaited<ReturnType<typeof searchCandidates>>[number]> = [];
+  for (let i = 0; i < picked.length && results.length < input.limit; i += 5) {
+    const batch = await Promise.all(picked.slice(i, i + 5).map(async (item) => {
+      const property = await propertyAt(key, item.lat, item.lon).catch(() => null);
+      if (!property?.roofWkt) return null;
+      const match = matchCostar(costar, item.lat, item.lon);
+      return {
+        id: `${item.lat.toFixed(6)},${item.lon.toFixed(6)}`,
+        rank: 0, lat: item.lat, lon: item.lon, score: Number((item.score / 3).toFixed(3)),
+        matchReason: `CoStar ${match?.propertyType ?? 'property'} with about ${Math.round(item.footprint).toLocaleString('en-US')} ft² of roof footprint`,
+        tileGeometry: null as unknown as JsonRecord,
+        property, costar: match,
+        imageryUrl: `/api/vexcel/imagery?lat=${item.lat}&lon=${item.lon}`,
+      };
+    }));
+    batch.forEach((item) => { if (item && results.length < input.limit) results.push(item); });
+  }
+  return results.map((item, index) => ({ ...item, rank: index + 1 }));
+}
+
 async function searchCandidates(key: string, costar: ReturnType<typeof costarIndex>, input: { query: string; lat: number; lon: number; radiusM: number; location?: string }) {
   const explicitPlace = input.location?.trim();
   const allCoverage = explicitPlace && /^(?:all (?:available )?(?:areas|vexcel coverage)|available vexcel coverage)$/i.test(explicitPlace);
@@ -476,6 +531,7 @@ export function vexcelApiPlugin(root: string) {
       if (await handleMlRoute(url.pathname, req, res)) return;
       if (await handleRunsRoute(url.pathname, req, res, root)) return;
       if (await handleGeoRoute(url.pathname, url, res, root)) return;
+      if (await handleSensorsRoute(url.pathname, req, res, root)) return;
       if (url.pathname === '/api/cropfit/status') {
         const response = await fetch(`${modelBaseUrl()}/health`, { signal: AbortSignal.timeout(3_000) });
         return json(res, response.status, await response.json());
@@ -607,7 +663,11 @@ export function vexcelApiPlugin(root: string) {
         const geometryCache = new Map<string, Promise<ResolvedGeometry | null>>();
         const candidateCache = new Map<string, AgentCandidate>();
         const search = async (searchQuery: string) => {
-          const results = await searchCandidates(key, costar, { query: searchQuery, location: searchLocation, lat, lon, radiusM });
+          // CoStar-first so most roofs come with a real building record; Vexcel search tops up.
+          const fromCostar = await costarCandidates(key, costar, { location: searchLocation, targetAreaSqft, limit: 8 }).catch(() => []);
+          const fromVexcel = fromCostar.length >= 5 ? [] : await searchCandidates(key, costar, { query: searchQuery, location: searchLocation, lat, lon, radiusM });
+          const seen = new Set(fromCostar.map((item) => item.id));
+          const results = [...fromCostar, ...fromVexcel.filter((item) => !seen.has(item.id))].map((item, index) => ({ ...item, rank: index + 1 }));
           results.forEach((candidate) => candidateCache.set(candidate.id, candidate));
           return results;
         };

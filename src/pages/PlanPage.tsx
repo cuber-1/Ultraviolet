@@ -7,7 +7,7 @@ import { type LoaderStage } from '../components/DeepAgentLoader';
 import MapStage from '../components/MapStage';
 import DeepAgentSite from './DeepAgentSite';
 import ResultsApp from './results/ResultsApp';
-import { AgentConsole } from './results/AgentTrace';
+import { ActivityFeed } from './results/AgentTrace';
 import '../pages/results/ResultsApp.css';
 import { OptimalPointsChart, PlantingCurveChart, SunCoverageChart } from '../components/charts/DeepAgentCharts';
 import { runAgentComparison, type AgentComparison, type AgentTraceEvent, type CropModelInfo, type CropPrediction, type SearchResult } from '../services/vexcel';
@@ -84,6 +84,7 @@ export default function PlanPage() {
         if (!live()) return;
         const plan = climate?.results[0] ? planForLocation(input, climate.results[0]) : null;
         setClimatePlan(plan);
+        if (plan && live()) setLiveTrace((items) => [...items, { kind: 'activity', tool: 'climate', title: `Reading NASA climate for ${urbanAreaLabel(input)}`, detail: `${plan.climate.annual.temperatureC.toFixed(0)}°C average · ${plan.climate.annual.solarMjM2Day.toFixed(1)} MJ/m²/day sun${plan.moveInMonth !== null ? ` · best start ${MONTH_LONG[plan.moveInMonth]}` : ''}`, at: 0 }]);
         const criteria = urbanAgentCriteria(input, plan);
         push(plan?.moveInMonth !== null && plan ? `Best start month: ${MONTH_LONG[plan.moveInMonth!]}` : 'Climate unavailable; using your preferred month');
         advance(URBAN_STAGES, 'planning');
@@ -183,7 +184,7 @@ export default function PlanPage() {
       ? `Searching ${urbanAreaLabel(brief)} for ${formatArea(brief.areaSqft)} of roof that suits ${cropList(brief)}.`
       : `Comparing ${ruralPlaces(brief).length} farming towns for ${cropList(brief)} on ${formatArea(brief.areaSqft)}.`}
     stages={urban ? URBAN_STAGES : RURAL_STAGES} activeIndex={stageIndex} message={log.at(-1) ?? 'Starting'} startedAt={startedAt}
-    feed={urban && liveTrace.length ? <AgentConsole events={liveTrace} /> : undefined}
+    feed={urban ? <ActivityFeed events={liveTrace} live /> : undefined}
     ctaLabel="" onContinue={() => undefined} onCancel={cancel} />;
   if (outcome && reveal && !running && !error) {
     const pins = outcome.kind === 'urban'

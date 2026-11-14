@@ -19,6 +19,7 @@
     "test:ml-failover": "node --experimental-strip-types scripts/verifyMlFailover.ts",
     "test:cropfit": "PYTHONPATH=machine-learning machine-learning/.venv/bin/python -m cropfit.verify_inference",
     "test:simulation": "node --experimental-strip-types scripts/verifySunSimulation.ts",
+    "hardware:bridge": "node hardware/bridge/serial-bridge.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

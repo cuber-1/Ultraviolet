@@ -138,3 +138,20 @@
 .ra-home svg { color: var(--gray-500); }
 .ra-food strong { color: var(--earth); }
 .ra-stats strong { font-size: clamp(30px, 2.8vw, 44px); }
+
+.feed { display: grid; gap: 4px; list-style: none; }
+.feed-row { display: grid; grid-template-columns: 30px 1fr auto; align-items: start; gap: 10px; padding: 10px 12px; border-radius: 14px; background: rgba(255, 255, 255, .55); animation: fadeIn .35s ease both; }
+.feed-row.latest { background: var(--white); box-shadow: 0 8px 22px rgba(232, 93, 4, .12); }
+.feed-icon { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 9px; background: var(--orange-soft); color: var(--earth); }
+.feed-row.thought .feed-icon { background: #efe8df; color: var(--gray-500); }
+.feed-row strong { display: block; color: var(--black); font-size: 14px; font-weight: 600; line-height: 1.35; }
+.feed-row small { display: block; margin-top: 2px; color: var(--gray-600); font-size: 13px; line-height: 1.4; }
+.feed-row details { margin-top: 6px; }
+.feed-row summary { cursor: pointer; color: var(--earth-dark); font-size: 13px; }
+.feed-row details ul { display: grid; gap: 4px; margin-top: 6px; padding-left: 16px; color: var(--gray-600); font-size: 12px; line-height: 1.4; }
+.feed-row details b { color: var(--black); font-weight: 600; }
+.feed-spin { color: var(--earth); margin-top: 6px; }
+.feed-empty { color: var(--gray-500); font-size: 14px; }
+.ra-agent .feed { max-width: 1100px; margin-bottom: 34px; }
+.ra-agent .feed-row { background: #fffdfa; }
+.ra-agent h2.feed-heading { margin: 0 0 12px; font-size: 22px; letter-spacing: -.03em; }

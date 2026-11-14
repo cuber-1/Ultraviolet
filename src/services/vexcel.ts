@@ -147,7 +147,8 @@ export type CropPrediction = {
 export type AgentTraceEvent =
   | { kind: 'prompt'; role: 'system' | 'user'; title: string; text: string; at: number }
   | { kind: 'llm'; text: string; toolCalls: Array<{ name: string; args: string }>; ms: number; tokens: number | null; at: number }
-  | { kind: 'tool'; name: string; args: string; result: string; ms: number; ok: boolean; at: number };
+  | { kind: 'tool'; name: string; args: string; result: string; ms: number; ok: boolean; at: number }
+  | { kind: 'activity'; tool: string; title: string; detail: string; at: number };
 export type CropModelInfo = { name: string; version: string | null; source: 'ml' | 'calendar-fallback'; error: string | null };
 export type CropProfileInput = { id: string; name: string; sunHours: number; tempMinC: number; tempMaxC: number; growMonths: number };
 

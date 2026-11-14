@@ -97,6 +97,7 @@ export default function LandingPage() {
         <nav>
           <button onClick={() => navigate('/model')}>How it works</button>
           <button onClick={() => navigate('/agriculture/urban')}>Urban</button>
+          <button onClick={() => navigate('/sensors')}>Sensors</button>
         </nav>
       </header>
 

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ArrowRight, Heart, Home, Layers, LineChart, Map as MapIcon, Pencil, RotateCcw, Sparkles, Star, Trash2, X } from 'lucide-react';
 import Wordmark from '../../components/Wordmark';
-import { AgentTrace } from './AgentTrace';
+import { ActivityFeed, AgentTrace } from './AgentTrace';
 import { CLASSES, CROP_COLORS, classify } from '../../components/charts/DeepAgentCharts';
 import { briefCrops, estimateFood, formatLbs, urbanAreaLabel, type Brief } from '../../services/cropPlan';
 import { roofTitle, useAddresses } from '../../services/addresses';
@@ -108,6 +108,8 @@ export default function ResultsApp({ brief, criteria, comparison, top, insights,
     {view === 'agent' && <main className="ra-agent">
       <h1>What the Deep Agent did</h1>
       <p>Every prompt, model turn, and tool call from this search, in order. The same run is traced in LangSmith.</p>
+      {(comparison.trace ?? []).some((event) => event.kind === 'activity') && <><h2 className="feed-heading">Activity</h2><ActivityFeed events={comparison.trace ?? []} /></>}
+      <h2 className="feed-heading">Full trace</h2>
       <AgentTrace events={comparison.trace ?? []} model={comparison.model ?? null} />
     </main>}
   </div>;
