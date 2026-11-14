@@ -78,6 +78,7 @@ export default function PlanPage() {
         const comparison = await runAgentComparison({
           goal: criteria.goal, location: input.urbanArea ?? 'All available Vexcel coverage', lat: 0, lon: 0, radiusM: 20_000,
           dates: criteria.dates, targetHours: criteria.targetHours, targetAreaSqft: criteria.targetAreaSqft,
+          crops: briefCrops(input).map((crop) => crop.name), source: 'guided',
         }, (event) => { advance(URBAN_STAGES, event.stage); push(event.message); }, controller.signal);
         if (!live()) return;
         const byId = new Map(comparison.candidates.map((candidate) => [candidate.id, candidate]));

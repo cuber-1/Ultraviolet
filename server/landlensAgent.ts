@@ -92,6 +92,25 @@ const AGENT_RECURSION_LIMIT = Number(process.env.LANDLENS_AGENT_RECURSION_LIMIT)
 // Each candidate costs a geometry + sunlight run; 8 keeps a top-5 answer to a few minutes.
 const AGENT_MAX_CANDIDATES = Number(process.env.LANDLENS_AGENT_MAX_CANDIDATES) || 8;
 
+// LangSmith trace name, tags, and metadata so runs are readable and filterable in the tracing UI.
+function traceConfig(input: { goal: string; location: string; dates: string[]; targetHours: number; targetAreaSqft: number; crops?: string[]; followUp?: string; source?: string }, modelName: string) {
+  const place = input.location.split(',')[0].trim() || 'All coverage';
+  const crops = (input.crops ?? []).map((crop) => crop.trim()).filter(Boolean).slice(0, 6);
+  const area = `${Math.round(input.targetAreaSqft).toLocaleString('en-US')} sq ft`;
+  const runName = ['Roof search', place, crops.length ? crops.join(', ') : area].join(' · ');
+  const tags = ['ultraviolet', 'roof-search', `source:${input.source ?? 'search'}`, `city:${place.toLowerCase()}`, `model:${modelName}`, ...crops.map((crop) => `crop:${crop.toLowerCase()}`)];
+  if (input.followUp) tags.push('follow-up');
+  return {
+    runName,
+    tags,
+    metadata: {
+      app: 'ultraviolet', source: input.source ?? 'search', location: input.location, crops,
+      target_area_sqft: input.targetAreaSqft, target_sun_hours: input.targetHours, dates: input.dates,
+      goal: input.goal, follow_up: input.followUp ?? null, model: modelName,
+    },
+  };
+}
+
 export function landLensAgentStatus() {
   const model = configuredModel();
   return { configured: Boolean(model), model: model?.name ?? null, provider: process.env.NRP_API_KEY ? 'NRP' : model ? 'OpenAI-compatible' : null };
@@ -104,6 +123,8 @@ export async function runLandLensAgent(input: {
   dates: string[];
   targetHours: number;
   targetAreaSqft: number;
+  crops?: string[];
+  source?: 'guided' | 'search' | 'photon-watch';
 }, services: LandLensAgentServices, progress: (event: AgentProgress) => void) {
   const model = configuredModel();
   if (!model) throw new Error('Agent model access is not configured. Set NRP_API_KEY or LANDLENS_AGENT_API_KEY.');
@@ -198,7 +219,7 @@ export async function runLandLensAgent(input: {
   try {
     const result = await agent.invoke({
       messages: [{ role: 'user', content: `${input.goal}\nLocation: ${input.location}\nRepresentative dates: ${input.dates.join(', ')}\nDirect sun target: ${input.targetHours} hours\nGrowing area target: ${input.targetAreaSqft} square feet.${input.followUp ? `\nFollow-up: ${input.followUp}` : ''}` }],
-    } as never, { recursionLimit: AGENT_RECURSION_LIMIT, signal: AbortSignal.timeout(AGENT_TIMEOUT_MS) });
+    } as never, { recursionLimit: AGENT_RECURSION_LIMIT, signal: AbortSignal.timeout(AGENT_TIMEOUT_MS), ...traceConfig(input, model.name) });
     narrative = result.structuredResponse ?? null;
   } catch (reason) {
     progress({ stage: 'ranking', message: `Model planning ended; ranking completed tool evidence directly` });
