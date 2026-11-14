@@ -14,6 +14,7 @@
     "ml:serve:demo": "PYTHONPATH=machine-learning machine-learning/.venv/bin/python -m uvicorn cropfit.api:app --host 127.0.0.1 --port 8100",
     "test:ml-failover": "node --experimental-strip-types scripts/verifyMlFailover.ts",
     "test:simulation": "node --experimental-strip-types scripts/verifySunSimulation.ts",
+    "hardware:bridge": "node hardware/bridge/serial-bridge.mjs",
     "preview": "vite preview"
   },
   "dependencies": {
