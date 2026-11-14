@@ -121,6 +121,7 @@ export type LocationPlan = {
   moveInMonth: number | null;
   score: number;
   reasons: string[];
+  rankingEvidence?: { observedCrops: number; climateCrops: number; method: 'observed-prior' | 'agroclimatic' };
 };
 
 export function planForLocation(brief: Brief, climate: MonthlyClimate): LocationPlan {
@@ -203,10 +204,19 @@ export function applyModel(plan: LocationPlan, predictions: CropPrediction[], pr
     if (!hit) return timing;
     return { ...timing, startMonth: hit.plantMonth, harvestMonth: hit.harvestMonth, waitMonths: hit.plantMonth === null ? null : (hit.plantMonth - preferredMonth + 12) % 12, suitability: hit.suitability };
   });
+  const observed = mine.filter((item) => Number.isFinite(item.observedYieldEvidence?.observedYieldPrior?.expectedPercentile));
+  const rankingFit = mine.reduce((sum, item) => sum + (item.observedYieldEvidence?.observedYieldPrior?.expectedPercentile ?? item.suitability), 0) / mine.length;
   const suitability = mine.reduce((sum, item) => sum + item.suitability, 0) / mine.length;
   const started = timings.filter((timing) => timing.waitMonths !== null);
   const moveInMonth = started.length ? started.reduce((best, timing) => timing.waitMonths! < best.waitMonths! ? timing : best).startMonth : null;
-  return { ...plan, timings, moveInMonth, score: Math.round(100 * suitability), reasons: [`Crop model suitability ${Math.round(100 * suitability)}%`, ...plan.reasons] };
+  const evidenceReason = observed.length
+    ? `USDA observed county prior ranks ${observed.length} of ${mine.length} selected crops; CropFit still sets planting timing`
+    : `Crop model suitability ${Math.round(100 * suitability)}%`;
+  return {
+    ...plan, timings, moveInMonth, score: Math.round(100 * rankingFit),
+    reasons: [evidenceReason, ...plan.reasons],
+    rankingEvidence: { observedCrops: observed.length, climateCrops: mine.length - observed.length, method: observed.length ? 'observed-prior' : 'agroclimatic' },
+  };
 }
 
 export type MlCapabilities = { strict: boolean; configured: boolean; api: 'contract' | 'cropfit' | null; supportedCrops: string[] | null };

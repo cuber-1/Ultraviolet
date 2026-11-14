@@ -126,3 +126,14 @@ national observed-validation download. It writes atlas v2, a forward-year
 validation report, and a presentation PNG under `evaluation/`. The report
 compares the 16-year and legacy 8-year histories on identical future rows and
 tests conformal intervals calibrated on 2011–2017 against 2018–2025 outcomes.
+
+## Validate rural ranking evidence
+
+```bash
+npm run ml:evaluate:ranking
+```
+
+This compares the observed county prior, CropFit agroclimatic score, and a
+candidate blend. Weights are selected on 2018–2020; 2021–2022 is confirmation;
+2023–2025 is the final untouched test. The current report rejects the fragile
+blend and validates using the observed prior for supported rural crops only.

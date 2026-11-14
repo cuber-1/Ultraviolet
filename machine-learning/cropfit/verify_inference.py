@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 from pathlib import Path
 
 from .features import FEATURE_NAMES
@@ -58,6 +59,13 @@ def verify(artifact: Path, profiles: Path) -> None:
         assert evidence["observedYieldPrior"]["interval90"][0] <= evidence["observedYieldPrior"]["interval80"][0]
         assert evidence["observedYieldPrior"]["interval90"][1] >= evidence["observedYieldPrior"]["interval80"][1]
         assert nearest_evidence("tomato", 29.7604, -95.3698, atlas) is None
+
+    ranking_validation = artifact.parents[1] / "evaluation/ranking-validation-v1.json"
+    if ranking_validation.exists():
+        ranking_report = json.loads(ranking_validation.read_text())
+        assert not ranking_report["blendGate"]["passed"]
+        assert ranking_report["productionGate"]["passed"]
+        assert ranking_report["priorVsClimateFinalTest"]["priorAdvantageBootstrap95"][0] > 0
 
     print(f"CropFit inference verified: {predictor.metadata['model']} ({len(FEATURE_NAMES)} features, 10-year reliability, county evidence)")
 

@@ -312,6 +312,7 @@ function UrbanResults({ outcome, onOpen }: { outcome: UrbanOutcome; onOpen: (id:
 function RuralResults({ outcome }: { outcome: RuralOutcome }) {
   const { brief, plans, errors } = outcome;
   const top = useMemo(() => plans.slice(0, TOP_N), [plans]);
+  const usesObservedPrior = plans.some((plan) => (plan.rankingEvidence?.observedCrops ?? 0) > 0);
   const points = useMemo(() => top.map((plan, index) => ({ id: plan.climate.query, lat: plan.climate.lat, lon: plan.climate.lon, rank: index + 1 })), [top]);
   const [openId, setOpenId] = useState<string | null>(top[0]?.climate.query ?? null);
   return <main className="plan-main">
@@ -354,7 +355,7 @@ function RuralResults({ outcome }: { outcome: RuralOutcome }) {
       <aside className="plan-side">
         <div className="plan-globe"><SearchGlobe points={points} onPointClick={setOpenId} unitLabel="REGIONS" /></div>
         {outcome.model && <ModelCard model={outcome.model} />}
-        <div className="plan-card"><header><CircleAlert size={15} /><strong>How this is scored</strong></header><p>{outcome.model?.source === 'ml' ? 'Fit is the crop model’s average suitability across your crops, and planting windows come from the model. ' : ''}{outcome.model?.source === 'ml' ? 'Without the model, fit' : 'Fit'} combines how many of your crops have a full growing season (45%), how soon they can start after your preferred month (25%), season length (15%), and annual solar resource (15%). A month counts when NASA’s average temperature sits inside the crop’s range. Soil, water rights, parcels, and price are not assessed yet.</p></div>
+        <div className="plan-card"><header><CircleAlert size={15} /><strong>How this is scored</strong></header><p>{usesObservedPrior ? 'For corn, soybeans, and wheat, regional order uses the USDA observed county prior validated on later years; CropFit still determines planting timing. Crops without USDA evidence use CropFit suitability. ' : outcome.model?.source === 'ml' ? 'Fit is the crop model’s average suitability across your crops, and planting windows come from the model. ' : ''}{outcome.model?.source === 'ml' ? 'Without usable model evidence, fit' : 'Fit'} combines how many crops have a full growing season, how soon they can start, season length, and annual solar resource. Soil, water rights, parcels, price, and on-site conditions are not assessed.</p></div>
       </aside>
     </section>
   </main>;

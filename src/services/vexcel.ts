@@ -142,7 +142,7 @@ export type CropPrediction = {
   profile?: { scientificName: string | null; tempOptC: [number, number] | null; rainOptMm: [number, number] | null; phOpt: [number, number] | null } | null;
   evidenceGrade?: string | null;
   plantingReliability?: { years: number; successRate: number; p10Score: number; medianScore: number; p90Score: number; threshold: number } | null;
-  observedYieldEvidence?: { county: string; state: string; distanceKm: number; years: number[]; observations: number; meanPercentile: number; p10Percentile: number; p90Percentile: number; meanYieldBushelsPerAcre: number; history: Array<{ year: number; yieldBushelsPerAcre: number; percentile: number }>; evidenceGrade: string; source: string; disclaimer: string } | null;
+  observedYieldEvidence?: { county: string; state: string; distanceKm: number; years: number[]; observations: number; meanPercentile: number; p10Percentile: number; p90Percentile: number; meanYieldBushelsPerAcre: number; observedYieldPrior?: { expectedPercentile: number; interval80: [number, number]; interval90: [number, number]; historyBucket: string; calibrationExamples: number }; history: Array<{ year: number; yieldBushelsPerAcre: number; percentile: number }>; evidenceGrade: string; source: string; disclaimer: string } | null;
 };
 export type AgentTraceEvent =
   | { kind: 'prompt'; role: 'system' | 'user'; title: string; text: string; at: number }

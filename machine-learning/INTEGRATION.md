@@ -13,8 +13,13 @@
 For corn, soybean, and wheat, CropFit API v0.5.4 also returns optional
 `observedYieldEvidence` from the nearest USDA reporting county within 100 km.
 Atlas v2 includes 2010–2025 history plus a calibrated observed-yield percentile
-prior with 80% and 90% uncertainty intervals. It does not modify EcoCrop
-suitability or site ranking and is not a parcel yield forecast.
+prior with 80% and 90% uncertainty intervals. It does not modify the underlying
+EcoCrop suitability and is not a parcel yield forecast.
+
+For `kind: "region"` results, the Ultraviolet client uses that observed prior
+to rank corn, soybean, and wheat locations while retaining CropFit suitability
+for planting timing and unsupported crops. The validated blend was not used;
+urban roof ranking remains based on sunlit area and agroclimatic suitability.
 
 The app supplies a 2015–2024 NASA POWER monthly history. CropFit scores every
 planting month in every year and returns p10/median/p90 suitability plus the

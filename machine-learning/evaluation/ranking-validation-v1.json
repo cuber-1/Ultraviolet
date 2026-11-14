@@ -1,0 +1,209 @@
+{
+  "name": "CropFit observed-ranking blend v1",
+  "model": "CropFit EcoCrop surrogate v0.5",
+  "target": "USDA county yield percentile within crop and year",
+  "weights": {
+    "observedCountyPrior": 0.9,
+    "agroclimaticScore": 0.1
+  },
+  "developmentYears": [
+    2018,
+    2019,
+    2020
+  ],
+  "candidateSelection": [
+    {
+      "climateWeight": 0.0,
+      "observations": 10362,
+      "priorSpearman": 0.8393,
+      "hybridSpearman": 0.8393,
+      "spearmanDelta": 0.0,
+      "priorMaePercentile": 0.1201,
+      "hybridMaePercentile": 0.1201
+    },
+    {
+      "climateWeight": 0.05,
+      "observations": 10362,
+      "priorSpearman": 0.8393,
+      "hybridSpearman": 0.8416,
+      "spearmanDelta": 0.0023,
+      "priorMaePercentile": 0.1201,
+      "hybridMaePercentile": 0.1222
+    },
+    {
+      "climateWeight": 0.1,
+      "observations": 10362,
+      "priorSpearman": 0.8393,
+      "hybridSpearman": 0.8421,
+      "spearmanDelta": 0.0028,
+      "priorMaePercentile": 0.1201,
+      "hybridMaePercentile": 0.1268
+    },
+    {
+      "climateWeight": 0.15,
+      "observations": 10362,
+      "priorSpearman": 0.8393,
+      "hybridSpearman": 0.8401,
+      "spearmanDelta": 0.0008,
+      "priorMaePercentile": 0.1201,
+      "hybridMaePercentile": 0.1335
+    },
+    {
+      "climateWeight": 0.25,
+      "observations": 10362,
+      "priorSpearman": 0.8393,
+      "hybridSpearman": 0.8258,
+      "spearmanDelta": -0.0135,
+      "priorMaePercentile": 0.1201,
+      "hybridMaePercentile": 0.1514
+    },
+    {
+      "climateWeight": 0.5,
+      "observations": 10362,
+      "priorSpearman": 0.8393,
+      "hybridSpearman": 0.6989,
+      "spearmanDelta": -0.1404,
+      "priorMaePercentile": 0.1201,
+      "hybridMaePercentile": 0.2156
+    },
+    {
+      "climateWeight": 1.0,
+      "observations": 10362,
+      "priorSpearman": 0.8393,
+      "hybridSpearman": 0.0615,
+      "spearmanDelta": -0.7778,
+      "priorMaePercentile": 0.1201,
+      "hybridMaePercentile": 0.3859
+    }
+  ],
+  "confirmationYears": [
+    2021,
+    2022
+  ],
+  "confirmation": {
+    "observations": 7338,
+    "priorSpearman": 0.8497,
+    "hybridSpearman": 0.8534,
+    "spearmanDelta": 0.0037,
+    "priorMaePercentile": 0.1167,
+    "hybridMaePercentile": 0.121
+  },
+  "finalTestYears": [
+    2023,
+    2024,
+    2025
+  ],
+  "finalTest": {
+    "observations": 8889,
+    "priorSpearman": 0.8269,
+    "hybridSpearman": 0.8286,
+    "spearmanDelta": 0.0017,
+    "priorMaePercentile": 0.1249,
+    "hybridMaePercentile": 0.1314,
+    "spearmanDeltaBootstrap95": [
+      0.0008,
+      0.0027
+    ]
+  },
+  "perCropFinalTest": [
+    {
+      "crop": "corn",
+      "observations": 3889,
+      "priorSpearman": 0.8362,
+      "hybridSpearman": 0.8385,
+      "spearmanDelta": 0.0023,
+      "priorMaePercentile": 0.1232,
+      "hybridMaePercentile": 0.129
+    },
+    {
+      "crop": "soybean",
+      "observations": 3454,
+      "priorSpearman": 0.8215,
+      "hybridSpearman": 0.8196,
+      "spearmanDelta": -0.0019,
+      "priorMaePercentile": 0.1257,
+      "hybridMaePercentile": 0.1326
+    },
+    {
+      "crop": "wheat",
+      "observations": 1546,
+      "priorSpearman": 0.8221,
+      "hybridSpearman": 0.8291,
+      "spearmanDelta": 0.007,
+      "priorMaePercentile": 0.1271,
+      "hybridMaePercentile": 0.1349
+    }
+  ],
+  "perYearFinalTest": [
+    {
+      "year": 2023,
+      "observations": 3484,
+      "priorSpearman": 0.835,
+      "hybridSpearman": 0.8387,
+      "spearmanDelta": 0.0037,
+      "priorMaePercentile": 0.1236,
+      "hybridMaePercentile": 0.1304
+    },
+    {
+      "year": 2024,
+      "observations": 2433,
+      "priorSpearman": 0.8112,
+      "hybridSpearman": 0.8121,
+      "spearmanDelta": 0.001,
+      "priorMaePercentile": 0.1283,
+      "hybridMaePercentile": 0.1332
+    },
+    {
+      "year": 2025,
+      "observations": 2972,
+      "priorSpearman": 0.8304,
+      "hybridSpearman": 0.8306,
+      "spearmanDelta": 0.0002,
+      "priorMaePercentile": 0.1235,
+      "hybridMaePercentile": 0.1311
+    }
+  ],
+  "blendGate": {
+    "passed": false,
+    "rule": "On untouched 2023\u20132025 rows: pooled rank delta and grouped-bootstrap lower bound > 0, every crop non-negative, and at least two of three years positive."
+  },
+  "priorVsClimateFinalTest": {
+    "observations": 8889,
+    "priorSpearman": 0.8269,
+    "climateSpearman": 0.0299,
+    "priorAdvantage": 0.797,
+    "priorAdvantageBootstrap95": [
+      0.7691,
+      0.8243
+    ],
+    "perCrop": [
+      {
+        "crop": "corn",
+        "observations": 3889,
+        "priorSpearman": 0.8362,
+        "climateSpearman": -0.0036,
+        "priorAdvantage": 0.8398
+      },
+      {
+        "crop": "soybean",
+        "observations": 3454,
+        "priorSpearman": 0.8215,
+        "climateSpearman": 0.0068,
+        "priorAdvantage": 0.8147
+      },
+      {
+        "crop": "wheat",
+        "observations": 1546,
+        "priorSpearman": 0.8221,
+        "climateSpearman": 0.2675,
+        "priorAdvantage": 0.5546
+      }
+    ]
+  },
+  "productionGate": {
+    "passed": true,
+    "rule": "On 2023\u20132025 rows, the observed prior must beat the current agroclimatic-only rank pooled with a grouped-bootstrap lower bound > 0 and separately for every supported crop.",
+    "decision": "Use the observed prior only for supported crops in rural regional ranking; keep agroclimatic suitability for planting timing and unsupported crops. Do not promote the failed blend."
+  },
+  "interpretation": "This validates ordering counties for supported crops. It does not validate parcel yield, revenue, or purchase returns."
+}

@@ -74,3 +74,18 @@ rows. Uncertainty was calibrated on 2011–2017 only; across 26,589 later
 2018–2025 outcomes, nominal 80% and 90% intervals covered 83.5% and 92.3%.
 This measures persistence of county yield ranks, not parcel yield forecasting.
 See `evaluation/yield-atlas-validation-v2.md`.
+
+## Rural regional ranking
+
+The rural workflow uses the observed county prior—not the EcoCrop score—to
+order regions for corn, soybeans, and wheat when nearby USDA evidence exists.
+CropFit still supplies planting timing; unsupported crops continue to use its
+agroclimatic suitability.
+
+This policy was tested on 8,889 untouched 2023–2025 county-year outcomes. The
+observed prior reached Spearman 0.8269 versus 0.0299 for climate-only ranking;
+the paired county-crop bootstrap advantage was 0.7691–0.8243 and was positive
+for every supported crop. A 90% prior / 10% climate blend was rejected because
+soybean regressed despite a small positive pooled result. Urban rooftop ranking
+is unchanged because county farm yields are not roof-specific. See
+`evaluation/ranking-validation-v1.md`.
