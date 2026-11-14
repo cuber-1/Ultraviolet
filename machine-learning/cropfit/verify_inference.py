@@ -49,6 +49,7 @@ def verify(artifact: Path, profiles: Path) -> None:
         evidence = nearest_evidence("corn", 29.7604, -95.3698, atlas)
         assert evidence and evidence["county"] == "Fort Bend County" and evidence["observations"] == 7
         assert evidence["latest"]["year"] == 2025
+        assert [item["year"] for item in evidence["history"]][-3:] == [2023, 2024, 2025]
         assert nearest_evidence("tomato", 29.7604, -95.3698, atlas) is None
 
     print(f"CropFit inference verified: {predictor.metadata['model']} ({len(FEATURE_NAMES)} features, 10-year reliability, county evidence)")

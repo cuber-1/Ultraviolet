@@ -34,7 +34,7 @@ export type MlPrediction = {
   profile?: { scientificName: string | null; tempOptC: [number, number] | null; rainOptMm: [number, number] | null; phOpt: [number, number] | null } | null;
   evidenceGrade?: string | null;
   plantingReliability?: { years: number; successRate: number; p10Score: number; medianScore: number; p90Score: number; threshold: number } | null;
-  observedYieldEvidence?: { county: string; state: string; distanceKm: number; years: number[]; observations: number; meanPercentile: number; p10Percentile: number; p90Percentile: number; meanYieldBushelsPerAcre: number; evidenceGrade: string; source: string; disclaimer: string } | null;
+  observedYieldEvidence?: { county: string; state: string; distanceKm: number; years: number[]; observations: number; meanPercentile: number; p10Percentile: number; p90Percentile: number; meanYieldBushelsPerAcre: number; history: Array<{ year: number; yieldBushelsPerAcre: number; percentile: number }>; evidenceGrade: string; source: string; disclaimer: string } | null;
 };
 export type MlResponse = { model: { name: string; version: string | null; source: 'ml' | 'calendar-fallback'; error: string | null }; predictions: MlPrediction[] };
 
@@ -165,7 +165,7 @@ type CropFitResult = {
   plantingReliability?: { years?: number; successRate?: number; p10Score?: number; medianScore?: number; p90Score?: number; threshold?: number } | null;
   monthlyCurve?: Array<{ month?: unknown; score?: number; uncertainty?: number; expectedAbsoluteErrorP80?: number; expectedAbsoluteErrorP90?: number; historicalP10?: number; historicalMedian?: number; historicalP90?: number; reliability?: number; components?: Record<string, number> }>;
   profile?: Record<string, unknown>; evidenceGrade?: string;
-  observedYieldEvidence?: { county?: unknown; state?: unknown; distanceKm?: number; years?: unknown[]; observations?: number; meanPercentile?: number; p10Percentile?: number; p90Percentile?: number; meanYieldBushelsPerAcre?: number; evidenceGrade?: unknown; source?: unknown; disclaimer?: unknown } | null;
+  observedYieldEvidence?: { county?: unknown; state?: unknown; distanceKm?: number; years?: unknown[]; observations?: number; meanPercentile?: number; p10Percentile?: number; p90Percentile?: number; meanYieldBushelsPerAcre?: number; history?: Array<{ year?: number; yieldBushelsPerAcre?: number; percentile?: number }>; evidenceGrade?: unknown; source?: unknown; disclaimer?: unknown } | null;
 };
 const apiKindCache = new Map<string, { kind: 'contract' | 'cropfit'; expires: number }>();
 const cropFitCache = new Map<string, { expires: number; value: Promise<CropFitResult> }>();
@@ -249,7 +249,7 @@ function fromCropFit(site: MlSite, crop: MlCrop, preferredMonth: number, result:
     evidenceGrade: typeof result.evidenceGrade === 'string' ? result.evidenceGrade : null,
     plantingReliability: reliability && [reliability.years, reliability.successRate, reliability.p10Score, reliability.medianScore, reliability.p90Score, reliability.threshold].every((value) => Number.isFinite(Number(value))) ? { years: Number(reliability.years), successRate: Number(reliability.successRate), p10Score: Number(reliability.p10Score), medianScore: Number(reliability.medianScore), p90Score: Number(reliability.p90Score), threshold: Number(reliability.threshold) } : null,
     observedYieldEvidence: observed && typeof observed.county === 'string' && typeof observed.state === 'string' && Array.isArray(observed.years) && [observed.distanceKm, observed.observations, observed.meanPercentile, observed.p10Percentile, observed.p90Percentile, observed.meanYieldBushelsPerAcre].every((value) => Number.isFinite(Number(value))) ? {
-      county: observed.county, state: observed.state, distanceKm: Number(observed.distanceKm), years: observed.years.map(Number).filter(Number.isFinite), observations: Number(observed.observations), meanPercentile: Number(observed.meanPercentile), p10Percentile: Number(observed.p10Percentile), p90Percentile: Number(observed.p90Percentile), meanYieldBushelsPerAcre: Number(observed.meanYieldBushelsPerAcre), evidenceGrade: String(observed.evidenceGrade ?? 'historical-county-context'), source: String(observed.source ?? 'USDA NASS Quick Stats'), disclaimer: String(observed.disclaimer ?? 'Historical county context; not a parcel yield forecast.'),
+      county: observed.county, state: observed.state, distanceKm: Number(observed.distanceKm), years: observed.years.map(Number).filter(Number.isFinite), observations: Number(observed.observations), meanPercentile: Number(observed.meanPercentile), p10Percentile: Number(observed.p10Percentile), p90Percentile: Number(observed.p90Percentile), meanYieldBushelsPerAcre: Number(observed.meanYieldBushelsPerAcre), history: (observed.history ?? []).flatMap((item) => [item.year, item.yieldBushelsPerAcre, item.percentile].every((value) => Number.isFinite(Number(value))) ? [{ year: Number(item.year), yieldBushelsPerAcre: Number(item.yieldBushelsPerAcre), percentile: Number(item.percentile) }] : []), evidenceGrade: String(observed.evidenceGrade ?? 'historical-county-context'), source: String(observed.source ?? 'USDA NASS Quick Stats'), disclaimer: String(observed.disclaimer ?? 'Historical county context; not a parcel yield forecast.'),
     } : null,
   };
 }

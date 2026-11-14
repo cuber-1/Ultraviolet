@@ -93,6 +93,7 @@ def build_atlas(rows: list[dict], validation: dict) -> dict:
         groups[(row["crop"], row["fips"])].append(row)
     records = []
     for (crop, fips), items in sorted(groups.items()):
+        items = sorted(items, key=lambda item: item["year"])
         percentiles = np.asarray([item["yieldPercentileWithinCropYear"] for item in items])
         yields = np.asarray([item["yieldBushelsPerAcre"] for item in items])
         last = max(items, key=lambda item: item["year"])
@@ -104,6 +105,10 @@ def build_atlas(rows: list[dict], validation: dict) -> dict:
             "p10Percentile": round(float(np.quantile(percentiles, .1)), 4),
             "p90Percentile": round(float(np.quantile(percentiles, .9)), 4),
             "meanYieldBushelsPerAcre": round(float(np.mean(yields)), 2),
+            "history": [{
+                "year": item["year"], "yieldBushelsPerAcre": item["yieldBushelsPerAcre"],
+                "percentile": round(item["yieldPercentileWithinCropYear"], 4),
+            } for item in items],
             "latest": {"year": last["year"], "yieldBushelsPerAcre": last["yieldBushelsPerAcre"]},
         })
     return {
