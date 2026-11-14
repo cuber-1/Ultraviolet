@@ -88,7 +88,7 @@ export default function LandingPage() {
 
       <main className="landing-content">
         <p className="landing-eyebrow mono">ULTRAVIOLET · ROOFTOP AGRICULTURE</p>
-        <h1><span>Find the space.</span><span>Grow the city.</span></h1>
+        <h1><span>Find the space.</span><span>Grow the space.</span></h1>
         <p className="landing-lede">
           Search aerial imagery for growing space, review roof outlines,
           and check sunlight across seasons.
