@@ -97,3 +97,10 @@
 
 .crop-model { justify-self: start; margin-top: 6px; padding: 3px 7px; border-radius: 999px; background: var(--gray-50); color: var(--gray-400); font: 8px var(--font-mono); letter-spacing: .08em; text-transform: uppercase; }
 .crop-model.on { background: #e3f3e8; color: #2e6d47; }
+
+.onboarding-progress { position: relative; height: 6px; background: #ebe3d9; }
+.onboarding-progress i { position: absolute; inset: 0 auto 0 0; border-radius: 0 6px 6px 0; background: linear-gradient(90deg, #f4a261, var(--earth)); box-shadow: 0 0 14px rgba(232, 93, 4, .45); transition: width .6s cubic-bezier(.2, .8, .2, 1); }
+.onboarding-progress i::after { content: ''; position: absolute; inset: 0; border-radius: inherit; background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .55), transparent); background-size: 200% 100%; animation: onboardingShimmer 1.8s linear infinite; }
+.onboarding-progress span { position: absolute; top: 12px; right: var(--pad); color: var(--gray-500); font-size: 14px; }
+@keyframes onboardingShimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+@media (prefers-reduced-motion: reduce) { .onboarding-progress i { transition: none; } .onboarding-progress i::after { animation: none; } }
