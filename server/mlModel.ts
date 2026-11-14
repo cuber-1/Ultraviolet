@@ -181,7 +181,7 @@ function fromCropFit(site: MlSite, crop: MlCrop, preferredMonth: number, result:
     harvestMonth: plant === null ? null : (plant + Math.max(1, Math.round(days / 30)) - 1) % 12,
     confidence: Number.isFinite(result.confidence) ? clamp01(Number(result.confidence)) : null,
     expectedYield: null,
-    notes: limiting?.factor ? `Most limited by ${limiting.factor.replace(/_/g, ' ')} (${Math.round(Number(limiting.score))}/100).` : null,
+    notes: limiting?.factor && Number(limiting.score) < 90 ? `Most limited by ${limiting.factor.replace(/_/g, ' ')} (${Math.round(Number(limiting.score))}/100).` : limiting?.factor ? 'No strong limiting factor.' : null,
     source: 'ml',
   };
 }
