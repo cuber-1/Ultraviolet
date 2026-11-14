@@ -25,6 +25,13 @@ export type MlPrediction = {
   expectedYield: { value: number; unit: string } | null;
   notes: string | null;
   source: 'ml' | 'calendar-fallback';
+  /** Full model detail when the model provides it (CropFit). Month indexes are 0-11. */
+  curve?: Array<{ month: number; score: number; uncertainty: number | null; components: Record<string, number> | null }>;
+  suitableMonths?: number[];
+  growingDays?: { min: number; max: number } | null;
+  limitingFactors?: Array<{ factor: string; score: number }>;
+  profile?: { scientificName: string | null; tempOptC: [number, number] | null; rainOptMm: [number, number] | null; phOpt: [number, number] | null } | null;
+  evidenceGrade?: string | null;
 };
 export type MlResponse = { model: { name: string; version: string | null; source: 'ml' | 'calendar-fallback'; error: string | null }; predictions: MlPrediction[] };
 
@@ -143,7 +150,8 @@ const monthIndex = (value: unknown) => {
 type CropFitResult = {
   score?: number; bestPlantingMonth?: unknown; suitableMonths?: unknown[]; confidence?: number;
   growingDays?: { min?: number; max?: number }; limitingFactors?: Array<{ factor?: string; score?: number }>;
-  monthlyCurve?: Array<{ month?: unknown; score?: number }>;
+  monthlyCurve?: Array<{ month?: unknown; score?: number; uncertainty?: number; components?: Record<string, number> }>;
+  profile?: Record<string, unknown>; evidenceGrade?: string;
 };
 let apiKindCache: { url: string; kind: 'contract' | 'cropfit'; expires: number } | null = null;
 const cropFitCache = new Map<string, { expires: number; value: Promise<CropFitResult> }>();
@@ -185,7 +193,9 @@ function fromCropFit(site: MlSite, crop: MlCrop, preferredMonth: number, result:
   let plant: number | null = null;
   for (let offset = 0; offset < 12 && plant === null; offset += 1) if (suitable.includes((preferredMonth + offset) % 12)) plant = (preferredMonth + offset) % 12;
   plant ??= monthIndex(result.bestPlantingMonth);
-  const days = Number(result.growingDays?.max) || crop.growMonths * 30;
+  // Harvest at the middle of CropFit's growing range (its max alone runs long, e.g. 150 d for tomato).
+  const minDays = Number(result.growingDays?.min); const maxDays = Number(result.growingDays?.max);
+  const days = Number.isFinite(minDays) && Number.isFinite(maxDays) ? (minDays + maxDays) / 2 : maxDays || crop.growMonths * 30;
   const score = plant !== null && curve.has(plant) ? curve.get(plant)! : Number(result.score ?? 0);
   const limiting = [...(result.limitingFactors ?? [])].filter((item) => Number.isFinite(item.score)).sort((a, b) => Number(a.score) - Number(b.score))[0];
   return {
@@ -197,8 +207,23 @@ function fromCropFit(site: MlSite, crop: MlCrop, preferredMonth: number, result:
     expectedYield: null,
     notes: limiting?.factor && Number(limiting.score) < 90 ? `Most limited by ${limiting.factor.replace(/_/g, ' ')} (${Math.round(Number(limiting.score))}/100).` : limiting?.factor ? 'No strong limiting factor.' : null,
     source: 'ml',
+    curve: (result.monthlyCurve ?? []).flatMap((item) => {
+      const month = monthIndex(item.month);
+      return month === null || !Number.isFinite(item.score) ? [] : [{ month, score: Number(item.score), uncertainty: Number.isFinite(item.uncertainty) ? Number(item.uncertainty) : null, components: item.components ?? null }];
+    }).sort((a, b) => a.month - b.month),
+    suitableMonths: suitable,
+    growingDays: Number.isFinite(minDays) && Number.isFinite(maxDays) ? { min: minDays, max: maxDays } : null,
+    limitingFactors: (result.limitingFactors ?? []).filter((item) => item.factor && Number.isFinite(item.score)).map((item) => ({ factor: String(item.factor), score: Number(item.score) })),
+    profile: result.profile ? {
+      scientificName: typeof result.profile.scientific_name === 'string' ? result.profile.scientific_name : null,
+      tempOptC: pair(result.profile.temp_opt_min, result.profile.temp_opt_max),
+      rainOptMm: pair(result.profile.rain_opt_min, result.profile.rain_opt_max),
+      phOpt: pair(result.profile.ph_opt_min, result.profile.ph_opt_max),
+    } : null,
+    evidenceGrade: typeof result.evidenceGrade === 'string' ? result.evidenceGrade : null,
   };
 }
+const pair = (a: unknown, b: unknown): [number, number] | null => Number.isFinite(Number(a)) && Number.isFinite(Number(b)) ? [Number(a), Number(b)] : null;
 
 async function predictViaCropFit(url: string, request: MlRequest): Promise<MlResponse> {
   const strict = mlStrict();

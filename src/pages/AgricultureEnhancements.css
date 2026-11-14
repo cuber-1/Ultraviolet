@@ -794,3 +794,7 @@
   .cropfit-chart { overflow-x: auto; padding: 18px 14px; }
   .cropfit-bars { min-width: 620px; }
 }
+
+/* Embedded inside the Deep Agent site view's Sun coverage tab. */
+.site-workspace.embedded { height: calc(100vh - 132px); min-height: 620px; border-top: 1px solid #e5d8ca; }
+.site-workspace.embedded .site-layout { height: 100%; }

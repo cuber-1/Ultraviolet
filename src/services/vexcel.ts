@@ -134,6 +134,12 @@ export type AgentProgress = { stage: 'planning' | 'imagery' | 'property' | 'geom
 export type CropPrediction = {
   siteId: string; cropId: string; suitability: number; plantMonth: number | null; harvestMonth: number | null;
   confidence: number | null; expectedYield: { value: number; unit: string } | null; notes: string | null; source: 'ml' | 'calendar-fallback';
+  curve?: Array<{ month: number; score: number; uncertainty: number | null; components: Record<string, number> | null }>;
+  suitableMonths?: number[];
+  growingDays?: { min: number; max: number } | null;
+  limitingFactors?: Array<{ factor: string; score: number }>;
+  profile?: { scientificName: string | null; tempOptC: [number, number] | null; rainOptMm: [number, number] | null; phOpt: [number, number] | null } | null;
+  evidenceGrade?: string | null;
 };
 export type CropModelInfo = { name: string; version: string | null; source: 'ml' | 'calendar-fallback'; error: string | null };
 export type CropProfileInput = { id: string; name: string; sunHours: number; tempMinC: number; tempMaxC: number; growMonths: number };

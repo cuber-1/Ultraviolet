@@ -124,3 +124,11 @@
 .saved-banner .mono { color: var(--earth-dark); font-size: 9px; letter-spacing: .14em; }
 .saved-banner button { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; padding: 7px 12px; border: 1px solid var(--earth); border-radius: 999px; background: var(--white); color: var(--earth-dark); font-size: 12px; }
 .model-error { margin-top: 8px; padding: 8px 10px; border-radius: 8px; background: #fff6ef; color: #7d3821 !important; font-size: 12px !important; overflow-wrap: anywhere; }
+
+.insights { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-top: 26px; }
+.insight-card { display: grid; align-content: start; gap: 14px; padding: 20px; border: 1px solid var(--gray-200); border-radius: 16px; background: var(--white); }
+.insight-card.wide { grid-column: 1 / -1; }
+.insight-card header .mono { color: var(--earth); font-size: 9px; letter-spacing: .14em; }
+.insight-card header h2 { margin: 6px 0 4px; font-size: 21px; letter-spacing: -.03em; }
+.insight-card header p { color: var(--gray-500); font-size: 13px; line-height: 1.5; }
+@media (max-width: 980px) { .insights { grid-template-columns: 1fr; } }

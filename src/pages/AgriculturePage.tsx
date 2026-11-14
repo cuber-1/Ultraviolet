@@ -32,7 +32,7 @@ function offsetForDate(date: string, timeZone: string) {
   return (Date.UTC(Number(parts.year), Number(parts.month) - 1, Number(parts.day), Number(parts.hour), Number(parts.minute), Number(parts.second)) - instant.getTime()) / 3_600_000;
 }
 
-export function SiteWorkspace({ result, onClose, initialDate = '2026-04-15', initialTargetHours = 6, targetAreaSqft = 5_000, backLabel = 'Results' }: { result: SearchResult; onClose: () => void; initialDate?: string; initialTargetHours?: number; targetAreaSqft?: number; backLabel?: string }) {
+export function SiteWorkspace({ result, onClose, initialDate = '2026-04-15', initialTargetHours = 6, targetAreaSqft = 5_000, backLabel = 'Results', embedded = false }: { result: SearchResult; onClose: () => void; initialDate?: string; initialTargetHours?: number; targetAreaSqft?: number; backLabel?: string; embedded?: boolean }) {
   const roofArea = result.property?.roofAreaSqft ?? 5_000;
   const uncenteredRoofGeometry = useMemo(() => roofWktToMetricGeometry(result.property?.roofWkt, result.lat, result.lon, 0), [result.lat, result.lon, result.property?.roofWkt]);
   const imageRadiusM = Math.min(250, Math.max(55, Math.sqrt(roofArea * .092903) * .9, geometryRequiredRadius(uncenteredRoofGeometry)));
@@ -110,8 +110,8 @@ export function SiteWorkspace({ result, onClose, initialDate = '2026-04-15', ini
   const costar = result.costar;
   const buildingName = costar?.buildingName || costar?.address || `${result.lat.toFixed(5)}, ${result.lon.toFixed(5)}`;
 
-  return <div className="site-workspace">
-    <button className="site-floating-back" onClick={onClose}><ArrowLeft size={16} /> {backLabel}</button>
+  return <div className={embedded ? 'site-workspace embedded' : 'site-workspace'}>
+    {!embedded && <button className="site-floating-back" onClick={onClose}><ArrowLeft size={16} /> {backLabel}</button>}
     <div className="site-layout">
       <section className="site-visual">
         <div className="layer-tabs">

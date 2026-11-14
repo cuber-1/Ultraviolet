@@ -4,7 +4,8 @@ import { ArrowLeft, ArrowRight, CalendarDays, CircleAlert, Droplets, MapPin, Rot
 import Wordmark from '../components/Wordmark';
 import SearchGlobe from '../components/SearchGlobe';
 import DeepAgentLoader, { type LoaderStage } from '../components/DeepAgentLoader';
-import { SiteWorkspace } from './AgriculturePage';
+import DeepAgentSite from './DeepAgentSite';
+import { OptimalPointsChart, PlantingCurveChart, SunCoverageChart } from '../components/charts/DeepAgentCharts';
 import { runAgentComparison, type AgentComparison, type CropModelInfo, type CropPrediction, type SearchResult } from '../services/vexcel';
 import {
   MONTH_LONG, MONTH_SHORT, applyModel, briefCrops, cropProfiles, fetchMlCapabilities, fetchMonthlyClimate, fetchRegionPredictions, formatArea, loadBrief, planForLocation, ruralPlaces, saveBrief,
@@ -147,8 +148,15 @@ export default function PlanPage() {
 
   const selectedId = new URLSearchParams(location.search).get('site');
   if (outcome?.kind === 'urban' && selectedId) {
-    const result = outcome.top.find((item) => item.id === selectedId);
-    if (result) return <SiteWorkspace result={result} onClose={() => navigate('/plan')} backLabel="Top 5" initialDate={outcome.criteria.dates[0]} initialTargetHours={outcome.criteria.targetHours} targetAreaSqft={outcome.criteria.targetAreaSqft} />;
+    const order = rankedIds(outcome);
+    const result = outcome.top.find((item) => item.id === selectedId) ?? outcome.comparison.candidates.find((item) => item.id === selectedId);
+    if (result) return <DeepAgentSite result={result} rank={order.indexOf(result.id) + 1} total={outcome.top.length}
+      simulation={outcome.comparison.simulations.find((item) => item.candidateId === result.id) ?? null}
+      predictions={(outcome.comparison.predictions ?? []).filter((item) => item.siteId === result.id)}
+      crops={briefCrops(outcome.brief).map(({ id, name }) => ({ id, name }))}
+      criteria={outcome.criteria} preferredMonth={outcome.brief.preferredMonth}
+      explanation={outcome.comparison.narrative?.explanations.find((item) => item.candidateId === result.id)?.explanation ?? null}
+      mlModel={outcome.comparison.mlModel ?? null} onClose={() => navigate('/plan')} />;
   }
 
   const cancel = () => { requestRef.current?.abort(); setRunning(false); navigate('/start'); };
@@ -225,6 +233,8 @@ function UrbanResults({ outcome, onOpen }: { outcome: UrbanOutcome; onOpen: (id:
         <div><dt>Sun checked on</dt><dd>{criteria.dates.map(shortDate).join(' + ')}</dd></div>
       </dl>
     </section>
+
+    <UrbanInsights outcome={outcome} onOpen={onOpen} />
 
     <section className="plan-grid">
       <ol className="roof-list">
@@ -331,4 +341,43 @@ function ModelCard({ model }: { model: CropModelInfo }) {
       : 'The trained crop model is not connected, so suitability and timing come from NASA monthly temperatures and each crop’s growing range.'}</p>
     {model.error && <p className="model-error">{model.error}</p>}
   </div>;
+}
+
+/** Roof ids in final rank order (server already sorted simulations). */
+function rankedIds(outcome: UrbanOutcome) {
+  return outcome.comparison.simulations.map((item) => item.candidateId);
+}
+
+function UrbanInsights({ outcome, onOpen }: { outcome: UrbanOutcome; onOpen: (id: string) => void }) {
+  const { brief, criteria, comparison } = outcome;
+  const crops = briefCrops(brief).map(({ id, name }) => ({ id, name }));
+  const byId = new Map(comparison.candidates.map((item) => [item.id, item]));
+  const roofs = comparison.simulations.flatMap((simulation, index) => {
+    const result = byId.get(simulation.candidateId);
+    if (!result) return [];
+    const hours = simulation.perDate.map((item) => item.meanHours).filter((value): value is number => value !== null);
+    const label = result.costar?.buildingName || result.costar?.address?.split(',')[0] || (result.property?.roofAreaSqft ? `${Math.round(result.property.roofAreaSqft / 1000)}k ft² roof` : 'Rooftop');
+    return [{ id: result.id, rank: index + 1, label, sunlitSqft: simulation.sharedAreaSqft, roofSqft: result.property?.roofAreaSqft ?? null, meanHours: hours.length ? hours.reduce((a, b) => a + b, 0) / hours.length : null }];
+  });
+  const predictions = comparison.predictions ?? [];
+  const fitPoints = roofs.map((roof) => ({ ...roof, fitByCrop: Object.fromEntries(crops.map((crop) => { const p = predictions.find((item) => item.siteId === roof.id && item.cropId === crop.id && item.source === 'ml'); return [crop.id, p ? p.suitability * 100 : null]; })) }));
+  const reference = roofs[0] ? predictions.filter((item) => item.siteId === roofs[0].id) : [];
+  const series = crops.flatMap((crop) => { const p = reference.find((item) => item.cropId === crop.id); return p?.curve?.length === 12 ? [{ id: crop.id, name: crop.name, curve: p.curve, plantMonth: p.plantMonth, harvestMonth: p.harvestMonth, suitableMonths: p.suitableMonths ?? [] }] : []; });
+  const best = roofs.reduce<typeof roofs[number] | null>((top, roof) => (roof.sunlitSqft ?? -1) > (top?.sunlitSqft ?? -1) ? roof : top, null);
+  const meeting = roofs.filter((roof) => (roof.sunlitSqft ?? 0) >= criteria.targetAreaSqft).length;
+  const firstStart = series.filter((item) => item.plantMonth !== null).sort((a, b) => ((a.plantMonth! - brief.preferredMonth + 12) % 12) - ((b.plantMonth! - brief.preferredMonth + 12) % 12))[0];
+  return <section className="insights">
+    <article className="insight-card">
+      <header><span className="mono">01 · SUN COVERAGE</span><h2>{best?.sunlitSqft ? `Up to ${new Intl.NumberFormat('en-US').format(Math.round(best.sunlitSqft))} ft² gets ${criteria.targetHours} h of sun.` : 'Sun coverage'}</h2><p>{meeting} of {roofs.length} roofs checked have enough area in {criteria.targetHours}+ hours of direct sun on every date.</p></header>
+      <SunCoverageChart rows={roofs} targetAreaSqft={criteria.targetAreaSqft} targetHours={criteria.targetHours} onSelect={onOpen} />
+    </article>
+    <article className="insight-card">
+      <header><span className="mono">02 · OPTIMAL POINTS</span><h2>Where sun and crop fit meet.</h2><p>Each roof by sunlit area and the crop model’s fit for your crops. Prime roofs clear both lines.</p></header>
+      {predictions.some((item) => item.source === 'ml') ? <OptimalPointsChart points={fitPoints} crops={crops} targetAreaSqft={criteria.targetAreaSqft} onSelect={onOpen} /> : <p className="viz-empty">The crop model did not score this search{comparison.mlModel?.error ? `: ${comparison.mlModel.error}` : ''}.</p>}
+    </article>
+    <article className="insight-card wide">
+      <header><span className="mono">03 · WHEN TO START</span><h2>{firstStart ? `Start ${firstStart.name.toLowerCase()} in ${['January','February','March','April','May','June','July','August','September','October','November','December'][firstStart.plantMonth!]}.` : 'When to start'}</h2><p>Crop-model fit for each planting month in {urbanAreaLabel(brief)}, with the model’s uncertainty. Circles mark the recommended start on or after your chosen month.</p></header>
+      <PlantingCurveChart series={series} preferredMonth={brief.preferredMonth} />
+    </article>
+  </section>;
 }
