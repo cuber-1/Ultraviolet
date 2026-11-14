@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Wordmark from '../components/Wordmark';
+import Showcase from '../components/Showcase';
 import './LandingPage.css';
 
 const CHARS = '·∿~=+−|/\\.:,;!?@#$%^&*()[]{}01<>≈≡∂∑∏√±×÷∞∠∆∇⊕⊗◦●○◆◇▲△▷▻';
@@ -73,6 +74,7 @@ export default function LandingPage() {
   const navigate = useNavigate();
 
   return (
+    <div className="landing-page">
     <div className="landing">
       <header className="landing-header">
         <Wordmark />
@@ -98,6 +100,9 @@ export default function LandingPage() {
           <button className="secondary" onClick={() => navigate('/agriculture/urban')}>Search rooftops directly</button>
         </div>
       </main>
+      <button className="landing-scroll" onClick={() => window.scrollTo({ top: window.innerHeight, behavior: 'smooth' })}>See how it works ↓</button>
+    </div>
+    <Showcase />
     </div>
   );
 }

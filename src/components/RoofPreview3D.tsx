@@ -20,7 +20,7 @@ const clock = (minute: number) => { const h = Math.floor(minute / 60); return `$
  * obstacles and their shadows), a slow sun sweep across the day, and one Infrared toggle.
  * Same geometry, elevation, and sun maths as the full simulator.
  */
-export default function RoofPreview3D({ result, date, targetHours, targetAreaSqft }: { result: SearchResult; date: string; targetHours: number; targetAreaSqft: number }) {
+export default function RoofPreview3D({ result, date, targetHours, targetAreaSqft, controls = true }: { result: SearchResult; date: string; targetHours: number; targetAreaSqft: number; controls?: boolean }) {
   const [infrared, setInfrared] = useState(false);
   const [minute, setMinute] = useState(8 * 60);
   const roofArea = result.property?.roofAreaSqft ?? 5_000;
@@ -69,7 +69,7 @@ export default function RoofPreview3D({ result, date, targetHours, targetAreaSqf
     {model ? <Suspense fallback={<div className="roof-preview-wait"><LoaderCircle className="spin" /> Building the roof</div>}>
       <Roof3DVisualizer key={infrared ? 'ir' : 'rgb'} roofGeometry={roofGeometry} roofBounds={bounds} roofWidthM={size} roofDepthM={size} buildingHeightM={model.buildingHeightM} obstructions={model.obstructions} cells={simulation.cells} imageryUrl={imageryUrl} surfaceLabel={infrared ? 'CIR / IRG' : 'RGB'} sun={simulation.sun} localTime={clock(minute)} autoRotate initialSurfaceMode="clean" minimal />
     </Suspense> : failed ? <img className="roof-preview-fallback" src={result.imageryUrl} alt="Aerial view of the roof" /> : <div className="roof-preview-wait"><LoaderCircle className="spin" /> Reading roof heights</div>}
-    {model && <>
+    {model && controls && <>
       <div className="roof-preview-chip">☀ {clock(minute)} · {model.obstructions.length} {model.obstructions.length === 1 ? 'obstacle' : 'obstacles'}</div>
       <button className={infrared ? 'roof-preview-ir active' : 'roof-preview-ir'} onClick={() => setInfrared((value) => !value)} aria-pressed={infrared}>{infrared ? 'Infrared on' : 'Infrared'}</button>
     </>}
