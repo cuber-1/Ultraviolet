@@ -28,6 +28,12 @@ suitability points (59.6%). These are marginal EcoCrop-teacher fidelity bands,
 not per-species or observed-yield guarantees. See
 `evaluation/uncertainty-validation-v0.5.1.md`.
 
+With the method and acceptance rule frozen, five new grouped train/validation/
+test seeds all passed. Mean held-out coverage was 79.67% and 89.98%; every seed
+produced a narrower 90% radius than v0.5, with a mean reduction of 57.92%.
+This robustness sweep strengthens the marginal calibration claim without
+changing the limits above.
+
 The CUDA XGBoost candidate completed 500 rounds with a cosine learning-rate
 schedule from 0.08 to 0.005. It was not promoted because held-out-profile MAE
 was worse (0.6395). The committed diagnostics are

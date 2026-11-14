@@ -98,8 +98,9 @@ probability or observed-yield confidence.
 npm run ml:evaluate:uncertainty
 ```
 
-This reproduces the untouched-profile comparison, its machine-readable report,
-and the presentation chart under `machine-learning/evaluation/`.
+This reproduces the production-seed comparison, a frozen five-seed robustness
+sweep, their machine-readable report, and two presentation charts under
+`machine-learning/evaluation/`.
 
 For corn, soybeans, and wheat, the response may also include
 `observedYieldEvidence`: the nearest USDA reporting county within 100 km, its

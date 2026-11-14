@@ -106,6 +106,13 @@ def verify(artifact: Path, profiles: Path) -> None:
         assert recency_report["finalTest"]["spearmanDeltaBootstrap95"][0] > 0
         assert any(item["spearmanDelta"] < 0 for item in recency_report["perYearFinalTest"])
 
+    uncertainty_validation = artifact.parents[1] / "evaluation/uncertainty-validation-v0.5.1.json"
+    if uncertainty_validation.exists():
+        uncertainty_report = json.loads(uncertainty_validation.read_text())
+        assert uncertainty_report["gate"]["passed"]
+        assert uncertainty_report["robustness"]["gate"]["passed"]
+        assert uncertainty_report["robustness"]["summary"]["wins"] == uncertainty_report["robustness"]["summary"]["seeds"] == 5
+
     from .trained_api import PredictionRequest, predict as api_predict
 
     valid_climate = climate(20.0)

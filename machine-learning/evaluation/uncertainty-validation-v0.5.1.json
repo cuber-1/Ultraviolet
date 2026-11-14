@@ -7,7 +7,7 @@
     "validationProfiles": 224,
     "testExamples": 26856,
     "testProfiles": 373,
-    "policy": "Calibration uses validation crop profiles; comparison is evaluated once on untouched crop profiles."
+    "policy": "Calibration uses validation crop profiles; comparison uses held-out crop profiles excluded from estimator fitting and calibration."
   },
   "legacyV05": {
     "coverage80": 0.9571,
@@ -61,8 +61,135 @@
     ],
     "note": "Split conformal guarantees marginal, not per-profile, coverage."
   },
-  "gate": {
+  "singleSplitGate": {
     "passed": true,
     "rule": "Candidate coverage must be within 2 points of 80% and 90%, and its mean 90% radius must be narrower than v0.5."
+  },
+  "robustness": {
+    "protocol": {
+      "seeds": [
+        20261201,
+        20261202,
+        20261203,
+        20261204,
+        20261205
+      ],
+      "samplesPerCrop": 72,
+      "estimators": 120,
+      "split": "Fresh grouped train/validation/test crop-profile splits per seed; calibration never uses the test profiles.",
+      "declaredGate": "On every frozen seed, coverage must be within 3 points of 80% and 90%, and mean 90% radius must be narrower than v0.5."
+    },
+    "results": [
+      {
+        "seed": 20261201,
+        "validationProfiles": 224,
+        "testProfiles": 373,
+        "legacyV05": {
+          "coverage80": 0.9546,
+          "coverage90": 0.9756,
+          "meanRadius80": 0.2283,
+          "meanRadius90": 0.3118
+        },
+        "candidate": {
+          "coverage80": 0.7975,
+          "coverage90": 0.8971,
+          "meanRadius80": 0.0026,
+          "meanRadius90": 0.1292
+        },
+        "meanRadius90ReductionPercent": 58.56,
+        "passed": true
+      },
+      {
+        "seed": 20261202,
+        "validationProfiles": 224,
+        "testProfiles": 373,
+        "legacyV05": {
+          "coverage80": 0.9562,
+          "coverage90": 0.9762,
+          "meanRadius80": 0.2186,
+          "meanRadius90": 0.2985
+        },
+        "candidate": {
+          "coverage80": 0.803,
+          "coverage90": 0.9017,
+          "meanRadius80": 0.0,
+          "meanRadius90": 0.1222
+        },
+        "meanRadius90ReductionPercent": 59.06,
+        "passed": true
+      },
+      {
+        "seed": 20261203,
+        "validationProfiles": 224,
+        "testProfiles": 373,
+        "legacyV05": {
+          "coverage80": 0.9552,
+          "coverage90": 0.9764,
+          "meanRadius80": 0.2313,
+          "meanRadius90": 0.3163
+        },
+        "candidate": {
+          "coverage80": 0.7959,
+          "coverage90": 0.8996,
+          "meanRadius80": 0.0055,
+          "meanRadius90": 0.1311
+        },
+        "meanRadius90ReductionPercent": 58.55,
+        "passed": true
+      },
+      {
+        "seed": 20261204,
+        "validationProfiles": 224,
+        "testProfiles": 373,
+        "legacyV05": {
+          "coverage80": 0.9519,
+          "coverage90": 0.9746,
+          "meanRadius80": 0.2367,
+          "meanRadius90": 0.3233
+        },
+        "candidate": {
+          "coverage80": 0.7907,
+          "coverage90": 0.8965,
+          "meanRadius80": 0.0038,
+          "meanRadius90": 0.1373
+        },
+        "meanRadius90ReductionPercent": 57.53,
+        "passed": true
+      },
+      {
+        "seed": 20261205,
+        "validationProfiles": 224,
+        "testProfiles": 373,
+        "legacyV05": {
+          "coverage80": 0.9535,
+          "coverage90": 0.974,
+          "meanRadius80": 0.2286,
+          "meanRadius90": 0.3122
+        },
+        "candidate": {
+          "coverage80": 0.7963,
+          "coverage90": 0.904,
+          "meanRadius80": 0.0017,
+          "meanRadius90": 0.1377
+        },
+        "meanRadius90ReductionPercent": 55.89,
+        "passed": true
+      }
+    ],
+    "summary": {
+      "wins": 5,
+      "seeds": 5,
+      "meanCoverage80": 0.7967,
+      "meanCoverage90": 0.8998,
+      "meanRadius90ReductionPercent": 57.92
+    },
+    "gate": {
+      "passed": true,
+      "rule": "On every frozen seed, coverage must be within 3 points of 80% and 90%, and mean 90% radius must be narrower than v0.5."
+    }
+  },
+  "gate": {
+    "passed": true,
+    "rule": "Production-seed and frozen five-seed robustness gates must both pass."
   }
 }
