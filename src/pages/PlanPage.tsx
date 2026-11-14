@@ -3,7 +3,8 @@ import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, CalendarDays, CircleAlert, Droplets, MapPin, RotateCcw, Sun, ThermometerSun } from 'lucide-react';
 import Wordmark from '../components/Wordmark';
 import SearchGlobe from '../components/SearchGlobe';
-import DeepAgentLoader, { type LoaderStage } from '../components/DeepAgentLoader';
+import { type LoaderStage } from '../components/DeepAgentLoader';
+import MapStage from '../components/MapStage';
 import DeepAgentSite from './DeepAgentSite';
 import ResultsApp from './results/ResultsApp';
 import { AgentConsole } from './results/AgentTrace';
@@ -11,7 +12,7 @@ import '../pages/results/ResultsApp.css';
 import { OptimalPointsChart, PlantingCurveChart, SunCoverageChart } from '../components/charts/DeepAgentCharts';
 import { runAgentComparison, type AgentComparison, type AgentTraceEvent, type CropModelInfo, type CropPrediction, type SearchResult } from '../services/vexcel';
 import {
-  MONTH_LONG, MONTH_SHORT, applyModel, briefCrops, cropProfiles, fetchMlCapabilities, fetchMonthlyClimate, fetchRegionPredictions, formatArea, loadBrief, planForLocation, ruralPlaces, saveBrief,
+  MONTH_LONG, MONTH_SHORT, applyModel, briefCrops, briefFocus, cropProfiles, fetchMlCapabilities, fetchMonthlyClimate, fetchRegionPredictions, formatArea, loadBrief, planForLocation, ruralPlaces, saveBrief,
   urbanAgentCriteria, urbanAreaLabel, type Brief, type CropTiming, type LocationPlan,
 } from '../services/cropPlan';
 import { getRun, saveRun, savedTime } from '../services/runs';
@@ -62,6 +63,8 @@ export default function PlanPage() {
   const [startedAt, setStartedAt] = useState(Date.now());
   const [climatePlan, setClimatePlan] = useState<LocationPlan | null>(null);
   const [liveTrace, setLiveTrace] = useState<AgentTraceEvent[]>([]);
+  const [discovered, setDiscovered] = useState<Array<{ lat: number; lon: number }>>([]);
+  const [reveal, setReveal] = useState(false);
   const requestRef = useRef<AbortController | null>(null);
 
   const run = useCallback(async (input: Brief) => {
@@ -72,7 +75,7 @@ export default function PlanPage() {
     const live = () => requestRef.current === controller && !controller.signal.aborted;
     const push = (message: string) => { if (live()) setLog((items) => [...items, message]); };
     const advance = (stages: LoaderStage[], key: string) => { if (live()) setStageIndex((current) => Math.max(current, stages.findIndex((stage) => stage.key === key))); };
-    setRunning(true); setError(null); setOutcome(null); setSavedAt(null); setLog([]); setStageIndex(0); setStartedAt(Date.now()); setClimatePlan(null); setLiveTrace([]);
+    setRunning(true); setError(null); setOutcome(null); setSavedAt(null); setLog([]); setStageIndex(0); setStartedAt(Date.now()); setClimatePlan(null); setLiveTrace([]); setDiscovered([]); setReveal(false);
     try {
       if (input.scale === 'urban') {
         push(`Reading NASA monthly climate for ${urbanAreaLabel(input)}`);
@@ -87,12 +90,14 @@ export default function PlanPage() {
           goal: criteria.goal, location: input.urbanArea ?? 'All available Vexcel coverage', lat: 0, lon: 0, radiusM: 20_000,
           dates: criteria.dates, targetHours: criteria.targetHours, targetAreaSqft: criteria.targetAreaSqft,
           crops: briefCrops(input).map((crop) => crop.name), cropProfiles: cropProfiles(input), preferredMonth: input.preferredMonth, source: 'guided',
-        }, (event) => { advance(URBAN_STAGES, event.stage); push(event.message); }, controller.signal, (event) => { if (live()) setLiveTrace((items) => [...items, event]); });
+        }, (event) => {
+          advance(URBAN_STAGES, event.stage); push(event.message);
+        }, controller.signal, (event) => { if (live()) setLiveTrace((items) => [...items, event]); });
         if (!live()) return;
         const byId = new Map(comparison.candidates.map((candidate) => [candidate.id, candidate]));
         const top = comparison.simulations.flatMap((simulation) => byId.get(simulation.candidateId) ?? []).slice(0, TOP_N);
         const next: UrbanOutcome = { kind: 'urban', brief: input, plan, criteria, comparison, top };
-        setOutcome(next); saveOutcome(next); void saveRun(input, next).catch(() => undefined);
+        setOutcome(next); saveOutcome(next); void saveRun(input, next).catch(() => undefined); setReveal(true);
         navigate('/plan', { replace: true, state: { brief: input } });
       } else {
         const places = ruralPlaces(input);
@@ -109,7 +114,7 @@ export default function PlanPage() {
         advance(RURAL_STAGES, 'ranking'); push('Ranking by crop fit');
         if (!live()) return;
         const next: RuralOutcome = { kind: 'rural', brief: input, plans, errors: climate.errors, model: model?.model ?? null };
-        setOutcome(next); saveOutcome(next); void saveRun(input, next).catch(() => undefined);
+        setOutcome(next); saveOutcome(next); void saveRun(input, next).catch(() => undefined); setReveal(true);
         navigate('/plan', { replace: true, state: { brief: input } });
       }
     } catch (reason) {
@@ -168,24 +173,27 @@ export default function PlanPage() {
   const cancel = () => { requestRef.current?.abort(); setRunning(false); navigate('/start'); };
   const urban = brief.scale === 'urban';
 
-  const loaderNode = (
-    running && <DeepAgentLoader
-      kicker={urban ? 'Deep Agent · live' : 'Climate match · live'}
-      title={urban ? 'Finding your roof' : 'Finding your region'}
-      subtitle={urban
-        ? `Searching ${urbanAreaLabel(brief)} for ${formatArea(brief.areaSqft)} of roof that suits ${cropList(brief)}.`
-        : `Comparing ${ruralPlaces(brief).length} farming towns for ${cropList(brief)} on ${formatArea(brief.areaSqft)}.`}
-      stages={urban ? URBAN_STAGES : RURAL_STAGES}
-      activeIndex={stageIndex}
-      message={log.at(-1) ?? 'Starting'}
-      log={log}
-      startedAt={startedAt}
-      expected={urban ? 'usually 1–3 min' : 'a few seconds'}
-      insight={urban && climatePlan ? <TimingInsight plan={climatePlan} brief={brief} /> : undefined}
-      console={urban && liveTrace.length ? <AgentConsole events={liveTrace} /> : undefined}
-      onCancel={cancel}
-    />
-  );
+  const focus = briefFocus(brief);
+  const loaderNode = running && <MapStage mode="loading" focus={focus} discovered={discovered} pins={[]}
+    title={urban ? 'Finding your roof' : 'Finding your region'}
+    subtitle={urban
+      ? `Searching ${urbanAreaLabel(brief)} for ${formatArea(brief.areaSqft)} of roof that suits ${cropList(brief)}.`
+      : `Comparing ${ruralPlaces(brief).length} farming towns for ${cropList(brief)} on ${formatArea(brief.areaSqft)}.`}
+    stages={urban ? URBAN_STAGES : RURAL_STAGES} activeIndex={stageIndex} message={log.at(-1) ?? 'Starting'} startedAt={startedAt}
+    feed={urban && liveTrace.length ? <AgentConsole events={liveTrace} /> : undefined}
+    ctaLabel="" onContinue={() => undefined} onCancel={cancel} />;
+  if (outcome && reveal && !running && !error) {
+    const pins = outcome.kind === 'urban'
+      ? outcome.top.map((result, index) => ({ id: result.id, lat: result.lat, lon: result.lon, rank: index + 1, label: result.costar?.buildingName || (result.property?.roofAreaSqft ? `${Math.round(result.property.roofAreaSqft / 1000)}k ft² roof` : `Roof ${index + 1}`) }))
+      : outcome.plans.slice(0, TOP_N).map((plan, index) => ({ id: plan.climate.query, lat: plan.climate.lat, lon: plan.climate.lon, rank: index + 1, label: plan.climate.name }));
+    const bestSun = outcome.kind === 'urban' ? Math.max(0, ...outcome.comparison.simulations.slice(0, TOP_N).map((item) => item.sharedAreaSqft ?? 0)) : 0;
+    return <MapStage mode="done" focus={focus} discovered={[]} pins={pins}
+      title={outcome.kind === 'urban' ? `${pins.length} roofs found` : `${pins.length} regions found`}
+      subtitle={outcome.kind === 'urban' ? `Best roof keeps ${new Intl.NumberFormat('en-US').format(Math.round(bestSun))} ft² in ${outcome.criteria.targetHours}+ hours of sun.` : `Top match: ${pins[0]?.label ?? '—'}.`}
+      stages={urban ? URBAN_STAGES : RURAL_STAGES} activeIndex={(urban ? URBAN_STAGES : RURAL_STAGES).length} message="" startedAt={startedAt}
+      summary={outcome.kind === 'urban' ? `${outcome.comparison.candidates.length} roofs checked in ${urbanAreaLabel(brief)}` : `${outcome.plans.length} towns compared`}
+      ctaLabel={outcome.kind === 'urban' ? 'See your top 5' : 'See your top regions'} onContinue={() => setReveal(false)} onCancel={() => setReveal(false)} />;
+  }
   if (outcome?.kind === 'urban' && !error) return <>{loaderNode}<ResultsApp brief={outcome.brief} criteria={outcome.criteria} comparison={outcome.comparison} top={outcome.top}
     insights={<UrbanInsights outcome={outcome} onOpen={openSite} />} savedAt={savedAt} onEdit={() => navigate('/start')} onRerun={() => void run(brief)} onOpen={openSite} /></>;
 
