@@ -1,0 +1,16 @@
+{
+  "id": "21290728",
+  "name": "7210 S Western Ave, Los Angeles, CA",
+  "lat": 33.9740596,
+  "lon": -118.3086724,
+  "listed_acres": 0.3,
+  "point_wkt": "POINT(-118.3086724 33.9740596)",
+  "area_wkt": "MULTIPOLYGON(((-118.3088049 33.9740439,-118.3088046 33.9740989,-118.3084411 33.9740995,-118.3084414 33.9740446,-118.3088049 33.9740439)))",
+  "used_fallback_square": false,
+  "oblique_directions": [
+    "oblique-north",
+    "oblique-south",
+    "oblique-east",
+    "oblique-west"
+  ]
+}

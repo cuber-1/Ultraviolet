@@ -1,0 +1,16 @@
+{
+  "id": "21276388",
+  "name": "8521 Horner St, Los Angeles, CA",
+  "lat": 34.0503123,
+  "lon": -118.377005,
+  "listed_acres": 0.22,
+  "point_wkt": "POINT(-118.377005 34.0503123)",
+  "area_wkt": "MULTIPOLYGON(((-118.3768157 34.0505339,-118.376929 34.0501226,-118.3771542 34.0501656,-118.377061 34.0505042,-118.3768157 34.0505339)))",
+  "used_fallback_square": false,
+  "oblique_directions": [
+    "oblique-north",
+    "oblique-south",
+    "oblique-east",
+    "oblique-west"
+  ]
+}

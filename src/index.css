@@ -1,0 +1,35 @@
+:root {
+  --white: #ffffff;
+  --off-white: #f7f3ed;
+  --gray-50: #f5f0e9;
+  --gray-100: #ece2d8;
+  --gray-200: #ddcec0;
+  --gray-300: #c9b8a9;
+  --gray-400: #a69689;
+  --gray-500: #887a70;
+  --gray-600: #6d625a;
+  --gray-800: #332d28;
+  --black: #28231f;
+  --earth: #e85d04;
+  --earth-dark: #b84400;
+  --green: #cf5a16;
+  --orange-soft: #fff0e5;
+  --font-sans: 'Onest', system-ui, sans-serif;
+  --font-mono: 'Space Mono', monospace;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body, #root { min-height: 100%; }
+body { background: var(--off-white); color: var(--black); font-family: var(--font-sans); -webkit-font-smoothing: antialiased; }
+button, input { font: inherit; }
+button { cursor: pointer; }
+.mono { font-family: var(--font-mono); }
+
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-thumb { background: var(--gray-200); border-radius: 999px; }
+::-webkit-scrollbar-thumb:hover { background: var(--earth); }
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
