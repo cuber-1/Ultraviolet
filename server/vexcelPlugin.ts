@@ -449,7 +449,7 @@ export function vexcelApiPlugin(root: string) {
           watch.lastCheckedAt = new Date().toISOString();
           if (!newOpenings.length) { saveWatches(); continue; }
           const geometryCache = new Map<string, Promise<ResolvedGeometry | null>>();
-          const output = await runLandLensAgent({ goal: watch.goal, location: locationPhrase(watch.goal) || 'all available Vexcel coverage', dates: watch.dates, targetHours: watch.targetHours, targetAreaSqft: watch.targetAreaSqft }, {
+          const output = await runLandLensAgent({ goal: watch.goal, location: locationPhrase(watch.goal) || 'all available Vexcel coverage', dates: watch.dates, targetHours: watch.targetHours, targetAreaSqft: watch.targetAreaSqft, source: 'photon-watch' }, {
             search: async () => candidates,
             geometry: async (candidate) => { if (!geometryCache.has(candidate.id)) geometryCache.set(candidate.id, resolveCandidateGeometry(key, candidate).catch(() => null)); const resolved = await geometryCache.get(candidate.id)!; return resolved?.evidence ?? unavailableGeometry(candidate, 'Roof or DSM/DTM geometry is unavailable.'); },
             simulate: async (candidate, dates, hours, area) => { if (!geometryCache.has(candidate.id)) geometryCache.set(candidate.id, resolveCandidateGeometry(key, candidate).catch(() => null)); return simulateCandidate(key, candidate, dates, hours, area, await geometryCache.get(candidate.id)!); },
@@ -576,7 +576,7 @@ export function vexcelApiPlugin(root: string) {
           return simulateCandidate(key, candidate, requestedDates, requestedHours, requestedArea, await geometryCache.get(candidate.id)!);
         };
         try {
-          const output = await runLandLensAgent({ goal, followUp: typeof input.followUp === 'string' ? input.followUp : undefined, location: searchLocation || locationPhrase(goal) || 'all available Vexcel coverage', dates, targetHours, targetAreaSqft }, { search, geometry, simulate: sunlight }, (event) => send({ type: 'progress', ...event }));
+          const output = await runLandLensAgent({ goal, followUp: typeof input.followUp === 'string' ? input.followUp : undefined, location: searchLocation || locationPhrase(goal) || 'all available Vexcel coverage', dates, targetHours, targetAreaSqft, crops: Array.isArray(input.crops) ? input.crops.map(String).slice(0, 6) : undefined, source: input.source === 'guided' ? 'guided' : 'search' }, { search, geometry, simulate: sunlight }, (event) => send({ type: 'progress', ...event }));
           const simulatedIds = new Set(output.simulations.map((item) => item.candidateId));
           for (const candidate of output.candidates) if (!simulatedIds.has(candidate.id)) output.simulations.push(await sunlight(candidate, dates, targetHours, targetAreaSqft));
           const byId = new Map(output.candidates.map((candidate) => [candidate.id, candidate]));

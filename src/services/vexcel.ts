@@ -121,6 +121,8 @@ export type ComparisonInput = {
   dates: string[];
   targetHours: number;
   targetAreaSqft: number;
+  crops?: string[];
+  source?: 'guided' | 'search';
 };
 
 export type AgentProgress = { stage: 'planning' | 'imagery' | 'property' | 'geometry' | 'sunlight' | 'ranking'; message: string };
