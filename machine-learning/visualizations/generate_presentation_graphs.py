@@ -246,10 +246,107 @@ def crop_classification_map():
     plt.close(fig)
 
 
+def model_derived_houston_map():
+    """Plot only values emitted by the trained artifact and its EcoCrop profiles."""
+    from cropfit.inference import CropFitPredictor
+
+    ml_root = OUTPUT.parent
+    predictor = CropFitPredictor(ml_root / "artifacts/cropfit.joblib", ml_root / "data/raw/ecocrop.csv")
+    climate = predictor.climate(29.7604, -95.3698)
+    requested = [
+        ("Leafy greens", "lettuce"), ("Kale & brassicas", "thousand head kale"),
+        ("Tomatoes", "tomato"), ("Peppers", "pepper"), ("Strawberries", "strawberry"),
+        ("Beans", "common bean"), ("Cucumbers", "cucumber"), ("Corn", "corn"),
+        ("Soybeans", "soy"), ("Wheat", "wheat"), ("Potatoes", "potato"),
+        ("Melons", "rock melon"), ("Onions", "onion"), ("Sunflowers", "sunflower"),
+    ]
+    rows = []
+    for label, query in requested:
+        result = predictor.predict(query, 29.7604, -95.3698, 6.5, True, climate)
+        profile = result["profile"]
+        best = max(result["monthlyCurve"], key=lambda month: month["score"])
+        cycle = (float(profile["growing_days_min"]) + float(profile["growing_days_max"])) / 2
+        rows.append({
+            "label": label, "species": profile["scientific_name"], "score": float(result["score"]),
+            "confidence": float(result["confidence"]), "uncertainty": float(best["uncertainty"]),
+            "temp_min": float(profile["temp_opt_min"]), "temp_max": float(profile["temp_opt_max"]),
+            "temp_mid": (float(profile["temp_opt_min"]) + float(profile["temp_opt_max"])) / 2,
+            "cycle": cycle, "month": result["bestPlantingMonth"],
+        })
+
+    def fit_class(score):
+        if score >= 85:
+            return "Strong fit", GREEN
+        if score >= 80:
+            return "Promising", BLUE
+        return "Conditional", YELLOW
+
+    fig = plt.figure(figsize=(16, 9), dpi=160)
+    header(fig, "TRAINED MODEL · LOCATION CLASSIFICATION",
+           "Which crops does CropFit classify as a Houston match?",
+           "Position, ranges, uncertainty, and crop-cycle size all come from the trained artifact and its EcoCrop profiles.")
+    ax = fig.add_axes([0.07, 0.18, 0.61, 0.60])
+    ax.axhspan(85, 100, color=GREEN, alpha=0.055)
+    ax.axhspan(80, 85, color=BLUE, alpha=0.055)
+    ax.axhspan(45, 80, color=YELLOW, alpha=0.025)
+    ax.axhline(85, color=GREEN, linewidth=1, linestyle="--", alpha=0.65)
+    ax.axhline(80, color=BLUE, linewidth=1, linestyle="--", alpha=0.65)
+    for index, row in enumerate(rows, start=1):
+        category, color = fit_class(row["score"])
+        x_error = [[row["temp_mid"] - row["temp_min"]], [row["temp_max"] - row["temp_mid"]]]
+        ax.errorbar(row["temp_mid"], row["score"], xerr=x_error, yerr=row["uncertainty"], fmt="none",
+                    ecolor=color, elinewidth=1.7, alpha=0.28, capsize=3, zorder=1)
+        bubble = 170 + np.sqrt(row["cycle"]) * 28
+        ax.scatter(row["temp_mid"], row["score"], s=bubble, color=color, edgecolor=TEXT,
+                   linewidth=1.4, alpha=0.96, zorder=3)
+        point_label = "2/13" if index == 2 else ("" if index == 13 else str(index))
+        if point_label:
+            ax.text(row["temp_mid"], row["score"], point_label, color=BG, fontsize=7.5, fontweight="bold",
+                    ha="center", va="center", zorder=4)
+    ax.text(10.3, 96.5, "STRONG FIT · 85+", color=GREEN, fontsize=8, fontweight="bold")
+    ax.text(10.3, 83.1, "PROMISING · 80–84", color=BLUE, fontsize=8, fontweight="bold")
+    ax.text(10.3, 76.8, "CONDITIONAL · <80", color=YELLOW, fontsize=8, fontweight="bold")
+    ax.set_xlim(10, 35.5)
+    ax.set_ylim(45, 100)
+    ax.set_xlabel("EcoCrop optimal temperature midpoint (°C)  ·  horizontal whisker = optimal range", fontsize=9, labelpad=12)
+    ax.set_ylabel("Best monthly CropFit suitability (0–100)  ·  vertical whisker = model disagreement", fontsize=9, labelpad=12)
+    ax.set_xticks([10, 15, 20, 25, 30, 35])
+    ax.set_yticks([50, 60, 70, 80, 85, 90, 100])
+    ax.grid(color=GRID, linewidth=0.8, alpha=0.65)
+    ax.spines[["top", "right"]].set_visible(False)
+
+    ranked = sorted(enumerate(rows, start=1), key=lambda item: item[1]["score"], reverse=True)
+    listing = fig.add_axes([0.72, 0.18, 0.25, 0.60])
+    listing.axis("off")
+    listing.set_xlim(0, 1)
+    listing.set_ylim(0, 1)
+    listing.text(0, 1.0, "MODEL RANKING", color=GREEN, fontsize=10, fontweight="bold", va="top")
+    listing.text(1, 1.0, "FIT  START", color=MUTED, fontsize=8, ha="right", va="top")
+    y = 0.94
+    for original_index, row in ranked:
+        category, color = fit_class(row["score"])
+        listing.scatter(0.018, y, s=55, color=color, edgecolor=TEXT, linewidth=0.7)
+        listing.text(0.06, y, f"{original_index:02d}  {row['label']}", color=TEXT, fontsize=8.7,
+                     fontweight="bold", va="center")
+        listing.text(1, y, f"{row['score']:.0f}   {row['month']}", color=TEXT, fontsize=8.7,
+                     ha="right", va="center")
+        listing.text(0.06, y - 0.026, row["species"], color=MUTED, fontsize=6.7,
+                     style="italic", va="top")
+        y -= 0.066
+    listing.text(0, 0.012, "Bubble size = model profile cycle length", color=MUTED, fontsize=7.2)
+    fig.text(0.07, 0.105, "MODEL READ", color=GREEN, fontsize=9, fontweight="bold")
+    fig.text(0.155, 0.105, "Cucumbers rank highest; peppers, wheat, and sunflowers remain conditional because uncertainty is high.",
+             color=TEXT, fontsize=9.5)
+    footer(fig)
+    fig.savefig(OUTPUT / "cropfit-model-derived-houston-classification.png", facecolor=BG)
+    plt.close(fig)
+
+
 if __name__ == "__main__":
     setup()
     growing_calendar()
     tomato_fingerprint()
     portfolio_map()
     crop_classification_map()
-    print("Generated 4 CropFit presentation PNGs in", OUTPUT)
+    model_derived_houston_map()
+    print("Generated 5 CropFit presentation PNGs in", OUTPUT)

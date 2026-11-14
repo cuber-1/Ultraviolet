@@ -8,6 +8,9 @@ irrigation enabled and soil pH 6.5:
 - `cropfit-portfolio-map.png` — sunlight demand versus model suitability
 - `cropfit-crop-classification-map.png` — temperature ranges, sunlight needs,
   crop classes, and cycle lengths
+- `cropfit-model-derived-houston-classification.png` — trained location-fit
+  classes with profile temperature ranges, ensemble disagreement, crop-cycle
+  size, score, and planting month; every quantitative mark comes from CropFit
 
 Regenerate them with the full ML environment:
 
