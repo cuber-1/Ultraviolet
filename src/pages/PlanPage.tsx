@@ -112,7 +112,9 @@ export default function PlanPage() {
         navigate('/plan', { replace: true, state: { brief: input } });
       }
     } catch (reason) {
-      if (live()) setError(reason instanceof Error ? reason.message : 'The search failed.');
+      const message = reason instanceof Error ? reason.message : 'The search failed.';
+      // A dropped stream (server restart, Wi-Fi blip) surfaces as a bare "network error" / "Failed to fetch".
+      if (live()) setError(/network|failed to fetch|load failed|terminated/i.test(message) ? 'The connection to the Ultraviolet server dropped mid-search (it may have restarted). Your answers are saved; try again.' : message);
     } finally {
       if (requestRef.current === controller && !controller.signal.aborted) setRunning(false);
     }
