@@ -171,7 +171,7 @@ export function loadBrief(): Brief | null {
   try { const raw = sessionStorage.getItem(BRIEF_KEY); return raw ? JSON.parse(raw) as Brief : null; } catch { return null; }
 }
 
-// ---- Crop model (see ml/CONTRACT.md) ----
+// ---- Crop model (see machine-learning/INTEGRATION.md) ----
 
 export const cropProfiles = (brief: Brief): CropProfileInput[] => briefCrops(brief).map(({ id, name, sunHours, tempMinC, tempMaxC, growMonths }) => ({ id, name, sunHours, tempMinC, tempMaxC, growMonths }));
 

@@ -1,6 +1,6 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 
-// Crop-suitability model client. See ml/CONTRACT.md for the wire format.
+// Crop-suitability model client. See machine-learning/INTEGRATION.md for the wire format.
 // When ML_MODEL_URL is unset or the model fails, predictions come from the
 // built-in crop calendar and are labelled source "calendar-fallback".
 
@@ -28,7 +28,11 @@ export type MlPrediction = {
 };
 export type MlResponse = { model: { name: string; version: string | null; source: 'ml' | 'calendar-fallback'; error: string | null }; predictions: MlPrediction[] };
 
-const modelUrl = () => process.env.ML_MODEL_URL?.trim().replace(/\/$/, '') || null;
+// One setting for the crop model: ML_MODEL_URL, or CROPFIT_URL (docker compose / npm run ml:serve).
+const explicitModelUrl = () => (process.env.ML_MODEL_URL || process.env.CROPFIT_URL)?.trim().replace(/\/$/, '') || null;
+/** Base URL for raw CropFit proxies; defaults to the local `npm run ml:serve` port. */
+export const modelBaseUrl = () => explicitModelUrl() ?? 'http://127.0.0.1:8100';
+const modelUrl = explicitModelUrl;
 const modelTimeoutMs = () => Number(process.env.ML_MODEL_TIMEOUT_MS) || 15_000;
 const clamp01 = (value: number) => Math.max(0, Math.min(1, value));
 const isMonth = (value: unknown): value is number => Number.isInteger(value) && Number(value) >= 0 && Number(value) <= 11;

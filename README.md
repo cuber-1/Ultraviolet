@@ -39,11 +39,42 @@ rooftop Deep Agent; an acre or more runs the rural region match.
   can start, season length, and solar resource. Soil, water rights, and
   parcels are not assessed.
 - Crop model: set `ML_MODEL_URL` (and optionally `ML_MODEL_TIMEOUT_MS`) to a
-  server implementing `ml/CONTRACT.md`. The Deep Agent's
+  server implementing `machine-learning/INTEGRATION.md` (CropFit's API is supported directly). The Deep Agent's
   `predict_crop_suitability` tool and the rural ranking use its suitability
   scores and planting windows; roofs rank by 60% sunlit area and 40% crop
   suitability. Without it, the app uses the crop calendar and says so.
-  `python3 ml/stub_server.py` serves a stand-in on port 8765.
+  `CROPFIT_URL` is accepted as the same setting; both default to
+  `http://127.0.0.1:8100` (`npm run ml:serve`).
+
+### Run the complete CropFit demo
+
+The complete demo has two lightweight services: the Ultraviolet web/server
+process and the local CropFit FastAPI. CropFit uses five committed demo vectors,
+so Docker performs no training and no GPU or external inference machine is
+required:
+
+```bash
+export VEXCEL_API_KEY="your-key"       # optional for the rural-only demo
+export NRP_API_KEY="your-agent-key"    # optional; enables Deep Agent
+docker compose up --build
+```
+
+Open `http://localhost:4173/agriculture/rural`. CropFit runs inside the
+`cropfit` container; only Ultraviolet is exposed publicly. The rural page shows
+the model's monthly crop-fit curve, planting window, uncertainty, and limiting
+signals. Named crops in urban Deep Agent requests invoke the same model.
+
+For development without Docker, run these in separate terminals:
+
+```bash
+npm run ml:serve
+npm run dev
+```
+
+GitHub Pages cannot host the full demo because it only serves static files.
+Deploy both containers to a Docker-capable host, or run them on a DGX Spark and
+expose port 4173 through an authenticated tunnel. Keep Vexcel and model-provider
+keys only in the server environment.
 
 ## Environment
 

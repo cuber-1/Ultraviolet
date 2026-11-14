@@ -129,7 +129,7 @@ export type ComparisonInput = {
   source?: 'guided' | 'search';
 };
 
-export type AgentProgress = { stage: 'planning' | 'imagery' | 'property' | 'geometry' | 'sunlight' | 'model' | 'ranking'; message: string };
+export type AgentProgress = { stage: 'planning' | 'imagery' | 'property' | 'geometry' | 'sunlight' | 'crop' | 'model' | 'ranking'; message: string };
 
 export type CropPrediction = {
   siteId: string; cropId: string; suitability: number; plantMonth: number | null; harvestMonth: number | null;

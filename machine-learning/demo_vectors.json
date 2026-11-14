@@ -1,0 +1,52 @@
+[
+  {
+    "id": "houston-market-garden", "location": "Houston, Texas",
+    "vector": {"latitude": 29.7604, "longitude": -95.3698, "acreage": 10, "rural": 0.65, "irrigated": 1, "lowMaintenance": 0.3, "commercial": 0.8},
+    "monthlyTemperatureC": [12.2, 14.1, 18.1, 22.1, 26.1, 28.7, 29.6, 29.8, 27.5, 22.8, 17.4, 13.3],
+    "recommendations": [
+      {"crop": "okra", "score": 92, "bestPlantingMonth": "MAR", "tags": ["vegetable", "heat-tolerant"], "reasons": ["Strong warm-season fit", "Works well in a market-garden setup"]},
+      {"crop": "sweet potato", "score": 89, "bestPlantingMonth": "APR", "tags": ["vegetable", "low-maintenance"], "reasons": ["Long warm season", "Moderate maintenance after establishment"]},
+      {"crop": "tomato", "score": 84, "bestPlantingMonth": "FEB", "tags": ["vegetable", "commercial"], "reasons": ["Early planting avoids peak summer heat", "Strong local-market crop"]}
+    ]
+  },
+  {
+    "id": "fresno-irrigated-farm", "location": "Fresno, California",
+    "vector": {"latitude": 36.7378, "longitude": -119.7871, "acreage": 80, "rural": 0.95, "irrigated": 1, "lowMaintenance": 0.6, "commercial": 1},
+    "monthlyTemperatureC": [8.4, 11.2, 14.2, 17.6, 22.3, 26.7, 29.3, 28.5, 25, 19, 12.5, 8.3],
+    "recommendations": [
+      {"crop": "almond", "score": 94, "bestPlantingMonth": "FEB", "tags": ["orchard", "commercial"], "reasons": ["Established orchard region analogue", "Irrigation supports dry summers"]},
+      {"crop": "grape", "score": 91, "bestPlantingMonth": "FEB", "tags": ["fruit", "commercial"], "reasons": ["Long dry growing season", "Good fit for larger irrigated acreage"]},
+      {"crop": "tomato", "score": 86, "bestPlantingMonth": "MAR", "tags": ["vegetable", "commercial"], "reasons": ["Warm production window", "Irrigation offsets summer dryness"]}
+    ]
+  },
+  {
+    "id": "des-moines-row-crop", "location": "Des Moines, Iowa",
+    "vector": {"latitude": 41.5868, "longitude": -93.625, "acreage": 320, "rural": 1, "irrigated": 0, "lowMaintenance": 0.8, "commercial": 1},
+    "monthlyTemperatureC": [-5.1, -2.5, 4.5, 11.5, 17.5, 22.5, 24.8, 23.4, 18.8, 11.8, 4.1, -2.6],
+    "recommendations": [
+      {"crop": "corn", "score": 95, "bestPlantingMonth": "APR", "tags": ["grain", "commercial"], "reasons": ["Strong row-crop analogue", "Suitable for large mechanized acreage"]},
+      {"crop": "soybean", "score": 93, "bestPlantingMonth": "MAY", "tags": ["legume", "commercial"], "reasons": ["Strong rain-fed analogue", "Fits common corn rotation"]},
+      {"crop": "wheat", "score": 81, "bestPlantingMonth": "SEP", "tags": ["grain", "low-maintenance"], "reasons": ["Useful cool-season option", "Lower irrigation requirement"]}
+    ]
+  },
+  {
+    "id": "miami-small-farm", "location": "Miami, Florida",
+    "vector": {"latitude": 25.7617, "longitude": -80.1918, "acreage": 5, "rural": 0.4, "irrigated": 1, "lowMaintenance": 0.2, "commercial": 0.6},
+    "monthlyTemperatureC": [20.1, 21, 22.8, 25, 27, 28.5, 29, 29, 28.3, 26.4, 23.7, 21.4],
+    "recommendations": [
+      {"crop": "pepper", "score": 91, "bestPlantingMonth": "OCT", "tags": ["vegetable", "commercial"], "reasons": ["Warm winter production window", "Good small-farm market crop"]},
+      {"crop": "tomato", "score": 87, "bestPlantingMonth": "SEP", "tags": ["vegetable", "commercial"], "reasons": ["Cooler season avoids summer stress", "Irrigation supports establishment"]},
+      {"crop": "okra", "score": 85, "bestPlantingMonth": "MAR", "tags": ["vegetable", "heat-tolerant"], "reasons": ["Handles hot humid summers", "Fits smaller diversified acreage"]}
+    ]
+  },
+  {
+    "id": "seattle-urban-grower", "location": "Seattle, Washington",
+    "vector": {"latitude": 47.6062, "longitude": -122.3321, "acreage": 2, "rural": 0.2, "irrigated": 0.5, "lowMaintenance": 0.5, "commercial": 0.3},
+    "monthlyTemperatureC": [5.4, 6.2, 8.4, 10.8, 14.2, 17, 19.5, 19.6, 16.7, 12, 7.8, 5.2],
+    "recommendations": [
+      {"crop": "lettuce", "score": 92, "bestPlantingMonth": "FEB", "tags": ["vegetable", "urban"], "reasons": ["Cool-season crop", "Works in compact intensive beds"]},
+      {"crop": "spinach", "score": 90, "bestPlantingMonth": "FEB", "tags": ["vegetable", "low-maintenance"], "reasons": ["Strong cool-weather fit", "Short production cycle"]},
+      {"crop": "strawberry", "score": 84, "bestPlantingMonth": "MAR", "tags": ["fruit", "urban"], "reasons": ["Moderate summer temperatures", "Works at small scale"]}
+    ]
+  }
+]

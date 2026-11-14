@@ -6,7 +6,7 @@ import { geometryBounds, geometryRequiredRadius, insideMetricGeometry, metricPoi
 import { sharedMeetingArea, simulate, type AreaSelection, type Obstruction } from '../src/services/sunSimulation';
 import { handleMonthlyClimate } from './monthlyClimate';
 import { handleRunsRoute } from './runStore';
-import { combinedRoofScore, handleMlRoute, mlModelStatus, predictCropSuitability, siteSuitability, type MlCrop } from './mlModel';
+import { combinedRoofScore, handleMlRoute, mlModelStatus, modelBaseUrl, predictCropSuitability, siteSuitability, type MlCrop } from './mlModel';
 import { landLensAgentStatus, roofSites, runLandLensAgent, type AgentCandidate, type GeometryEvidence, type SunlightEvidence } from './landlensAgent';
 import { createPhotonConversation, photonStatus, sendPhotonMessage, type PhotonPlatform } from './photon';
 
@@ -473,6 +473,26 @@ export function vexcelApiPlugin(root: string) {
       if (await handleMonthlyClimate(url.pathname, req, res)) return;
       if (await handleMlRoute(url.pathname, req, res)) return;
       if (await handleRunsRoute(url.pathname, req, res, root)) return;
+      if (url.pathname === '/api/cropfit/status') {
+        const response = await fetch(`${modelBaseUrl()}/health`, { signal: AbortSignal.timeout(3_000) });
+        return json(res, response.status, await response.json());
+      }
+      if (url.pathname === '/api/cropfit/predict' && req.method === 'POST') {
+        const input = await body(req);
+        const response = await fetch(`${modelBaseUrl()}/predict`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(input), signal: AbortSignal.timeout(35_000),
+        });
+        const payload = await response.json();
+        return json(res, response.status, response.ok ? payload : { error: payload.detail || 'CropFit prediction failed.' });
+      }
+      if (url.pathname === '/api/cropfit/recommend' && req.method === 'POST') {
+        const input = await body(req);
+        const response = await fetch(`${modelBaseUrl()}/recommend`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(input), signal: AbortSignal.timeout(5_000),
+        });
+        const payload = await response.json();
+        return json(res, response.status, response.ok ? payload : { error: payload.detail || 'CropFit recommendation failed.' });
+      }
       if (url.pathname === '/api/rural/compare' && req.method === 'POST') {
         const input = await body(req);
         const goal = ['balanced', 'sun', 'low-irrigation'].includes(String(input.goal)) ? String(input.goal) as RuralGoal : 'balanced';

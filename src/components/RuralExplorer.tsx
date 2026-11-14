@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { CircleAlert, Droplets, LoaderCircle, MapPin, Search, Sun, ThermometerSun } from 'lucide-react';
 import SearchGlobe from './SearchGlobe';
+import CropFitPanel from './CropFitPanel';
 import { compareRuralLocations, type RuralClimateResult, type RuralComparison, type RuralGoal } from '../services/rural';
 
 const STARTING_PLACES = 'Fresno, California; Yuma, Arizona; Yakima, Washington; Salinas, California; McAllen, Texas';
@@ -50,6 +51,7 @@ export default function RuralExplorer() {
         {comparison?.errors.map((item) => <div className="rural-missing" key={item.location}><CircleAlert /><span><strong>{item.location}</strong>{item.error}</span></div>)}
       </aside>
     </section>
+    {results.length > 0 && <CropFitPanel locations={results} />}
     <section className="rural-method"><div><span className="mono">WHAT THIS RANKING MEANS</span><h2>Regional climate first.<br />Land diligence next.</h2></div><p>The score transparently combines annual solar resource, average growing temperature, and precipitation according to the selected priority. It is a regional screen—not a farm recommendation. USDA soil capability, irrigation supply and rights, flood risk, zoning, ownership, price, and an on-site assessment still determine whether a parcel works.</p></section>
   </main>;
 }

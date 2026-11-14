@@ -1,4 +1,4 @@
-# Crop model contract
+# How Ultraviolet calls the crop model
 
 > **CropFit is supported directly.** If the model's `GET /health` returns a
 > `model` string containing "CropFit" (or `ML_MODEL_API=cropfit`), the app calls
@@ -11,7 +11,7 @@
 > Optional: `ML_SOIL_PH` (default 6.5), `ML_IRRIGATED` (default true).
 
 Ultraviolet calls the crop-suitability model over HTTP from its server. Implement
-these two endpoints and set `ML_MODEL_URL` in `land-intelligence/.env`.
+these two endpoints and set `ML_MODEL_URL` (or `CROPFIT_URL`) in the app's `.env`.
 
 ```bash
 ML_MODEL_URL="http://127.0.0.1:8765"   # no trailing slash
@@ -23,8 +23,8 @@ unreachable, times out, or returns no usable predictions, the app falls back to 
 crop calendar (NASA monthly temperature within each crop's range) and labels the
 results "Crop calendar · model offline". The UI and Deep Agent keep working.
 
-`ml/stub_server.py` implements this contract with a heuristic. Replace its
-`predict()` body with the trained model, or serve the same JSON from any stack.
+CropFit (this folder) is the production model; the generic contract below is
+for any other model you want to plug in.
 
 ## `GET /health`
 
@@ -129,6 +129,8 @@ ranges are clamped; malformed entries are dropped.
 ## Try it
 
 ```bash
-python3 ml/stub_server.py            # serves the contract on :8765
-curl -s localhost:8765/health
+npm run ml:serve                     # CropFit on 127.0.0.1:8100
+curl -s localhost:8100/health
 ```
+
+Or point at the DGX Spark over Tailscale: `ML_MODEL_URL=http://100.119.73.13:8100`.

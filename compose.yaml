@@ -1,0 +1,29 @@
+services:
+  cropfit:
+    build:
+      context: .
+      dockerfile: machine-learning/Dockerfile
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8100/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+  ultraviolet:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      cropfit:
+        condition: service_healthy
+    environment:
+      CROPFIT_URL: http://cropfit:8100
+      VEXCEL_API_KEY: ${VEXCEL_API_KEY:-}
+      NRP_API_KEY: ${NRP_API_KEY:-}
+      LANDLENS_AGENT_API_KEY: ${LANDLENS_AGENT_API_KEY:-}
+      LANDLENS_AGENT_BASE_URL: ${LANDLENS_AGENT_BASE_URL:-}
+      LANDLENS_AGENT_MODEL: ${LANDLENS_AGENT_MODEL:-}
+    ports:
+      - "4173:4173"

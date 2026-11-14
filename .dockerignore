@@ -1,0 +1,11 @@
+.git
+.env
+node_modules
+dist
+runtime
+machine-learning/.venv
+machine-learning/data
+machine-learning/artifacts
+machine-learning/runs
+__pycache__
+*.pyc
