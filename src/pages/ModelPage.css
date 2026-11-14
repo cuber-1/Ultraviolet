@@ -85,6 +85,8 @@
 
 .model-pill-group { display: grid; justify-items: end; gap: 5px; }
 .model-metrics { color: var(--gray-400); font-size: 9px; letter-spacing: .08em; }
+.model-evidence { color: #a33a17; font-size: 9px; letter-spacing: .06em; }
+.model-evidence.passed { color: var(--green); }
 .model-confidence { color: var(--gray-400) !important; font-size: 10px !important; letter-spacing: .08em; }
 .model-warning { display: flex; gap: 8px; padding: 10px 12px; border: 1px solid #e9b99a; border-radius: 8px; background: #fff6ef; color: #7d3821; font-size: 12px; overflow-wrap: anywhere; }
 .run-demo { margin-right: 8px; padding: 2px 8px; border-radius: 999px; background: var(--earth); color: var(--white); font-size: 11px; font-style: normal; font-weight: 700; }

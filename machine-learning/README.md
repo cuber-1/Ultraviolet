@@ -7,6 +7,19 @@ revenue, or a buy/sell recommendation.
 
 ## Run the trained model
 
+On macOS or Linux, install the released v0.4 artifact, EcoCrop profiles, and
+inference dependencies without access to the Spark:
+
+```bash
+./scripts/installCropFitModel.sh
+npm run ml:serve
+```
+
+The release bundle is checksum-verified before extraction. To train a fresh
+artifact instead, use the full setup below. Because the repository is private,
+the installer uses an authenticated GitHub CLI session (`gh auth login`) or a
+`GITHUB_TOKEN`.
+
 ```bash
 python3 -m venv machine-learning/.venv
 machine-learning/.venv/bin/pip install -r machine-learning/requirements.txt
@@ -62,6 +75,15 @@ supplies a 12-month `climate` array in the prediction request.
 
 ## Next evidence gate
 
-Version 0.2 will calibrate crop outputs against USDA NASS county yield history
-and DSSAT simulations. Until that gate passes, the UI must retain the
-`agroclimatic-screening` evidence label.
+External observed-outcome validation is reproducible with:
+
+```bash
+npm run ml:download:observed
+npm run ml:evaluate:observed
+```
+
+This compares CropFit with California's 2018–2022 county agricultural
+commissioner yield reports using actual-year NASA POWER weather. The data are
+not used for training or model selection. The current gate did not pass, so the
+UI must retain the `agroclimatic-screening` evidence label until independent,
+broader-state evidence supports a new claim.

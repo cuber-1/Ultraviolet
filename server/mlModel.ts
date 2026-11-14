@@ -26,7 +26,7 @@ export type MlPrediction = {
   notes: string | null;
   source: 'ml' | 'calendar-fallback';
   /** Full model detail when the model provides it (CropFit). Month indexes are 0-11. */
-  curve?: Array<{ month: number; score: number; uncertainty: number | null; components: Record<string, number> | null }>;
+  curve?: Array<{ month: number; score: number; uncertainty: number | null; errorP80: number | null; errorP90: number | null; components: Record<string, number> | null }>;
   suitableMonths?: number[];
   growingDays?: { min: number; max: number } | null;
   limitingFactors?: Array<{ factor: string; score: number }>;
@@ -64,10 +64,10 @@ export async function mlModelHealth() {
     const started = Date.now();
     try {
       const response = await fetch(`${url}/health`, { signal: AbortSignal.timeout(4_000) });
-      const payload = await response.json().catch(() => ({})) as { model?: string | { name?: string; version?: string }; metrics?: Record<string, number> };
+      const payload = await response.json().catch(() => ({})) as { model?: string | { name?: string; version?: string }; metrics?: Record<string, number>; evidence?: unknown };
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const model = typeof payload.model === 'string' ? { name: payload.model } : payload.model ?? null;
-      return { configured: true, online: true, latencyMs: Date.now() - started, model, metrics: payload.metrics ?? null, error: null, url, role: index === 0 ? 'primary' : 'backup', primaryError: index ? errors[0] : null };
+      return { configured: true, online: true, latencyMs: Date.now() - started, model, metrics: payload.metrics ?? null, evidence: payload.evidence ?? null, error: null, url, role: index === 0 ? 'primary' : 'backup', primaryError: index ? errors[0] : null };
     } catch (reason) {
       errors.push(`${index === 0 ? 'primary' : 'backup'}: ${reason instanceof Error ? reason.message : 'unreachable'}`);
     }
@@ -158,7 +158,7 @@ const monthIndex = (value: unknown) => {
 type CropFitResult = {
   score?: number; bestPlantingMonth?: unknown; suitableMonths?: unknown[]; confidence?: number;
   growingDays?: { min?: number; max?: number }; limitingFactors?: Array<{ factor?: string; score?: number }>;
-  monthlyCurve?: Array<{ month?: unknown; score?: number; uncertainty?: number; components?: Record<string, number> }>;
+  monthlyCurve?: Array<{ month?: unknown; score?: number; uncertainty?: number; expectedAbsoluteErrorP80?: number; expectedAbsoluteErrorP90?: number; components?: Record<string, number> }>;
   profile?: Record<string, unknown>; evidenceGrade?: string;
 };
 const apiKindCache = new Map<string, { kind: 'contract' | 'cropfit'; expires: number }>();
@@ -178,13 +178,16 @@ async function modelApiKind(url: string): Promise<'contract' | 'cropfit'> {
   return kind;
 }
 
-function cropFitCall(url: string, crop: string, lat: number, lon: number) {
+function cropFitCall(url: string, crop: string, lat: number, lon: number, climate: MlClimate | null) {
   const key = `${url}:${crop}:${lat.toFixed(2)},${lon.toFixed(2)}`;
   const cached = cropFitCache.get(key);
   if (cached && cached.expires > Date.now()) return cached.value;
   const value = fetch(`${url}/predict`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(modelTimeoutMs()),
-    body: JSON.stringify({ crop, latitude: Number(lat.toFixed(4)), longitude: Number(lon.toFixed(4)), soilPh: Number(process.env.ML_SOIL_PH) || 6.5, irrigated: process.env.ML_IRRIGATED !== 'false' }),
+    body: JSON.stringify({
+      crop, latitude: Number(lat.toFixed(4)), longitude: Number(lon.toFixed(4)), soilPh: Number(process.env.ML_SOIL_PH) || 6.5, irrigated: process.env.ML_IRRIGATED !== 'false',
+      climate: climate ? MONTH_KEYS.map((month, index) => ({ month: month.toUpperCase(), temperatureC: climate.temperatureC[index], precipitationMmDay: climate.precipitationMmDay[index], solarMjM2Day: climate.solarMjM2Day[index] })) : undefined,
+    }),
   }).then(async (response) => {
     const payload = await response.json().catch(() => ({})) as CropFitResult & { detail?: unknown };
     if (!response.ok) throw new Error(typeof payload.detail === 'string' ? payload.detail : `CropFit HTTP ${response.status}`);
@@ -218,7 +221,7 @@ function fromCropFit(site: MlSite, crop: MlCrop, preferredMonth: number, result:
     source: 'ml',
     curve: (result.monthlyCurve ?? []).flatMap((item) => {
       const month = monthIndex(item.month);
-      return month === null || !Number.isFinite(item.score) ? [] : [{ month, score: Number(item.score), uncertainty: Number.isFinite(item.uncertainty) ? Number(item.uncertainty) : null, components: item.components ?? null }];
+      return month === null || !Number.isFinite(item.score) ? [] : [{ month, score: Number(item.score), uncertainty: Number.isFinite(item.uncertainty) ? Number(item.uncertainty) : null, errorP80: Number.isFinite(item.expectedAbsoluteErrorP80) ? Number(item.expectedAbsoluteErrorP80) : null, errorP90: Number.isFinite(item.expectedAbsoluteErrorP90) ? Number(item.expectedAbsoluteErrorP90) : null, components: item.components ?? null }];
     }).sort((a, b) => a.month - b.month),
     suitableMonths: suitable,
     growingDays: Number.isFinite(minDays) && Number.isFinite(maxDays) ? { min: minDays, max: maxDays } : null,
@@ -242,7 +245,7 @@ async function predictViaCropFit(url: string, request: MlRequest): Promise<MlRes
   for (let i = 0; i < pairs.length; i += 6) {
     const batch = await Promise.all(pairs.slice(i, i + 6).map(async ({ site, crop, name }) => {
       if (!name) return strict ? null : calendarPrediction(site, crop, request.preferredMonth);
-      try { return fromCropFit(site, crop, request.preferredMonth, await cropFitCall(url, name, site.lat, site.lon)); }
+      try { return fromCropFit(site, crop, request.preferredMonth, await cropFitCall(url, name, site.lat, site.lon, site.climate)); }
       catch (reason) {
         const message = reason instanceof Error ? reason.message : 'CropFit failed';
         if (strict) throw new Error(`CropFit failed for ${crop.name}: ${message}`);
