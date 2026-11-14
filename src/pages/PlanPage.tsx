@@ -5,9 +5,9 @@ import Wordmark from '../components/Wordmark';
 import SearchGlobe from '../components/SearchGlobe';
 import DeepAgentLoader, { type LoaderStage } from '../components/DeepAgentLoader';
 import { SiteWorkspace } from './AgriculturePage';
-import { runAgentComparison, type AgentComparison, type SearchResult } from '../services/vexcel';
+import { runAgentComparison, type AgentComparison, type CropModelInfo, type CropPrediction, type SearchResult } from '../services/vexcel';
 import {
-  MONTH_LONG, MONTH_SHORT, briefCrops, fetchMonthlyClimate, formatArea, loadBrief, planForLocation, ruralPlaces,
+  MONTH_LONG, MONTH_SHORT, applyModel, briefCrops, cropProfiles, fetchMonthlyClimate, fetchRegionPredictions, formatArea, loadBrief, planForLocation, ruralPlaces,
   urbanAgentCriteria, urbanAreaLabel, type Brief, type CropTiming, type LocationPlan,
 } from '../services/cropPlan';
 import './PlanPage.css';
@@ -20,17 +20,18 @@ const URBAN_STAGES: LoaderStage[] = [
   { key: 'property', label: 'Property records' },
   { key: 'geometry', label: 'Roof geometry' },
   { key: 'sunlight', label: 'Sunlight' },
+  { key: 'model', label: 'Crop model' },
   { key: 'ranking', label: 'Ranking' },
 ];
 const RURAL_STAGES: LoaderStage[] = [
   { key: 'geocode', label: 'Locating towns' },
   { key: 'climate', label: 'NASA climate' },
-  { key: 'calendar', label: 'Crop calendars' },
+  { key: 'calendar', label: 'Crop model' },
   { key: 'ranking', label: 'Ranking' },
 ];
 
 type UrbanOutcome = { kind: 'urban'; brief: Brief; plan: LocationPlan | null; criteria: ReturnType<typeof urbanAgentCriteria>; comparison: AgentComparison; top: SearchResult[] };
-type RuralOutcome = { kind: 'rural'; brief: Brief; plans: LocationPlan[]; errors: Array<{ location: string; error: string }> };
+type RuralOutcome = { kind: 'rural'; brief: Brief; plans: LocationPlan[]; errors: Array<{ location: string; error: string }>; model?: CropModelInfo | null };
 type Outcome = UrbanOutcome | RuralOutcome;
 
 const RESULT_KEY = 'ultraviolet.plan.result';
@@ -78,7 +79,7 @@ export default function PlanPage() {
         const comparison = await runAgentComparison({
           goal: criteria.goal, location: input.urbanArea ?? 'All available Vexcel coverage', lat: 0, lon: 0, radiusM: 20_000,
           dates: criteria.dates, targetHours: criteria.targetHours, targetAreaSqft: criteria.targetAreaSqft,
-          crops: briefCrops(input).map((crop) => crop.name), source: 'guided',
+          crops: briefCrops(input).map((crop) => crop.name), cropProfiles: cropProfiles(input), preferredMonth: input.preferredMonth, source: 'guided',
         }, (event) => { advance(URBAN_STAGES, event.stage); push(event.message); }, controller.signal);
         if (!live()) return;
         const byId = new Map(comparison.candidates.map((candidate) => [candidate.id, candidate]));
@@ -95,13 +96,16 @@ export default function PlanPage() {
         advance(RURAL_STAGES, 'climate'); push('Reading NASA POWER monthly climatology');
         const climate = await pending;
         if (!live()) return;
-        advance(RURAL_STAGES, 'calendar'); push(`Matching ${briefCrops(input).length} crop calendars to ${climate.results.length} towns`);
-        const plans = climate.results.map((result) => planForLocation(input, result)).sort((a, b) => b.score - a.score);
+        advance(RURAL_STAGES, 'calendar'); push(`Scoring ${briefCrops(input).length} crops in ${climate.results.length} towns with the crop model`);
+        const model = await fetchRegionPredictions(input, climate.results, controller.signal).catch(() => null);
+        if (!live()) return;
+        if (model) push(model.model.source === 'ml' ? `Crop model ${model.model.name} scored every town` : 'Crop model offline; using the climate crop calendar');
+        const plans = climate.results.map((result) => applyModel(planForLocation(input, result), model?.predictions ?? [], input.preferredMonth)).sort((a, b) => b.score - a.score);
         await new Promise((resolve) => setTimeout(resolve, 900));
         advance(RURAL_STAGES, 'ranking'); push('Ranking by crop fit');
         await new Promise((resolve) => setTimeout(resolve, 600));
         if (!live()) return;
-        const next: RuralOutcome = { kind: 'rural', brief: input, plans, errors: climate.errors };
+        const next: RuralOutcome = { kind: 'rural', brief: input, plans, errors: climate.errors, model: model?.model ?? null };
         setOutcome(next); saveOutcome(next);
         navigate('/plan', { replace: true, state: { brief: input } });
       }
@@ -195,6 +199,8 @@ function UrbanResults({ outcome, onOpen }: { outcome: UrbanOutcome; onOpen: (id:
   const explanations = new Map((comparison.narrative?.explanations ?? []).map((item) => [item.candidateId, item.explanation]));
   const [hovered, setHovered] = useState<string | null>(null);
   const points = useMemo(() => top.map((result, index) => ({ id: result.id, lat: result.lat, lon: result.lon, rank: index + 1 })), [top]);
+  const predictionsBySite = useMemo(() => { const map = new Map<string, CropPrediction[]>(); for (const item of comparison.predictions ?? []) map.set(item.siteId, [...(map.get(item.siteId) ?? []), item]); return map; }, [comparison.predictions]);
+  const cropName = (id: string) => briefCrops(brief).find((crop) => crop.id === id)?.name ?? id;
   return <main className="plan-main">
     <section className="plan-hero">
       <span className="mono">{comparison.mode === 'deep-agent' ? `DEEP AGENT · ${comparison.model ?? ''}`.trim() : 'DIRECT COMPARISON'} · {urbanAreaLabel(brief).toUpperCase()}</span>
@@ -226,6 +232,7 @@ function UrbanResults({ outcome, onOpen }: { outcome: UrbanOutcome; onOpen: (id:
                 <div className="roof-meter"><div style={{ width: `${ratio * 100}%` }} className={meets ? 'meets' : ''} /></div>
                 <span className="roof-metric">{shared === null ? 'Sunlight not assessed · missing roof geometry' : <><b>{sqft(shared)}</b> gets {criteria.targetHours} h on both dates{meets ? ' · meets your area' : ` · ${Math.round(ratio * 100)}% of target`}</>}</span>
                 {explanations.get(result.id) && <p className="roof-why">{explanations.get(result.id)}</p>}
+                {(predictionsBySite.get(result.id)?.length ?? 0) > 0 && <div className="roof-crops">{predictionsBySite.get(result.id)!.map((item) => <span key={item.cropId} title={item.notes ?? undefined}><b>{cropName(item.cropId)}</b> {Math.round(item.suitability * 100)}%{item.plantMonth !== null ? ` · plant ${MONTH_SHORT[item.plantMonth]}${item.harvestMonth !== null ? ` → ${MONTH_SHORT[item.harvestMonth]}` : ''}` : ' · no season'}</span>)}</div>}
                 <div className="roof-chips">
                   {result.property?.roofAreaSqft && <span>{sqft(result.property.roofAreaSqft)} roof</span>}
                   {result.costar ? <span>{result.costar.propertyType}</span> : <span className="muted">No property record</span>}
@@ -242,6 +249,7 @@ function UrbanResults({ outcome, onOpen }: { outcome: UrbanOutcome; onOpen: (id:
 
       <aside className="plan-side">
         <div className="plan-globe"><SearchGlobe points={points} onPointClick={onOpen} /></div>
+        {comparison.mlModel && <ModelCard model={comparison.mlModel} />}
         {plan && <div className="plan-card"><header><CalendarDays size={15} /><strong>When to start</strong><span className="mono">{plan.climate.name}</span></header><CropCalendar timings={plan.timings} preferredMonth={brief.preferredMonth} /></div>}
         {comparison.narrative?.summary && <div className="plan-card"><header><Sun size={15} /><strong>Agent summary</strong></header><p>{comparison.narrative.summary}</p></div>}
         {(comparison.narrative?.unknowns.length ?? 0) > 0 && <details className="plan-card plan-unknowns"><summary>What we couldn’t verify ({comparison.narrative!.unknowns.length})</summary><ul>{comparison.narrative!.unknowns.map((item) => <li key={item}>{item}</li>)}</ul></details>}
@@ -257,7 +265,7 @@ function RuralResults({ outcome }: { outcome: RuralOutcome }) {
   const [openId, setOpenId] = useState<string | null>(top[0]?.climate.query ?? null);
   return <main className="plan-main">
     <section className="plan-hero rural">
-      <span className="mono">CLIMATE MATCH · NASA POWER · {plans.length} TOWNS COMPARED</span>
+      <span className="mono">{outcome.model?.source === 'ml' ? `CROP MODEL · ${outcome.model.name.toUpperCase()}` : 'CLIMATE MATCH · NASA POWER'} · {plans.length} TOWNS COMPARED</span>
       <h1>Your top {top.length} regions for {cropList(brief)}.</h1>
       <dl className="plan-stats">
         <div><dt>Land</dt><dd>{formatArea(brief.areaSqft)}</dd></div>
@@ -294,8 +302,19 @@ function RuralResults({ outcome }: { outcome: RuralOutcome }) {
       </ol>
       <aside className="plan-side">
         <div className="plan-globe"><SearchGlobe points={points} onPointClick={setOpenId} unitLabel="REGIONS" /></div>
-        <div className="plan-card"><header><CircleAlert size={15} /><strong>How this is scored</strong></header><p>Fit combines how many of your crops have a full growing season (45%), how soon they can start after your preferred month (25%), season length (15%), and annual solar resource (15%). A month counts when NASA’s average temperature sits inside the crop’s range. Soil, water rights, parcels, and price are not assessed yet.</p></div>
+        {outcome.model && <ModelCard model={outcome.model} />}
+        <div className="plan-card"><header><CircleAlert size={15} /><strong>How this is scored</strong></header><p>{outcome.model?.source === 'ml' ? 'Fit is the crop model’s average suitability across your crops, and planting windows come from the model. ' : ''}{outcome.model?.source === 'ml' ? 'Without the model, fit' : 'Fit'} combines how many of your crops have a full growing season (45%), how soon they can start after your preferred month (25%), season length (15%), and annual solar resource (15%). A month counts when NASA’s average temperature sits inside the crop’s range. Soil, water rights, parcels, and price are not assessed yet.</p></div>
       </aside>
     </section>
   </main>;
+}
+
+function ModelCard({ model }: { model: CropModelInfo }) {
+  const live = model.source === 'ml';
+  return <div className={live ? 'plan-card model-card live' : 'plan-card model-card'}>
+    <header><Sun size={15} /><strong>{live ? 'Crop model' : 'Crop calendar'}</strong><span className="mono">{live ? `${model.name}${model.version ? ` · ${model.version}` : ''}` : 'MODEL OFFLINE'}</span></header>
+    <p>{live
+      ? 'Suitability and planting windows come from the trained crop model, using each site’s climate and measured sunlight. Ranking blends 60% sunlit area with 40% crop suitability.'
+      : 'The trained crop model is not connected, so suitability and timing come from NASA monthly temperatures and each crop’s growing range.'}</p>
+  </div>;
 }

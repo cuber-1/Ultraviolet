@@ -103,6 +103,8 @@ export type AgentComparison = {
   targetAreaSqft: number;
   candidates: SearchResult[];
   simulations: SunlightEvidence[];
+  predictions?: CropPrediction[];
+  mlModel?: CropModelInfo | null;
   narrative?: null | {
     summary: string;
     criteria: { location: string; targetAreaSqft: number; targetHours: number; dates: string[] };
@@ -122,10 +124,19 @@ export type ComparisonInput = {
   targetHours: number;
   targetAreaSqft: number;
   crops?: string[];
+  cropProfiles?: CropProfileInput[];
+  preferredMonth?: number;
   source?: 'guided' | 'search';
 };
 
-export type AgentProgress = { stage: 'planning' | 'imagery' | 'property' | 'geometry' | 'sunlight' | 'ranking'; message: string };
+export type AgentProgress = { stage: 'planning' | 'imagery' | 'property' | 'geometry' | 'sunlight' | 'model' | 'ranking'; message: string };
+
+export type CropPrediction = {
+  siteId: string; cropId: string; suitability: number; plantMonth: number | null; harvestMonth: number | null;
+  confidence: number | null; expectedYield: { value: number; unit: string } | null; notes: string | null; source: 'ml' | 'calendar-fallback';
+};
+export type CropModelInfo = { name: string; version: string | null; source: 'ml' | 'calendar-fallback'; error: string | null };
+export type CropProfileInput = { id: string; name: string; sunHours: number; tempMinC: number; tempMaxC: number; growMonths: number };
 
 export type PhotonWatchInput = ComparisonInput & { platform: 'imessage' | 'sms' | 'telegram' | 'email' | 'whatsapp_business'; handle: string };
 
