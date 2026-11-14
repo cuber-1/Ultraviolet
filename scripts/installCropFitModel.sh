@@ -6,6 +6,16 @@ expected_sha256="3e603f81361fa0375f6883d64f896cc15fd8db9523bc147b1dfd4daa61bbefc
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 bundle_tmp="$(mktemp -d)"
 trap 'rm -rf "${bundle_tmp}"' EXIT
+python_bin="${CROPFIT_PYTHON:-python3}"
+
+if ! command -v "${python_bin}" >/dev/null 2>&1; then
+  echo "Python was not found. Install Python 3.10+ (for example: brew install python@3.12)." >&2
+  exit 1
+fi
+if ! "${python_bin}" -c 'import sys; raise SystemExit(0 if sys.version_info >= (3, 10) else 1)'; then
+  echo "CropFit requires Python 3.10 or newer. Set CROPFIT_PYTHON to a compatible interpreter." >&2
+  exit 1
+fi
 
 echo "Downloading CropFit v0.5 model bundle..."
 if command -v gh >/dev/null 2>&1; then
@@ -17,7 +27,7 @@ else
   exit 1
 fi
 
-actual_sha256="$(python3 - "${bundle_tmp}/cropfit.tar.gz" <<'PY'
+actual_sha256="$("${python_bin}" - "${bundle_tmp}/cropfit.tar.gz" <<'PY'
 import hashlib
 import pathlib
 import sys
@@ -35,7 +45,11 @@ if [[ "${actual_sha256}" != "${expected_sha256}" ]]; then
 fi
 
 tar -xzf "${bundle_tmp}/cropfit.tar.gz" -C "${repo_root}"
-python3 -m venv "${repo_root}/machine-learning/.venv"
+"${python_bin}" -m venv "${repo_root}/machine-learning/.venv"
+"${repo_root}/machine-learning/.venv/bin/python" -m pip install --upgrade pip
 "${repo_root}/machine-learning/.venv/bin/python" -m pip install -r "${repo_root}/machine-learning/requirements-inference.txt"
+PYTHONPATH="${repo_root}/machine-learning" "${repo_root}/machine-learning/.venv/bin/python" -m cropfit.verify_inference
 
-echo "CropFit v0.5 is installed. Start it with: npm run ml:serve"
+echo "CropFit v0.5 is installed and verified."
+echo "Local Mac fallback: npm run ml:serve:local"
+echo "Tailscale/LAN service: npm run ml:serve"

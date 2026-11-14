@@ -44,3 +44,5 @@ jobs:
         run: ./scripts/installCropFitModel.sh
       - name: Verify offline inference and yield evidence
         run: npm run test:cropfit
+      - name: Verify local HTTP fallback without Spark
+        run: npm run test:cropfit:http

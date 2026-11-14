@@ -7,13 +7,16 @@ order automatically:
 2. `ML_MODEL_FALLBACK_URL` — an optional second CropFit or compatible API.
 3. Built-in crop calendar — no model process or GPU required.
 
-The real v0.4 model can also be installed directly from its GitHub Release on a
+The real v0.5 model can also be installed directly from its GitHub Release on a
 MacBook, with no Spark connection:
 
 ```bash
 ./scripts/installCropFitModel.sh
-npm run ml:serve
+npm run ml:serve:local
 ```
+
+This starts the trained CPU model on `127.0.0.1:8100` and verifies the released
+artifact during installation. No GPU is required.
 
 The final fallback uses the NASA monthly climate already fetched by the app and
 the committed crop temperature, sunlight, and growing-season requirements. It
@@ -24,11 +27,12 @@ the trained model.
 
 ```bash
 ML_MODEL_URL="http://100.119.73.13:8100"
-ML_MODEL_FALLBACK_URL="https://your-hosted-backup.example.com"
+ML_MODEL_FALLBACK_URL="http://127.0.0.1:8100"
 ML_MODEL_TIMEOUT_MS=5000
 ```
 
-The backup URL is optional. With no backup, a failed Spark call moves directly
+Run `npm run ml:serve:local` on the Mac before starting the web app. The backup
+URL is optional. With no backup, a failed Spark call moves directly
 to the calendar. Leave `ML_STRICT` unset for a resilient demo; `ML_STRICT=1`
 intentionally disables the calendar fallback.
 
