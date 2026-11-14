@@ -27,6 +27,8 @@ def verify(artifact: Path, profiles: Path) -> None:
     assert (CLIMATE_HISTORY_START_YEAR, CLIMATE_HISTORY_END_YEAR, len(CLIMATE_HISTORY_YEARS)) == (2016, 2025, 10)
     predictor = CropFitPredictor(artifact, profiles)
     assert predictor.model.n_features_in_ == len(FEATURE_NAMES), "artifact and feature code disagree"
+    if predictor.metadata["model"].endswith("v0.6"):
+        assert predictor.metadata["selectedModel"] == "extraTrees"
     history = [climate(18.0 + offset) for offset in (-3, -2, -1, 0, 0, 1, 1, 2, 3, 5)]
     result = predictor.predict("tomato", 29.76, -95.37, 6.5, True, climate(20.0), history)
     assert result["plantingReliability"]["years"] == 10
@@ -112,6 +114,13 @@ def verify(artifact: Path, profiles: Path) -> None:
         assert uncertainty_report["gate"]["passed"]
         assert uncertainty_report["robustness"]["gate"]["passed"]
         assert uncertainty_report["robustness"]["summary"]["wins"] == uncertainty_report["robustness"]["summary"]["seeds"] == 5
+
+    estimator_validation = artifact.parents[1] / "evaluation/estimator-validation-v0.6.json"
+    if estimator_validation.exists():
+        estimator_report = json.loads(estimator_validation.read_text())
+        assert estimator_report["gate"]["passed"]
+        assert estimator_report["summary"]["lockedSeedWins"] == estimator_report["summary"]["lockedSeeds"] == 7
+        assert estimator_report["summary"]["finalMeanMaeImprovementPercent"] >= 30
 
     from .trained_api import PredictionRequest, predict as api_predict
 

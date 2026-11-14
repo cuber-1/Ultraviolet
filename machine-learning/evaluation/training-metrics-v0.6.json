@@ -1,0 +1,87 @@
+{
+  "model": "CropFit EcoCrop surrogate v0.6",
+  "selectedModel": "extraTrees",
+  "createdAt": "2026-11-14T23:38:26.154140+00:00",
+  "runId": "20261114T233826Z",
+  "device": "cuda",
+  "trainingSource": "FAO EcoCrop environmental requirement profiles via OpenCLIM",
+  "labelType": "mechanistic screening teacher; not observed farm yield",
+  "profiles": 1862,
+  "examples": 134064,
+  "heldOutProfiles": 373,
+  "boostingRounds": 500,
+  "metrics": {
+    "mae": 0.0894,
+    "r2": 0.9998,
+    "p90AbsoluteError": 0.2289
+  },
+  "validationMetrics": {
+    "mae": 0.0881,
+    "r2": 0.9998
+  },
+  "modelParameters": {
+    "estimator": "ExtraTreesRegressor",
+    "nEstimators": 120,
+    "minSamplesLeaf": 1,
+    "maxFeatures": 1.0
+  },
+  "uncertaintyCalibration": {
+    "source": "validation crop profiles only",
+    "method": "tree-disagreement-normalized split conformal",
+    "treeStdFloor": 0.01,
+    "normalizedErrorQuantiles": {
+      "p80": 0.011151,
+      "p90": 0.148639
+    },
+    "nominalCoverage": {
+      "p80": 0.8,
+      "p90": 0.9
+    },
+    "heldOutCoverage": {
+      "p80": 0.8006,
+      "p90": 0.901
+    },
+    "heldOutMeanRadius": {
+      "p80": 0.0051,
+      "p90": 0.0681
+    },
+    "gate": {
+      "passed": true,
+      "rule": "Held-out crop-profile coverage must be within 2 percentage points of both nominal levels."
+    }
+  },
+  "selectionEvidence": "Extra Trees improved MAE and p90 error on all seven locked confirmation/final crop-profile seeds while preserving calibrated coverage and API latency; see evaluation/estimator-validation-v0.6.json.",
+  "boostedCandidate": {
+    "mae": 0.6395,
+    "r2": 0.998,
+    "p90AbsoluteError": 1.7004,
+    "promoted": false,
+    "reason": "Held-out crop-profile MAE was worse than the selected Extra Trees estimator."
+  },
+  "featureNames": [
+    "temperature_c",
+    "annual_precipitation_mm",
+    "soil_ph",
+    "solar_mj_m2_day",
+    "irrigated",
+    "temp_opt_min",
+    "temp_opt_max",
+    "temp_abs_min",
+    "temp_abs_max",
+    "rain_opt_min",
+    "rain_opt_max",
+    "rain_abs_min",
+    "rain_abs_max",
+    "ph_opt_min",
+    "ph_opt_max",
+    "ph_abs_min",
+    "ph_abs_max",
+    "growing_days_min",
+    "growing_days_max",
+    "temperature_range_fit",
+    "water_range_fit",
+    "ph_range_fit",
+    "solar_range_fit"
+  ],
+  "seed": 20261114
+}

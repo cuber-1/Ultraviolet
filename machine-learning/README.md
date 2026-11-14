@@ -7,7 +7,7 @@ revenue, or a buy/sell recommendation.
 
 ## Run the trained model
 
-On macOS or Linux, install the released v0.5.1 artifact, EcoCrop profiles, and
+On macOS or Linux, install the released v0.6 artifact, EcoCrop profiles, and
 inference dependencies without access to the Spark:
 
 ```bash
@@ -82,6 +82,14 @@ learning-rate schedule, error distribution, and feature importance to
 `machine-learning/runs/<run-id>/`. A candidate is only promoted when it improves held-out
 crop-profile error.
 
+CropFit v0.6 uses 120 Extra Trees. Its promotion report compares the candidate
+with the previous 120-tree Random Forest on identical grouped splits, including
+locked confirmation/final seeds, conformal coverage, and API-sized latency:
+
+```bash
+npm run ml:evaluate:estimator
+```
+
 The trained API obtains NASA POWER monthly history for 2016–2025 unless the
 caller supplies a 12-month `climate` array and `climateHistory`. It evaluates
 each month across all ten years and returns a risk-adjusted planting month,
@@ -90,7 +98,7 @@ climate consistency, not observed yield accuracy.
 
 Model-error radii use tree-disagreement-normalized split conformal calibration
 on validation crop profiles. The committed uncertainty report tests nominal
-80% and 90% marginal coverage once on untouched crop profiles. The UI's
+80% and 90% marginal coverage on held-out crop profiles. The UI's
 screening confidence is the calibrated 80% coverage level, not a parcel-success
 probability or observed-yield confidence.
 

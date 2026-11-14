@@ -12,7 +12,7 @@ import joblib
 import matplotlib.pyplot as plt
 import numpy as np
 import xgboost as xgb
-from sklearn.ensemble import RandomForestRegressor
+from sklearn.ensemble import ExtraTreesRegressor
 from sklearn.metrics import mean_absolute_error, r2_score
 from sklearn.model_selection import GroupShuffleSplit
 
@@ -93,7 +93,7 @@ def save_run(run_dir: Path, metadata: dict, config: dict, history: dict, learnin
     ranked = sorted(importance.items(), key=lambda item: item[1])[-12:]
     figure, axis = plt.subplots(figsize=(8, 5)); axis.barh([item[0] for item in ranked], [item[1] for item in ranked], color="#6f9551"); axis.set(title="XGBoost candidate feature importance (gain)", xlabel="gain"); figure.tight_layout(); figure.savefig(run_dir / "feature-importance.png", dpi=180); plt.close(figure)
     forest_importance = sorted(zip(FEATURE_NAMES, model.feature_importances_, strict=True), key=lambda item: item[1])[-12:]
-    figure, axis = plt.subplots(figsize=(8, 5)); axis.barh([item[0] for item in forest_importance], [item[1] for item in forest_importance], color="#315d49"); axis.set(title="Selected Random Forest feature importance", xlabel="mean decrease in impurity"); figure.tight_layout(); figure.savefig(run_dir / "selected-feature-importance.png", dpi=180); plt.close(figure)
+    figure, axis = plt.subplots(figsize=(8, 5)); axis.barh([item[0] for item in forest_importance], [item[1] for item in forest_importance], color="#315d49"); axis.set(title="Selected Extra Trees feature importance", xlabel="mean decrease in impurity"); figure.tight_layout(); figure.savefig(run_dir / "selected-feature-importance.png", dpi=180); plt.close(figure)
 
 
 def train(raw: Path, artifact: Path, metadata_path: Path, runs: Path, samples_per_crop: int, seed: int, rounds: int):
@@ -106,7 +106,7 @@ def train(raw: Path, artifact: Path, metadata_path: Path, runs: Path, samples_pe
     inner_train, inner_validation = next(GroupShuffleSplit(n_splits=1, test_size=.15, random_state=seed + 1).split(x[train_validation_indices], y[train_validation_indices], inner_groups))
     train_indices = train_validation_indices[inner_train]
     validation_indices = train_validation_indices[inner_validation]
-    model = RandomForestRegressor(
+    model = ExtraTreesRegressor(
         n_estimators=120,
         min_samples_leaf=1,
         max_features=1.0,
@@ -135,8 +135,8 @@ def train(raw: Path, artifact: Path, metadata_path: Path, runs: Path, samples_pe
     created = datetime.now(timezone.utc)
     run_id = created.strftime("%Y%m%dT%H%M%SZ")
     metadata = {
-        "model": "CropFit EcoCrop surrogate v0.5.1",
-        "selectedModel": "randomForest",
+        "model": "CropFit EcoCrop surrogate v0.6",
+        "selectedModel": "extraTrees",
         "createdAt": created.isoformat(),
         "runId": run_id,
         "device": device,
@@ -156,6 +156,7 @@ def train(raw: Path, artifact: Path, metadata_path: Path, runs: Path, samples_pe
             "r2": round(float(r2_score(y[validation_indices], validation_predictions)), 4),
         },
         "modelParameters": {
+            "estimator": "ExtraTreesRegressor",
             "nEstimators": 120,
             "minSamplesLeaf": 1,
             "maxFeatures": 1.0,
@@ -179,16 +180,16 @@ def train(raw: Path, artifact: Path, metadata_path: Path, runs: Path, samples_pe
             },
             "gate": {
                 "passed": abs(held_out_p80_coverage - .8) <= .02 and abs(held_out_p90_coverage - .9) <= .02,
-                "rule": "Untouched crop-profile coverage must be within 2 percentage points of both nominal levels.",
+                "rule": "Held-out crop-profile coverage must be within 2 percentage points of both nominal levels.",
             },
         },
-        "selectionEvidence": "Range-relative agronomic features improved held-out MAE on all five seeds in the 20261110-20261114 robustness sweep; see evaluation/feature-validation-v0.5.json.",
+        "selectionEvidence": "Extra Trees improved MAE and p90 error on all seven locked confirmation/final crop-profile seeds while preserving calibrated coverage and API latency; see evaluation/estimator-validation-v0.6.json.",
         "boostedCandidate": {
             "mae": round(float(mean_absolute_error(y[test_indices], boosted_predictions)), 4),
             "r2": round(float(r2_score(y[test_indices], boosted_predictions)), 4),
             "p90AbsoluteError": round(float(np.quantile(boosted_residuals, .9)), 4),
             "promoted": False,
-            "reason": "Held-out crop-profile MAE was worse than the selected Random Forest.",
+            "reason": "Held-out crop-profile MAE was worse than the selected Extra Trees estimator.",
         },
         "featureNames": FEATURE_NAMES,
         "seed": seed,

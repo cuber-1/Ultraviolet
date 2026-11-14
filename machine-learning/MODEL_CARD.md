@@ -1,14 +1,28 @@
-# CropFit EcoCrop surrogate v0.5.1
+# CropFit EcoCrop surrogate v0.6
 
 - Trained: 2026-11-14
 - Source: FAO EcoCrop environmental requirement profiles via OpenCLIM
 - Usable crop profiles: 1,862
 - Generated training scenarios: 134,064
 - Evaluation: entire crop profiles held out (373 profiles)
-- Selected production estimator: Random Forest
-- MAE: 0.1519 suitability points
-- R²: 0.9996
-- 90th percentile absolute error: 0.4443 points
+- Selected production estimator: Extra Trees
+- MAE: 0.0894 suitability points
+- R²: 0.9998
+- 90th percentile absolute error: 0.2289 points
+
+Version 0.6 replaces the 120-tree Random Forest with a 120-tree Extra Trees
+estimator while preserving the same 23 inputs and Mac-compatible scikit-learn
+runtime. Across two confirmation and five final grouped crop-profile seeds, it
+won 7/7 gates. Final-seed mean MAE fell 43.2% and p90 error fell 47.6%; mean
+API-sized batch latency was 1.05× the Random Forest. On the production split,
+MAE fell from 0.1519 to 0.0894. See
+`evaluation/estimator-validation-v0.6.md`.
+
+The compressed artifact is 73 MB versus 43 MB for v0.5.1. On the development
+host, clean-load peak RSS was 754 MiB versus 531 MiB and full reliability
+prediction median latency was 5.30 ms versus 5.18 ms. Timings and RSS are
+machine-dependent; Apple Silicon installation and loopback inference remain CI
+requirements.
 
 Version 0.5 adds four crop-relative features: temperature, water, pH, and solar
 membership within each crop's absolute and optimum ranges. The 120-tree Random
@@ -18,21 +32,12 @@ feature design, it improved held-out MAE on all five robustness seeds from
 reproducible protocol and per-seed results are in
 `evaluation/feature-validation-v0.5.md`.
 
-Version 0.5.1 leaves the selected estimator and its score metrics unchanged. It
-replaces coarse disagreement bins with tree-disagreement-normalized split
-conformal error bands. Calibration uses only 224 validation crop profiles. On
-26,856 examples from 373 untouched crop profiles, the conservatively serialized
-nominal 80% and 90% bands covered 80.03% and 89.82%, while mean 90% radius fell
-from 0.308 to 0.125
-suitability points (59.6%). These are marginal EcoCrop-teacher fidelity bands,
-not per-species or observed-yield guarantees. See
-`evaluation/uncertainty-validation-v0.5.1.md`.
-
-With the method and acceptance rule frozen, five new grouped train/validation/
-test seeds all passed. Mean held-out coverage was 79.67% and 89.98%; every seed
-produced a narrower 90% radius than v0.5, with a mean reduction of 57.92%.
-This robustness sweep strengthens the marginal calibration claim without
-changing the limits above.
+Version 0.6 refits the v0.5.1 tree-disagreement-normalized split-conformal
+calibrator using only 224 validation crop profiles. On 26,856 held-out examples
+from 373 crop profiles, nominal 80% and 90% bands covered 80.06% and 90.10%; the
+mean 90% radius was 0.068 suitability points. Across the seven locked estimator
+validation seeds, mean coverage was 79.95% and 90.08%. These are marginal
+EcoCrop-teacher fidelity bands, not per-species or observed-yield guarantees.
 
 The CUDA XGBoost candidate completed 500 rounds with a cosine learning-rate
 schedule from 0.08 to 0.005. It was not promoted because held-out-profile MAE
@@ -143,7 +148,7 @@ tests used by the Mac installer and CI.
 ## Batched reliability inference
 
 API v0.5.7 evaluates the baseline and ten historical climate scenarios in one
-random-forest pass rather than invoking every tree once per scenario. The
+tree-ensemble pass rather than invoking every tree once per scenario. The
 committed benchmark requires exact nested output equality and measured a
 machine-dependent median reduction from 26.4 ms to 4.5 ms (**5.9x faster**) on
 the development host. See `evaluation/inference-benchmark-v1.md`.
