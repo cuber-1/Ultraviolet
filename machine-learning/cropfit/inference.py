@@ -28,7 +28,12 @@ class CropFitPredictor:
         self.profiles = load_profiles(profiles_path)
 
     def calibrated_error(self, tree_std: float) -> tuple[float, float]:
-        bins = self.metadata.get("uncertaintyCalibration", {}).get("bins", [])
+        calibration = self.metadata.get("uncertaintyCalibration", {})
+        quantiles = calibration.get("normalizedErrorQuantiles")
+        if quantiles:
+            scale = tree_std + float(calibration.get("treeStdFloor", 0.01))
+            return float(quantiles["p80"]) * scale, float(quantiles["p90"]) * scale
+        bins = calibration.get("bins", [])
         for item in bins:
             upper = item.get("upperTreeStd")
             if tree_std >= float(item["lowerTreeStd"]) and (upper is None or tree_std < float(upper)):
@@ -142,8 +147,9 @@ class CropFitPredictor:
                     "monthIndex": index + 1,
                     "score": round(score, 1),
                     "uncertainty": round(float(uncertainty[position]), 1),
-                    "expectedAbsoluteErrorP80": round(error_p80, 1),
-                    "expectedAbsoluteErrorP90": round(error_p90, 1),
+                    # Error radii round upward so serialization cannot weaken calibrated coverage.
+                    "expectedAbsoluteErrorP80": float(np.ceil(error_p80 * 1000) / 1000),
+                    "expectedAbsoluteErrorP90": float(np.ceil(error_p90 * 1000) / 1000),
                     "temperatureC": round(temperature, 1),
                     "precipitationMmDay": round(precipitation_mm_day, 2),
                     "solarMjM2Day": round(solar, 1),
@@ -196,7 +202,7 @@ class CropFitPredictor:
             "profile": profile.to_dict(),
             "location": {"latitude": latitude, "longitude": longitude},
             "score": best["score"],
-            "confidence": round(max(0.15, min(.99, 1.0 - float(best["expectedAbsoluteErrorP80"]) / 50.0)), 2),
+            "confidence": float(self.metadata.get("uncertaintyCalibration", {}).get("nominalCoverage", {}).get("p80", .8)),
             "expectedAbsoluteError": {"p80": best["expectedAbsoluteErrorP80"], "p90": best["expectedAbsoluteErrorP90"]},
             "bestPlantingMonth": best["month"],
             "bestReliablePlantingMonth": reliable_best["month"],

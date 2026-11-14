@@ -20,6 +20,15 @@ from .features import FEATURE_NAMES, feature_row, teacher_scores
 from .profiles import load_profiles
 
 
+TREE_STD_FLOOR = 0.01
+
+
+def conformal_quantile(values: np.ndarray, coverage: float) -> float:
+    """Finite-sample split-conformal quantile using the conservative higher rank."""
+    level = min(1.0, math.ceil((len(values) + 1) * coverage) / len(values))
+    return float(np.quantile(values, level, method="higher"))
+
+
 def generate_examples(profiles, samples_per_crop: int, seed: int):
     random = np.random.default_rng(seed)
     features, labels, groups = [], [], []
@@ -112,33 +121,21 @@ def train(raw: Path, artifact: Path, metadata_path: Path, runs: Path, samples_pe
     validation_tree_predictions = np.asarray([tree.predict(x[validation_indices]) for tree in model.estimators_])
     validation_tree_std = validation_tree_predictions.std(axis=0)
     validation_residuals = np.abs(validation_predictions - y[validation_indices])
-    uncertainty_bins = []
-    for lower, upper in [(0, .01), (.01, 2), (2, 5), (5, 10), (10, 15), (15, 20), (20, 30), (30, None)]:
-        mask = validation_tree_std >= lower
-        mask &= validation_tree_std < upper if upper is not None else np.ones_like(mask, dtype=bool)
-        bin_residuals = validation_residuals[mask]
-        if len(bin_residuals):
-            uncertainty_bins.append({
-                "lowerTreeStd": lower,
-                "upperTreeStd": upper,
-                "examples": int(len(bin_residuals)),
-                "p80AbsoluteError": round(float(np.quantile(bin_residuals, .8)), 4),
-                "p90AbsoluteError": round(float(np.quantile(bin_residuals, .9)), 4),
-            })
+    normalized_validation_errors = validation_residuals / (validation_tree_std + TREE_STD_FLOOR)
+    normalized_error_p80 = conformal_quantile(normalized_validation_errors, .8)
+    normalized_error_p90 = conformal_quantile(normalized_validation_errors, .9)
     residuals = np.abs(baseline_predictions - y[test_indices])
     boosted_residuals = np.abs(boosted_predictions - y[test_indices])
     test_tree_predictions = np.asarray([tree.predict(x[test_indices]) for tree in model.estimators_])
     test_tree_std = test_tree_predictions.std(axis=0)
-    test_p80 = np.empty_like(test_tree_std)
-    test_p90 = np.empty_like(test_tree_std)
-    for index, value in enumerate(test_tree_std):
-        match = next((item for item in uncertainty_bins if value >= item["lowerTreeStd"] and (item["upperTreeStd"] is None or value < item["upperTreeStd"])), None)
-        test_p80[index] = match["p80AbsoluteError"] if match else value
-        test_p90[index] = match["p90AbsoluteError"] if match else min(100.0, value * 1.5)
+    test_p80 = normalized_error_p80 * (test_tree_std + TREE_STD_FLOOR)
+    test_p90 = normalized_error_p90 * (test_tree_std + TREE_STD_FLOOR)
+    held_out_p80_coverage = float(np.mean(residuals <= test_p80))
+    held_out_p90_coverage = float(np.mean(residuals <= test_p90))
     created = datetime.now(timezone.utc)
     run_id = created.strftime("%Y%m%dT%H%M%SZ")
     metadata = {
-        "model": "CropFit EcoCrop surrogate v0.5",
+        "model": "CropFit EcoCrop surrogate v0.5.1",
         "selectedModel": "randomForest",
         "createdAt": created.isoformat(),
         "runId": run_id,
@@ -165,11 +162,24 @@ def train(raw: Path, artifact: Path, metadata_path: Path, runs: Path, samples_pe
         },
         "uncertaintyCalibration": {
             "source": "validation crop profiles only",
-            "method": "tree-disagreement bins",
-            "bins": uncertainty_bins,
+            "method": "tree-disagreement-normalized split conformal",
+            "treeStdFloor": TREE_STD_FLOOR,
+            "normalizedErrorQuantiles": {
+                "p80": round(normalized_error_p80, 6),
+                "p90": round(normalized_error_p90, 6),
+            },
+            "nominalCoverage": {"p80": .8, "p90": .9},
             "heldOutCoverage": {
-                "p80": round(float(np.mean(residuals <= test_p80)), 4),
-                "p90": round(float(np.mean(residuals <= test_p90)), 4),
+                "p80": round(held_out_p80_coverage, 4),
+                "p90": round(held_out_p90_coverage, 4),
+            },
+            "heldOutMeanRadius": {
+                "p80": round(float(np.mean(test_p80)), 4),
+                "p90": round(float(np.mean(test_p90)), 4),
+            },
+            "gate": {
+                "passed": abs(held_out_p80_coverage - .8) <= .02 and abs(held_out_p90_coverage - .9) <= .02,
+                "rule": "Untouched crop-profile coverage must be within 2 percentage points of both nominal levels.",
             },
         },
         "selectionEvidence": "Range-relative agronomic features improved held-out MAE on all five seeds in the 20261110-20261114 robustness sweep; see evaluation/feature-validation-v0.5.json.",

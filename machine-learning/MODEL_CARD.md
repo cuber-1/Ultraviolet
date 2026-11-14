@@ -1,4 +1,4 @@
-# CropFit EcoCrop surrogate v0.5
+# CropFit EcoCrop surrogate v0.5.1
 
 - Trained: 2026-11-14
 - Source: FAO EcoCrop environmental requirement profiles via OpenCLIM
@@ -18,9 +18,15 @@ feature design, it improved held-out MAE on all five robustness seeds from
 reproducible protocol and per-seed results are in
 `evaluation/feature-validation-v0.5.md`.
 
-Error bands are calibrated only on validation crop profiles, never the held-out
-test profiles. The nominal p80 and p90 bands conservatively covered 95.71% and
-97.72% of the held-out examples, respectively.
+Version 0.5.1 leaves the selected estimator and its score metrics unchanged. It
+replaces coarse disagreement bins with tree-disagreement-normalized split
+conformal error bands. Calibration uses only 224 validation crop profiles. On
+26,856 examples from 373 untouched crop profiles, the conservatively serialized
+nominal 80% and 90% bands covered 80.03% and 89.82%, while mean 90% radius fell
+from 0.308 to 0.125
+suitability points (59.6%). These are marginal EcoCrop-teacher fidelity bands,
+not per-species or observed-yield guarantees. See
+`evaluation/uncertainty-validation-v0.5.1.md`.
 
 The CUDA XGBoost candidate completed 500 rounds with a cosine learning-rate
 schedule from 0.08 to 0.005. It was not promoted because held-out-profile MAE

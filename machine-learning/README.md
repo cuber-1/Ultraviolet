@@ -7,7 +7,7 @@ revenue, or a buy/sell recommendation.
 
 ## Run the trained model
 
-On macOS or Linux, install the released v0.5 artifact, EcoCrop profiles, and
+On macOS or Linux, install the released v0.5.1 artifact, EcoCrop profiles, and
 inference dependencies without access to the Spark:
 
 ```bash
@@ -82,11 +82,24 @@ learning-rate schedule, error distribution, and feature importance to
 `machine-learning/runs/<run-id>/`. A candidate is only promoted when it improves held-out
 crop-profile error.
 
-The trained API obtains NASA POWER monthly history for 2015–2024 unless the
+The trained API obtains NASA POWER monthly history for 2016–2025 unless the
 caller supplies a 12-month `climate` array and `climateHistory`. It evaluates
 each month across all ten years and returns a risk-adjusted planting month,
 historical success rate, and p10/median/p90 suitability bands. These describe
 climate consistency, not observed yield accuracy.
+
+Model-error radii use tree-disagreement-normalized split conformal calibration
+on validation crop profiles. The committed uncertainty report tests nominal
+80% and 90% marginal coverage once on untouched crop profiles. The UI's
+screening confidence is the calibrated 80% coverage level, not a parcel-success
+probability or observed-yield confidence.
+
+```bash
+npm run ml:evaluate:uncertainty
+```
+
+This reproduces the untouched-profile comparison, its machine-readable report,
+and the presentation chart under `machine-learning/evaluation/`.
 
 For corn, soybeans, and wheat, the response may also include
 `observedYieldEvidence`: the nearest USDA reporting county within 100 km, its

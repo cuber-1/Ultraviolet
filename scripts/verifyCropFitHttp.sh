@@ -60,7 +60,10 @@ assert health["status"] == "ok" and health["requestLimits"]["historyYearsMax"] =
 assert health["climateHistory"] == {"source": "NASA POWER Agroclimatology", "startYear": 2016, "endYear": 2025, "years": 10}
 prediction = requests.post(f"{base}/predict", json=payload, timeout=30)
 prediction.raise_for_status()
-assert prediction.json()["observedYieldEvidence"]["county"] == "Fort Bend County"
+prediction_body = prediction.json()
+assert prediction_body["observedYieldEvidence"]["county"] == "Fort Bend County"
+assert prediction_body["confidence"] == .8
+assert prediction_body["expectedAbsoluteError"]["p80"] <= prediction_body["expectedAbsoluteError"]["p90"]
 representatives = {
     "basil": "Ocimum basilicum",
     "kale": "Brassica oleracea var. acephala",

@@ -31,6 +31,11 @@ def verify(artifact: Path, profiles: Path) -> None:
     result = predictor.predict("tomato", 29.76, -95.37, 6.5, True, climate(20.0), history)
     assert result["plantingReliability"]["years"] == 10
     assert "2016–2025" in result["disclaimer"]
+    calibration = predictor.metadata["uncertaintyCalibration"]
+    if calibration.get("normalizedErrorQuantiles"):
+        assert calibration["gate"]["passed"]
+        assert result["confidence"] == calibration["nominalCoverage"]["p80"] == .8
+        assert result["expectedAbsoluteError"]["p80"] <= result["expectedAbsoluteError"]["p90"]
     assert result["bestReliablePlantingMonth"] in MONTHS
     assert len(result["monthlyCurve"]) == 12
     for month in result["monthlyCurve"]:

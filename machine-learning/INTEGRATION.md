@@ -13,7 +13,7 @@
 > remain excluded in strict mode.
 > Optional: `ML_SOIL_PH` (default 6.5), `ML_IRRIGATED` (default true).
 
-For corn, soybean, and wheat, CropFit API v0.5.9 also returns optional
+For corn, soybean, and wheat, CropFit API v0.5.10 also returns optional
 `observedYieldEvidence` from the nearest USDA reporting county within 100 km.
 Atlas v2 includes 2010–2025 history plus a calibrated observed-yield percentile
 prior with 80% and 90% uncertainty intervals. It does not modify the underlying
@@ -56,7 +56,7 @@ results "Crop calendar · model offline". The UI and Deep Agent keep working.
 Failed health probes are not cached, so a recovered primary is redetected as
 CropFit on the next request rather than receiving the generic API payload.
 
-CropFit v0.5 (this folder) is the production model; the generic contract below is
+CropFit v0.5.1 (this folder) is the production model; the generic contract below is
 for any other model you want to plug in.
 
 ## `GET /health`
