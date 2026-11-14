@@ -5,6 +5,7 @@ import Wordmark from '../components/Wordmark';
 import SearchGlobe from '../components/SearchGlobe';
 import RuralExplorer from '../components/RuralExplorer';
 import InfraredSurface from '../components/InfraredSurface';
+import AgentCompanion from '../components/AgentCompanion';
 import { createPhotonWatch, fetchElevations, runAgentComparison, searchVexcel, type AgentComparison, type AgentProgress, type ElevationResponse, type PhotonWatchInput, type SearchResult } from '../services/vexcel';
 import { shadowVector, simulate, type AreaSelection, type Obstruction } from '../services/sunSimulation';
 import { geometryBounds, geometryRequiredRadius, insideMetricGeometry, metricPointToLonLat, roofWktToMetricGeometry } from '../services/roofGeometry';
@@ -177,9 +178,17 @@ function PhotonWatchDialog({ query, searchArea, onClose, onCreated }: { query: s
 function AgentLoadingScreen({ query, progress, onCancel }: { query: string; progress: AgentProgress[]; onCancel: () => void }) {
   const steps = (progress.length ? progress : [{ stage: 'planning', message: 'Starting rooftop comparison' } as AgentProgress]).slice(-4);
   const firstIndex = Math.max(0, progress.length - steps.length);
+  const current = steps.at(-1)!;
+  const companionMessage = current.stage.toLowerCase().includes('imag') ? 'Scanning the city…'
+    : current.stage.toLowerCase().includes('propert') ? 'Checking the records…'
+      : current.stage.toLowerCase().includes('geometr') ? 'Tracing each rooftop…'
+        : current.stage.toLowerCase().includes('sun') ? 'Following the sunlight…'
+          : current.stage.toLowerCase().includes('rank') || current.stage.toLowerCase().includes('compar') ? 'Weighing the evidence…'
+            : 'Working on it…';
   return <div className="agent-loading-screen" role="dialog" aria-modal="true" aria-labelledby="agent-loading-title">
     <button className="agent-loading-cancel" onClick={onCancel}>Cancel</button>
     <div className="agent-loading-orbit" aria-hidden="true"><span /><span /><span /></div>
+    <AgentCompanion message={companionMessage} detail={current.message} />
     <section className="agent-loading-content">
       <div className="agent-loading-kicker"><i /> DEEP AGENT · LIVE</div>
       <h2 id="agent-loading-title">Finding the right roof</h2>

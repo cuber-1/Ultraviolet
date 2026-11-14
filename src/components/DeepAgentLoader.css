@@ -11,7 +11,7 @@
   background: radial-gradient(ellipse at 50% 0%, #fff4ea 0%, var(--off-white) 55%);
   animation: fadeIn .3s ease both;
 }
-.agent-loader-cancel { position: absolute; z-index: 2; top: 24px; right: 24px; padding: 8px 12px; border: 1px solid var(--gray-200); border-radius: 999px; background: var(--white); color: var(--gray-600); font-size: 9px; letter-spacing: .12em; }
+.agent-loader-cancel { position: absolute; z-index: 4; top: 24px; right: 24px; padding: 8px 12px; border: 1px solid var(--gray-200); border-radius: 999px; background: var(--white); color: var(--gray-600); font-size: 9px; letter-spacing: .12em; }
 .agent-loader-cancel:hover { border-color: var(--earth); color: var(--earth); }
 
 .agent-loader-stage { position: relative; flex: none; width: min(460px, 100%, 46vh); margin: 0 auto 4px; }

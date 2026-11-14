@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import L, { type LayerGroup, type Map as LeafletMap } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { ArrowRight, Check, LoaderCircle, X } from 'lucide-react';
+import AgentCompanion from './AgentCompanion';
 import './MapStage.css';
 
 export type MapStageStage = { key: string; label: string };
@@ -110,6 +111,8 @@ export default function MapStage({ mode, focus, discovered, pins, title, subtitl
     {mode === 'loading' && <div className="ms-waves" aria-hidden="true">{waves.map((wave, index) => <div key={index} className="ms-wave-group" style={{ left: wave.x, top: wave.y, width: wave.size, height: wave.size }}>
       <i className="ms-glow" /><i className="ms-sweep" /><i className="ms-ring" /><i className="ms-ring r2" /><i className="ms-ring r3" /><i className="ms-core" />
     </div>)}</div>}
+
+    {mode === 'loading' && <div className="ms-companion"><AgentCompanion message={stages[activeIndex]?.label ? `${stages[activeIndex].label}…` : 'Working on it…'} detail={message} /></div>}
 
     <aside className="ms-panel">
       <span className="ms-kicker">{mode === 'loading' ? <><i /> Searching live</> : <><Check size={15} /> Search complete</>}</span>
