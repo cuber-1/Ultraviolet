@@ -6,6 +6,8 @@ irrigation enabled and soil pH 6.5:
 - `cropfit-growing-calendar.png` — monthly suitability heatmap
 - `cropfit-tomato-fingerprint.png` — tomato requirements and learned signals
 - `cropfit-portfolio-map.png` — sunlight demand versus model suitability
+- `cropfit-crop-classification-map.png` — temperature ranges, sunlight needs,
+  crop classes, and cycle lengths
 
 Regenerate them with the full ML environment:
 

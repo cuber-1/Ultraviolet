@@ -169,9 +169,87 @@ def portfolio_map():
     plt.close(fig)
 
 
+def crop_classification_map():
+    crops = [
+        ("Leafy greens", 7, 24, 4, 2, "Leafy & cool-season"),
+        ("Kale & brassicas", 5, 24, 5, 2, "Leafy & cool-season"),
+        ("Tomatoes", 16, 30, 8, 3, "Fruiting crops"),
+        ("Peppers", 18, 31, 8, 3, "Fruiting crops"),
+        ("Strawberries", 10, 26, 6, 3, "Fruiting crops"),
+        ("Cucumbers & squash", 18, 32, 7, 2, "Fruiting crops"),
+        ("Melons", 20, 34, 8, 3, "Fruiting crops"),
+        ("Beans", 16, 30, 6, 2, "Grains & legumes"),
+        ("Corn", 16, 32, 8, 4, "Grains & legumes"),
+        ("Soybeans", 18, 30, 7, 4, "Grains & legumes"),
+        ("Wheat", 3, 24, 6, 4, "Grains & legumes"),
+        ("Potatoes", 10, 24, 6, 4, "Roots & alliums"),
+        ("Onions", 10, 27, 6, 4, "Roots & alliums"),
+        ("Sunflowers", 16, 32, 7, 3, "Flowers & oilseeds"),
+    ]
+    colors = {
+        "Leafy & cool-season": GREEN,
+        "Fruiting crops": CORAL,
+        "Grains & legumes": YELLOW,
+        "Roots & alliums": BLUE,
+        "Flowers & oilseeds": "#c691e8",
+    }
+    markers = {
+        "Leafy & cool-season": "o", "Fruiting crops": "s", "Grains & legumes": "^",
+        "Roots & alliums": "D", "Flowers & oilseeds": "P",
+    }
+    fig = plt.figure(figsize=(16, 9), dpi=160)
+    header(fig, "CROP CLASSIFICATION MAP", "What growing conditions define each crop?",
+           "Temperature bands show tolerance; position shows the preferred climate; height shows required daily sunlight.")
+    ax = fig.add_axes([0.09, 0.23, 0.82, 0.54])
+    ax.axvspan(0, 14, color=BLUE, alpha=0.045)
+    ax.axvspan(14, 23, color=GREEN, alpha=0.045)
+    ax.axvspan(23, 36, color=CORAL, alpha=0.045)
+    ax.text(7, 8.62, "COOL-SEASON", color=BLUE, fontsize=9, fontweight="bold", ha="center")
+    ax.text(18.5, 8.62, "TEMPERATE", color=GREEN, fontsize=9, fontweight="bold", ha="center")
+    ax.text(29.5, 8.62, "HEAT-LOVING", color=CORAL, fontsize=9, fontweight="bold", ha="center")
+    label_offsets = {
+        "Leafy greens": (-0.2, -0.29), "Kale & brassicas": (-0.2, 0.25), "Tomatoes": (-0.25, 0.28),
+        "Peppers": (0.1, -0.34), "Strawberries": (-0.2, 0.32), "Cucumbers & squash": (0.1, -0.34),
+        "Melons": (0.15, 0.30), "Beans": (0.15, -0.31), "Corn": (-0.2, -0.34),
+        "Soybeans": (0.15, 0.28), "Wheat": (-0.2, 0.28), "Potatoes": (-0.2, -0.31),
+        "Onions": (0.15, 0.56), "Sunflowers": (0.1, -0.30),
+    }
+    for name, low, high, sun, months, category in crops:
+        midpoint = (low + high) / 2
+        ax.errorbar(midpoint, sun, xerr=[[midpoint - low], [high - midpoint]], fmt="none",
+                    ecolor=colors[category], elinewidth=3, alpha=0.38, capsize=0, zorder=1)
+        ax.scatter(midpoint, sun, s=130 + months * 70, marker=markers[category], color=colors[category],
+                   edgecolor=TEXT, linewidth=1.2, alpha=0.94, zorder=3)
+        dx, dy = label_offsets[name]
+        align = "right" if dx < 0 else "left"
+        ax.text(midpoint + dx, sun + dy, name, color=TEXT, fontsize=8.3, ha=align, va="center", zorder=4)
+    houston_temp = 22.8
+    ax.axvline(houston_temp, color=TEXT, linestyle=(0, (3, 5)), linewidth=1.2, alpha=0.7)
+    ax.text(houston_temp, 8.77, "HOUSTON · 22.8°C", color=TEXT, fontsize=8, ha="center", fontweight="bold")
+    ax.set_xlim(0, 36)
+    ax.set_ylim(3.7, 8.9)
+    ax.set_xlabel("Preferred temperature midpoint (°C)  ·  horizontal band = full tolerated range", fontsize=10, labelpad=13)
+    ax.set_ylabel("Required daily sunlight (hours)", fontsize=10, labelpad=13)
+    ax.set_xticks(range(0, 37, 5))
+    ax.set_yticks([4, 5, 6, 7, 8])
+    ax.grid(color=GRID, linewidth=0.8, alpha=0.65)
+    ax.spines[["top", "right"]].set_visible(False)
+    handles = [ax.scatter([], [], marker=markers[name], s=90, color=color, edgecolor=TEXT, linewidth=1, label=name)
+               for name, color in colors.items()]
+    legend = ax.legend(handles=handles, loc="lower center", bbox_to_anchor=(0.5, -0.22), ncol=5,
+                       frameon=False, fontsize=8, labelcolor=TEXT, handletextpad=0.5, columnspacing=1.8)
+    fig.text(0.09, 0.075, "HOW TO READ IT", color=GREEN, fontsize=9, fontweight="bold")
+    fig.text(0.185, 0.075, "Warm, high-sun crops cluster upper-right; greens and roots sit lower and cooler. Bubble size = crop-cycle length.",
+             color=TEXT, fontsize=9.5)
+    footer(fig)
+    fig.savefig(OUTPUT / "cropfit-crop-classification-map.png", facecolor=BG, bbox_inches="tight")
+    plt.close(fig)
+
+
 if __name__ == "__main__":
     setup()
     growing_calendar()
     tomato_fingerprint()
     portfolio_map()
-    print("Generated 3 CropFit presentation PNGs in", OUTPUT)
+    crop_classification_map()
+    print("Generated 4 CropFit presentation PNGs in", OUTPUT)
