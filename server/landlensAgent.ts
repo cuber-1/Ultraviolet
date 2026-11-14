@@ -46,13 +46,27 @@ export type SunlightEvidence = {
   geometry: GeometryEvidence;
 };
 
+export type CropFitEvidence = {
+  candidateId: string;
+  crop: string;
+  available: boolean;
+  score?: number;
+  confidence?: number;
+  bestPlantingMonth?: string;
+  suitableMonths?: string[];
+  limitingFactors?: Array<{ factor: string; score: number }>;
+  evidenceGrade?: string;
+  reason?: string;
+};
+
 export type LandLensAgentServices = {
   search: (query: string) => Promise<AgentCandidate[]>;
   geometry: (candidate: AgentCandidate) => Promise<GeometryEvidence>;
   simulate: (candidate: AgentCandidate, dates: string[], targetHours: number, targetAreaSqft: number) => Promise<SunlightEvidence>;
+  cropfit: (candidate: AgentCandidate, crop: string, soilPh: number, irrigated: boolean) => Promise<CropFitEvidence>;
 };
 
-export type AgentProgress = { stage: 'planning' | 'imagery' | 'property' | 'geometry' | 'sunlight' | 'ranking'; message: string };
+export type AgentProgress = { stage: 'planning' | 'imagery' | 'property' | 'geometry' | 'sunlight' | 'crop' | 'ranking'; message: string };
 
 const responseSchema = z.object({
   summary: z.string(),
@@ -102,6 +116,7 @@ export async function runLandLensAgent(input: {
   const candidates = new Map<string, AgentCandidate>();
   const simulations = new Map<string, SunlightEvidence>();
   const geometryResults = new Map<string, GeometryEvidence>();
+  const cropFitResults = new Map<string, CropFitEvidence>();
   let searchResults: AgentCandidate[] | null = null;
 
   const searchImagery = tool(async ({ query }: { query: string }) => {
@@ -177,6 +192,22 @@ export async function runLandLensAgent(input: {
     }),
   });
 
+  const evaluateCropFit = tool(async ({ candidateId, crop, soilPh, irrigated }: { candidateId: string; crop: string; soilPh: number; irrigated: boolean }) => {
+    progress({ stage: 'crop', message: `Testing ${crop} climate fit for ${candidateId}` });
+    const candidate = candidates.get(candidateId);
+    if (!candidate) return { candidateId, crop, available: false, reason: 'Run rooftop imagery search first.' };
+    const cacheKey = `${candidateId}:${crop.toLowerCase()}:${soilPh}:${irrigated}`;
+    const cached = cropFitResults.get(cacheKey);
+    if (cached) return cached;
+    const result = await services.cropfit(candidate, crop, soilPh, irrigated);
+    cropFitResults.set(cacheKey, result);
+    return result;
+  }, {
+    name: 'evaluate_crop_fit',
+    description: 'Run the local CropFit model for a named crop and candidate location. This is agroclimatic screening, not a yield or purchase forecast.',
+    schema: z.object({ candidateId: z.string(), crop: z.string().min(2), soilPh: z.number().min(2.5).max(10.5).default(6.5), irrigated: z.boolean().default(true) }),
+  });
+
   progress({ stage: 'planning', message: 'Planning the site comparison' });
   const siteResearcher = {
     name: 'site-researcher',
@@ -190,13 +221,19 @@ export async function runLandLensAgent(input: {
     systemPrompt: 'For every candidate ID provided, call resolve_roof_geometry and then simulate_rooftop_sunlight. Keep missing geometry visible as not assessed.',
     tools: [resolveGeometry, simulateSunlight],
   };
+  const cropAnalyst = {
+    name: 'crop-analyst',
+    description: 'Checks whether requested crops match candidate climate conditions and reports planting-window uncertainty.',
+    systemPrompt: 'When the user names a crop, call evaluate_crop_fit for every candidate. Keep the agroclimatic-screening label and never convert the score into yield, revenue, or purchase advice.',
+    tools: [evaluateCropFit],
+  };
 
   const agent = createDeepAgent({
     model: model.client,
-    tools: [searchImagery, lookupProperty, resolveGeometry, simulateSunlight],
-    subagents: [siteResearcher, solarAnalyst],
+    tools: [searchImagery, lookupProperty, resolveGeometry, simulateSunlight, evaluateCropFit],
+    subagents: [siteResearcher, solarAnalyst, cropAnalyst],
     responseFormat: toolStrategy(responseSchema),
-    systemPrompt: `You compare real urban rooftops for growing goals. Delegate candidate research to site-researcher and sunlight work to solar-analyst. Use the in-memory filesystem for working notes and a comparison plan. Rank only by sharedAreaSqft returned by the sunlight tool. A verified Matterport tour may break a near tie but can never outrank materially greater suitable area. Link evidence with the candidate URL. Never estimate missing geometry, listing status, or sunlight.`,
+    systemPrompt: `You compare real urban rooftops for growing goals. Delegate candidate research to site-researcher, sunlight work to solar-analyst, and named-crop screening to crop-analyst. Use the in-memory filesystem for working notes and a comparison plan. Rank only by sharedAreaSqft returned by the sunlight tool. CropFit can explain crop compatibility but cannot override measured usable area or be presented as yield, revenue, or purchase advice. A verified Matterport tour may break a near tie but can never outrank materially greater suitable area. Link evidence with the candidate URL. Never estimate missing geometry, listing status, sunlight, or crop fit.`,
   });
 
   let narrative: z.infer<typeof responseSchema> | null = null;
@@ -216,5 +253,6 @@ export async function runLandLensAgent(input: {
     narrative,
     candidates: [...candidates.values()],
     simulations: [...new Map([...simulations.values()].map((item) => [item.candidateId, item])).values()],
+    cropFits: [...new Map([...cropFitResults.values()].map((item) => [`${item.candidateId}:${item.crop}`, item])).values()],
   };
 }

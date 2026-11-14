@@ -4,3 +4,9 @@ dist/
 .DS_Store
 .env
 runtime/
+ml/.venv/
+ml/data/
+ml/artifacts/
+ml/runs/
+ml/__pycache__/
+ml/cropfit/__pycache__/

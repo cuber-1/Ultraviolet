@@ -103,6 +103,7 @@ export type AgentComparison = {
   targetAreaSqft: number;
   candidates: SearchResult[];
   simulations: SunlightEvidence[];
+  cropFits?: Array<{ candidateId: string; crop: string; available: boolean; score?: number; confidence?: number; bestPlantingMonth?: string; suitableMonths?: string[]; evidenceGrade?: string; reason?: string }>;
   narrative?: null | {
     summary: string;
     criteria: { location: string; targetAreaSqft: number; targetHours: number; dates: string[] };
@@ -123,7 +124,7 @@ export type ComparisonInput = {
   targetAreaSqft: number;
 };
 
-export type AgentProgress = { stage: 'planning' | 'imagery' | 'property' | 'geometry' | 'sunlight' | 'ranking'; message: string };
+export type AgentProgress = { stage: 'planning' | 'imagery' | 'property' | 'geometry' | 'sunlight' | 'crop' | 'ranking'; message: string };
 
 export type PhotonWatchInput = ComparisonInput & { platform: 'imessage' | 'sms' | 'telegram' | 'email' | 'whatsapp_business'; handle: string };
 

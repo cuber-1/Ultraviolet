@@ -694,3 +694,67 @@
   .rural-metrics { grid-template-columns: 1fr; }
   .rural-method { grid-template-columns: 1fr; gap: 18px; padding: 24px; }
 }
+
+/* CropFit uses the IFM dashboard's score-first density, but visualizes seasonality and uncertainty. */
+.cropfit-lab { margin-top: 24px; overflow: hidden; border: 1px solid #d9c8b8; border-radius: 8px; background: #13231d; color: #f4f7f1; box-shadow: 0 18px 44px rgba(24,45,36,.13); }
+.cropfit-lab>header { display: grid; grid-template-columns: minmax(260px,.75fr) minmax(560px,1.25fr); align-items: end; gap: 28px; padding: 24px 26px; border-bottom: 1px solid rgba(255,255,255,.1); background: linear-gradient(120deg,#10241d,#1c3429); }
+.cropfit-lab>header .mono { color: #b7dc75; font-size: 8px; letter-spacing: .14em; }
+.cropfit-lab>header h2 { margin: 7px 0 4px; color: #fff; font-size: 30px; letter-spacing: -.04em; }
+.cropfit-lab>header p { color: #9daf9f; font-size: 9px; }
+.cropfit-controls { display: grid; grid-template-columns: 1fr 1.25fr 78px auto; gap: 7px; align-items: end; }
+.cropfit-controls label { display: grid; gap: 5px; color: #9daf9f; font: 7px var(--font-mono); letter-spacing: .07em; text-transform: uppercase; }
+.cropfit-controls select,.cropfit-controls input[type=number] { width: 100%; height: 38px; padding: 0 9px; border: 1px solid rgba(255,255,255,.16); border-radius: 4px; outline: none; background: #fff; color: #1b2c25; font: 9px var(--font-sans); }
+.cropfit-controls .cropfit-check { display: flex; align-items: center; gap: 6px; height: 38px; padding: 0 10px; border: 1px solid rgba(183,220,117,.28); border-radius: 4px; color: #d9e9be; white-space: nowrap; }
+.cropfit-check svg { width: 13px; }
+.cropfit-state { display: flex; align-items: center; justify-content: center; gap: 9px; min-height: 280px; color: #b8c6bc; font-size: 10px; }
+.cropfit-state svg { width: 17px; }
+.cropfit-state.error { color: #ffb28a; }
+.cropfit-body { display: grid; grid-template-columns: 285px 1fr; min-height: 360px; }
+.cropfit-summary { padding: 22px; border-right: 1px solid rgba(255,255,255,.1); background: rgba(255,255,255,.025); }
+.cropfit-score { display: grid; grid-template-columns: 34px auto 1fr; align-items: end; gap: 7px; padding-bottom: 18px; border-bottom: 1px solid rgba(255,255,255,.1); }
+.cropfit-score svg { width: 28px; color: #b7dc75; }
+.cropfit-score strong { font-size: 58px; line-height: .75; letter-spacing: -.08em; }
+.cropfit-score span { padding-bottom: 3px; color: #94a399; font: 6px var(--font-mono); letter-spacing: .09em; }
+.cropfit-summary dl { display: grid; gap: 0; margin-top: 12px; }
+.cropfit-summary dl>div { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,.07); }
+.cropfit-summary dt { color: #83948a; font-size: 8px; }
+.cropfit-summary dd { margin: 0; color: #e8efe9; font-size: 9px; text-align: right; }
+.cropfit-summary dd em { font-size: 8px; }
+.cropfit-limit { margin-top: 17px; }
+.cropfit-limit>span { color: #b7dc75; font: 7px var(--font-mono); letter-spacing: .1em; }
+.cropfit-limit p { display: grid; grid-template-columns: 75px 1fr 24px; align-items: center; gap: 7px; margin-top: 9px; font-size: 7px; }
+.cropfit-limit p b { overflow: hidden; color: #aab7ae; font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }
+.cropfit-limit p i { height: 4px; overflow: hidden; border-radius: 99px; background: #30443a; }
+.cropfit-limit p i span { display: block; height: 100%; background: #e8874d; }
+.cropfit-limit p strong { color: #dce5df; text-align: right; }
+.cropfit-chart { min-width: 0; padding: 22px 24px 18px; }
+.cropfit-chart-title { display: flex; align-items: center; justify-content: space-between; color: #aebbb2; font-size: 8px; }
+.cropfit-chart-title span { display: flex; align-items: center; gap: 7px; color: #dfe8e2; font-size: 9px; }
+.cropfit-chart-title svg { width: 14px; color: #b7dc75; }
+.cropfit-chart-title small { color: #74877a; font-size: 7px; }
+.cropfit-bars { display: grid; grid-template-columns: repeat(12,minmax(28px,1fr)); gap: 8px; height: 228px; margin-top: 12px; padding-top: 14px; border-bottom: 1px solid rgba(255,255,255,.12); background: repeating-linear-gradient(to bottom,rgba(255,255,255,.045) 0,rgba(255,255,255,.045) 1px,transparent 1px,transparent 50px); }
+.cropfit-bars>div { display: grid; grid-template-rows: 1fr 16px 13px 13px; justify-items: center; min-width: 0; }
+.cropfit-bar-track { position: relative; width: min(32px,70%); height: 100%; }
+.cropfit-bar-track>i { position: absolute; right: 0; bottom: 0; left: 0; min-height: 2px; border-radius: 3px 3px 0 0; background: #698b62; transition: height .35s ease; }
+.cropfit-bars .best .cropfit-bar-track>i { background: #b7dc75; box-shadow: 0 0 18px rgba(183,220,117,.25); }
+.cropfit-bar-track>i>span { position: absolute; right: 45%; bottom: calc(100% - 8px); width: 1px; min-height: 3px; background: #f1b27e; }
+.cropfit-bars strong { color: #dfe8e2; font-size: 8px; }
+.cropfit-bars small { color: #84968a; font: 6px var(--font-mono); }
+.cropfit-bars em { color: #5f7668; font-size: 6px; font-style: normal; }
+.cropfit-bars .best strong,.cropfit-bars .best small { color: #d5f29c; }
+.cropfit-window { display: grid; grid-template-columns: auto 1fr; gap: 7px 14px; align-items: baseline; padding-top: 14px; }
+.cropfit-window span { color: #b7dc75; font: 7px var(--font-mono); letter-spacing: .1em; }
+.cropfit-window strong { color: #ecf2ed; font-size: 9px; }
+.cropfit-window p { grid-column: 1/-1; color: #778a7d; font-size: 7px; }
+
+@media (max-width: 1050px) {
+  .cropfit-lab>header { grid-template-columns: 1fr; }
+  .cropfit-body { grid-template-columns: 1fr; }
+  .cropfit-summary { border-right: 0; border-bottom: 1px solid rgba(255,255,255,.1); }
+}
+@media (max-width: 700px) {
+  .cropfit-controls { grid-template-columns: 1fr 1fr; }
+  .cropfit-lab>header { padding: 20px 16px; }
+  .cropfit-chart { overflow-x: auto; padding: 18px 14px; }
+  .cropfit-bars { min-width: 620px; }
+}

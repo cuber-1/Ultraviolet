@@ -22,6 +22,35 @@ a regional screening heuristic; it does not claim that a parcel is farmland or
 assess USDA soil capability, water rights, flood risk, ownership, price, or
 availability.
 
+### Run the complete CropFit demo
+
+The complete demo has two services: the Ultraviolet web/server process and the
+local CropFit inference API. Docker builds the model from the pinned EcoCrop
+pipeline, so no model file or external inference machine is required:
+
+```bash
+export VEXCEL_API_KEY="your-key"       # optional for the rural-only demo
+export NRP_API_KEY="your-agent-key"    # optional; enables Deep Agent
+docker compose up --build
+```
+
+Open `http://localhost:4173/agriculture/rural`. CropFit runs inside the
+`cropfit` container; only Ultraviolet is exposed publicly. The rural page shows
+the model's monthly crop-fit curve, planting window, uncertainty, and limiting
+signals. Named crops in urban Deep Agent requests invoke the same model.
+
+For development without Docker, run these in separate terminals:
+
+```bash
+npm run ml:serve
+npm run dev
+```
+
+GitHub Pages cannot host the full demo because it only serves static files.
+Deploy both containers to a Docker-capable host, or run them on a DGX Spark and
+expose port 4173 through an authenticated tunnel. Keep Vexcel and model-provider
+keys only in the server environment.
+
 ## Environment
 
 Set the Vexcel key only on the server:

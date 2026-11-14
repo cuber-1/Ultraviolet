@@ -4,11 +4,12 @@ import { resolve } from 'node:path';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { geometryBounds, geometryRequiredRadius, insideMetricGeometry, metricPointToLonLat, roofWktToMetricGeometry, type MetricRoofGeometry } from '../src/services/roofGeometry';
 import { sharedMeetingArea, simulate, type AreaSelection, type Obstruction } from '../src/services/sunSimulation';
-import { landLensAgentStatus, runLandLensAgent, type AgentCandidate, type GeometryEvidence, type SunlightEvidence } from './landlensAgent';
+import { landLensAgentStatus, runLandLensAgent, type AgentCandidate, type CropFitEvidence, type GeometryEvidence, type SunlightEvidence } from './landlensAgent';
 import { createPhotonConversation, photonStatus, sendPhotonMessage, type PhotonPlatform } from './photon';
 
 const API_ROOT = 'https://api.vexcelgroup.com/v2';
 const LAYERS = 'urban,urban-r,wide-area,urban-g';
+const CROPFIT_URL = process.env.CROPFIT_URL || 'http://127.0.0.1:8100';
 
 type JsonRecord = Record<string, unknown>;
 type RuralGoal = 'balanced' | 'sun' | 'low-irrigation';
@@ -422,6 +423,28 @@ async function simulateCandidate(key: string, candidate: AgentCandidate, dates: 
   };
 }
 
+async function cropFitCandidate(candidate: AgentCandidate, crop: string, soilPh: number, irrigated: boolean): Promise<CropFitEvidence> {
+  try {
+    const response = await fetch(`${CROPFIT_URL}/predict`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ crop, latitude: candidate.lat, longitude: candidate.lon, soilPh, irrigated }),
+      signal: AbortSignal.timeout(35_000),
+    });
+    const payload = await response.json() as JsonRecord;
+    if (!response.ok) throw new Error(String(payload.detail || 'CropFit unavailable'));
+    return {
+      candidateId: candidate.id, crop, available: true,
+      score: Number(payload.score), confidence: Number(payload.confidence),
+      bestPlantingMonth: String(payload.bestPlantingMonth),
+      suitableMonths: Array.isArray(payload.suitableMonths) ? payload.suitableMonths.map(String) : [],
+      limitingFactors: Array.isArray(payload.limitingFactors) ? payload.limitingFactors as Array<{ factor: string; score: number }> : [],
+      evidenceGrade: String(payload.evidenceGrade || 'agroclimatic-screening'),
+    };
+  } catch (error) {
+    return { candidateId: candidate.id, crop, available: false, reason: error instanceof Error ? error.message : 'CropFit unavailable.' };
+  }
+}
+
 export function vexcelApiPlugin(root: string) {
   const costar = costarIndex(root);
   const watchDirectory = resolve(root, 'runtime');
@@ -450,6 +473,7 @@ export function vexcelApiPlugin(root: string) {
             search: async () => candidates,
             geometry: async (candidate) => { if (!geometryCache.has(candidate.id)) geometryCache.set(candidate.id, resolveCandidateGeometry(key, candidate).catch(() => null)); const resolved = await geometryCache.get(candidate.id)!; return resolved?.evidence ?? unavailableGeometry(candidate, 'Roof or DSM/DTM geometry is unavailable.'); },
             simulate: async (candidate, dates, hours, area) => { if (!geometryCache.has(candidate.id)) geometryCache.set(candidate.id, resolveCandidateGeometry(key, candidate).catch(() => null)); return simulateCandidate(key, candidate, dates, hours, area, await geometryCache.get(candidate.id)!); },
+            cropfit: cropFitCandidate,
           }, () => {});
           const simulationById = new Map(output.simulations.map((item) => [item.candidateId, item]));
           for (const candidate of newOpenings) if (!simulationById.has(candidate.id)) simulationById.set(candidate.id, await simulateCandidate(key, candidate, watch.dates, watch.targetHours, watch.targetAreaSqft));
@@ -465,6 +489,18 @@ export function vexcelApiPlugin(root: string) {
     if (!req.url) return next();
     const url = new URL(req.url, 'http://localhost');
     try {
+      if (url.pathname === '/api/cropfit/status') {
+        const response = await fetch(`${CROPFIT_URL}/health`, { signal: AbortSignal.timeout(3_000) });
+        return json(res, response.status, await response.json());
+      }
+      if (url.pathname === '/api/cropfit/predict' && req.method === 'POST') {
+        const input = await body(req);
+        const response = await fetch(`${CROPFIT_URL}/predict`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(input), signal: AbortSignal.timeout(35_000),
+        });
+        const payload = await response.json();
+        return json(res, response.status, response.ok ? payload : { error: payload.detail || 'CropFit prediction failed.' });
+      }
       if (url.pathname === '/api/rural/compare' && req.method === 'POST') {
         const input = await body(req);
         const goal = ['balanced', 'sun', 'low-irrigation'].includes(String(input.goal)) ? String(input.goal) as RuralGoal : 'balanced';
@@ -569,7 +605,7 @@ export function vexcelApiPlugin(root: string) {
           return simulateCandidate(key, candidate, requestedDates, requestedHours, requestedArea, await geometryCache.get(candidate.id)!);
         };
         try {
-          const output = await runLandLensAgent({ goal, followUp: typeof input.followUp === 'string' ? input.followUp : undefined, location: locationPhrase(goal) || 'all available Vexcel coverage', dates, targetHours, targetAreaSqft }, { search, geometry, simulate: sunlight }, (event) => send({ type: 'progress', ...event }));
+          const output = await runLandLensAgent({ goal, followUp: typeof input.followUp === 'string' ? input.followUp : undefined, location: locationPhrase(goal) || 'all available Vexcel coverage', dates, targetHours, targetAreaSqft }, { search, geometry, simulate: sunlight, cropfit: cropFitCandidate }, (event) => send({ type: 'progress', ...event }));
           const simulatedIds = new Set(output.simulations.map((item) => item.candidateId));
           for (const candidate of output.candidates) if (!simulatedIds.has(candidate.id)) output.simulations.push(await sunlight(candidate, dates, targetHours, targetAreaSqft));
           const byId = new Map(output.candidates.map((candidate) => [candidate.id, candidate]));
