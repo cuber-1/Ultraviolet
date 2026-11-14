@@ -13,8 +13,8 @@ from .yield_atlas import load_atlas, nearest_evidence
 
 
 ROOT = Path(__file__).resolve().parents[1]
-YIELD_ATLAS = ROOT / "evaluation/yield-atlas-v1.json"
-app = FastAPI(title="Ultraviolet CropFit", version="0.5.3")
+YIELD_ATLAS = ROOT / "evaluation/yield-atlas-v2.json"
+app = FastAPI(title="Ultraviolet CropFit", version="0.5.4")
 
 
 class PredictionRequest(BaseModel):
@@ -62,6 +62,8 @@ def observed_evidence() -> dict:
         evidence["historicalYieldAtlas"] = {
             "available": True, "records": len(atlas["records"]), "crops": atlas["crops"],
             "years": atlas["years"], "validation": atlas["validation"],
+            "historyWindowComparison": atlas.get("historyWindowComparison"),
+            "uncertaintyValidation": atlas.get("uncertaintyValidation"),
         }
     return evidence
 

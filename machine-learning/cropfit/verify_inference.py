@@ -6,7 +6,7 @@ from pathlib import Path
 from .features import FEATURE_NAMES
 from .inference import MONTHS, CropFitPredictor
 from .profiles import resolve_profile
-from .yield_atlas import nearest_evidence
+from .yield_atlas import load_atlas, nearest_evidence
 
 
 def climate(temperature: float) -> list[dict]:
@@ -44,12 +44,19 @@ def verify(artifact: Path, profiles: Path) -> None:
     else:
         raise AssertionError("invalid second-year climate was accepted")
 
-    atlas = artifact.parents[1] / "evaluation/yield-atlas-v1.json"
+    atlas = artifact.parents[1] / "evaluation/yield-atlas-v2.json"
     if atlas.exists():
+        atlas_report = load_atlas(str(atlas.resolve()))
+        assert atlas_report["years"] == list(range(2010, 2026))
+        assert atlas_report["historyWindowComparison"]["gate"]["passed"]
+        assert atlas_report["uncertaintyValidation"]["gate"]["passed"]
         evidence = nearest_evidence("corn", 29.7604, -95.3698, atlas)
-        assert evidence and evidence["county"] == "Fort Bend County" and evidence["observations"] == 7
+        assert evidence and evidence["county"] == "Fort Bend County" and evidence["observations"] == 14
         assert evidence["latest"]["year"] == 2025
         assert [item["year"] for item in evidence["history"]][-3:] == [2023, 2024, 2025]
+        assert evidence["observedYieldPrior"]["interval80"][0] <= evidence["meanPercentile"] <= evidence["observedYieldPrior"]["interval80"][1]
+        assert evidence["observedYieldPrior"]["interval90"][0] <= evidence["observedYieldPrior"]["interval80"][0]
+        assert evidence["observedYieldPrior"]["interval90"][1] >= evidence["observedYieldPrior"]["interval80"][1]
         assert nearest_evidence("tomato", 29.7604, -95.3698, atlas) is None
 
     print(f"CropFit inference verified: {predictor.metadata['model']} ({len(FEATURE_NAMES)} features, 10-year reliability, county evidence)")

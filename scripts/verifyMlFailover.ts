@@ -28,6 +28,12 @@ const backup = await start(async (req, res) => {
       score: 81, bestPlantingMonth: 'MAR', suitableMonths: ['MAR', 'APR'], confidence: 0.7,
       growingDays: { min: 60, max: 90 }, limitingFactors: [{ factor: 'water', score: 75 }],
       monthlyCurve: [{ month: 'MAR', score: 81, uncertainty: 5 }],
+      observedYieldEvidence: {
+        county: 'Fort Bend County', state: 'TX', distanceKm: 46.7, years: [2024, 2025], observations: 2,
+        meanPercentile: .4, p10Percentile: .3, p90Percentile: .5, meanYieldBushelsPerAcre: 140,
+        observedYieldPrior: { expectedPercentile: .4, interval80: [.2, .6], interval90: [.1, .7], historyBucket: '2-3', calibrationExamples: 100 },
+        history: [{ year: 2024, yieldBushelsPerAcre: 140, percentile: .4 }], evidenceGrade: 'observed-county-prior', source: 'USDA', disclaimer: 'County prior.',
+      },
     });
   }
   send(res, 404, {});
@@ -55,7 +61,7 @@ try {
   process.env.ML_MODEL_TIMEOUT_MS = '1000';
   const backupResult = await predictCropSuitability(request);
   const health = await mlModelHealth();
-  if (backupResult.model.name !== 'CropFit backup' || backupResult.model.source !== 'ml' || health.role !== 'backup' || !receivedClimate) {
+  if (backupResult.model.name !== 'CropFit backup' || backupResult.model.source !== 'ml' || health.role !== 'backup' || !receivedClimate || backupResult.predictions[0]?.observedYieldEvidence?.observedYieldPrior?.interval90[1] !== .7) {
     throw new Error('Primary-to-backup failover did not select the backup model.');
   }
 

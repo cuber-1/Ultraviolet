@@ -78,8 +78,9 @@ climate consistency, not observed yield accuracy.
 
 For corn, soybeans, and wheat, the response may also include
 `observedYieldEvidence`: the nearest USDA reporting county within 100 km, its
-2018–2025 within-crop/year percentile range, and published yield history. This
-is displayed as historical context and never changes the suitability score.
+2010–2025 within-crop/year percentile history, and an observed county prior
+with calibrated 80% and 90% uncertainty intervals. This is displayed as
+separate observed evidence and never changes the EcoCrop suitability score.
 
 ## Next evidence gate
 
@@ -121,5 +122,7 @@ npm run ml:build:yield-atlas
 ```
 
 The builder uses the filtered USDA Quick Stats and Census county files from the
-national observed-validation download. It writes the compact atlas, a
-forward-year validation report, and a presentation PNG under `evaluation/`.
+national observed-validation download. It writes atlas v2, a forward-year
+validation report, and a presentation PNG under `evaluation/`. The report
+compares the 16-year and legacy 8-year histories on identical future rows and
+tests conformal intervals calibrated on 2011–2017 against 2018–2025 outcomes.

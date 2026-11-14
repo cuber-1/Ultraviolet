@@ -61,13 +61,16 @@ below the predeclared 0.30 threshold. Corn and 2019 were negative. See
 
 ## Historical county evidence
 
-CropFit also returns a separate USDA county-history record for corn, soybeans,
+CropFit also returns a separate USDA observed county prior for corn, soybeans,
 and wheat when a published county centroid is within 100 km. This evidence does
-not alter CropFit suitability or ranking. The atlas contains 4,878 county-crop
-records from 2018–2025.
+not alter CropFit suitability or ranking. Atlas v2 contains 5,562 county-crop
+records from 2010–2025 and adds crop/history-count conditional conformal
+uncertainty bands.
 
-Retrospective forward-year validation uses only earlier years for each test
-year. Pooled Spearman was 0.819 over 21,908 covered observations (grouped 95%
-interval 0.811–0.826); the newest 2025 test was 0.828 at 97.3% coverage. This measures
-the persistence of county yield ranks, not parcel yield forecasting. See
-`evaluation/yield-atlas-validation-v1.md`.
+On the same 21,908 2019–2025 county-year rows, extending the available history
+from 2018 back to 2010 improved pooled Spearman from 0.819 to 0.841 and reduced
+percentile MAE from 0.127 to 0.120. Coverage increased from 21,908 to 23,311
+rows. Uncertainty was calibrated on 2011–2017 only; across 26,589 later
+2018–2025 outcomes, nominal 80% and 90% intervals covered 83.5% and 92.3%.
+This measures persistence of county yield ranks, not parcel yield forecasting.
+See `evaluation/yield-atlas-validation-v2.md`.

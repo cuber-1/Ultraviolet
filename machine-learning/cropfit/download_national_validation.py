@@ -19,6 +19,7 @@ from .download_observed_validation import COUNTIES_URL, PARAMETERS, POWER_URL, d
 
 DATASETS_PAGE = "https://www.nass.usda.gov/datasets"
 YEARS = tuple(range(2018, 2026))
+ATLAS_YEARS = tuple(range(2010, 2026))
 LATITUDE_BANDS = ((24, 34), (34, 44), (44, 50))
 LONGITUDE_BANDS = ((-125, -115), (-115, -105), (-105, -95), (-95, -85), (-85, -75), (-75, -66))
 
@@ -32,8 +33,8 @@ def latest_crops_url(session: requests.Session) -> str:
     return urljoin(DATASETS_PAGE, matches[-1])
 
 
-def keep(row: dict[str, str]) -> bool:
-    if row["YEAR"] not in {str(year) for year in YEARS}:
+def keep(row: dict[str, str], years: tuple[int, ...] = YEARS) -> bool:
+    if row["YEAR"] not in {str(year) for year in years}:
         return False
     if row["AGG_LEVEL_DESC"] != "COUNTY" or row["STATISTICCAT_DESC"] != "YIELD" or row["FREQ_DESC"] != "ANNUAL":
         return False
@@ -47,7 +48,7 @@ def keep(row: dict[str, str]) -> bool:
     )
 
 
-def extract(source: Path, destination: Path) -> int:
+def extract(source: Path, destination: Path, years: tuple[int, ...] = YEARS) -> int:
     if destination.exists():
         with destination.open(newline="") as existing:
             return max(0, sum(1 for _ in existing) - 1)
@@ -56,7 +57,7 @@ def extract(source: Path, destination: Path) -> int:
         reader = csv.DictReader(raw, delimiter="\t")
         fields = ["COMMODITY_DESC", "STATE_FIPS_CODE", "STATE_ALPHA", "STATE_NAME", "COUNTY_CODE", "COUNTY_NAME", "YEAR", "VALUE", "CV_%"]
         for row in reader:
-            if keep(row):
+            if keep(row, years):
                 selected.append({field: row[field].replace("\x00", "") for field in fields})
     with destination.open("w", encoding="utf-8", newline="") as output:
         writer = csv.DictWriter(output, fieldnames=fields, delimiter="\t")
@@ -115,6 +116,11 @@ def main() -> None:
         bulk = args.output / Path(crops_url).name
         download(session, crops_url, bulk)
         rows = extract(bulk, filtered)
+    bulk = args.output / Path(crops_url).name
+    if not bulk.exists():
+        download(session, crops_url, bulk)
+    atlas_filtered = args.output / "quickstats-county-yield-2010-2025.tsv"
+    atlas_rows = extract(bulk, atlas_filtered, ATLAS_YEARS)
     tasks = []
     for year in YEARS:
         for parameter in PARAMETERS:
@@ -125,8 +131,14 @@ def main() -> None:
         futures = [executor.submit(fetch_power, task) for task in tasks]
         for future in as_completed(futures):
             future.result()
-    metadata_path.write_text(json.dumps({"quickStats": crops_url, "filteredRows": rows, "years": YEARS}, indent=2) + "\n")
-    print(json.dumps({"output": str(args.output), "filteredRows": rows, "powerTiles": len(tasks)}, indent=2))
+    metadata_path.write_text(json.dumps({
+        "quickStats": crops_url,
+        "filteredRows": rows,
+        "years": YEARS,
+        "atlasFilteredRows": atlas_rows,
+        "atlasYears": ATLAS_YEARS,
+    }, indent=2) + "\n")
+    print(json.dumps({"output": str(args.output), "filteredRows": rows, "atlasFilteredRows": atlas_rows, "powerTiles": len(tasks)}, indent=2))
 
 
 if __name__ == "__main__":

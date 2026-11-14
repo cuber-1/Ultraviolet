@@ -791,6 +791,8 @@
 .cropfit-yield>header em { color: #93a59a; font: normal 7px var(--font-mono); }
 .cropfit-yield svg { display: block; width: 100%; height: 154px; margin-top: 8px; overflow: visible; }
 .cropfit-yield svg text { fill: #75887c; font: 7px var(--font-mono); }
+.cropfit-yield .yield-prior-band { fill: rgba(241,178,126,.11); }
+.cropfit-yield .yield-prior-line { stroke: #f1b27e; stroke-width: 1.2; stroke-dasharray: 4 3; }
 .cropfit-yield .yield-midline { stroke: rgba(255,255,255,.15); stroke-dasharray: 3 3; }
 .cropfit-yield .yield-bar { fill: #537863; transition: opacity .2s; }
 .cropfit-yield .yield-bar:hover { opacity: .72; }
