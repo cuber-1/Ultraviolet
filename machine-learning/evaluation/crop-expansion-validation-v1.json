@@ -1,0 +1,263 @@
+{
+  "name": "USDA observed-prior crop expansion v1",
+  "historyYears": [
+    2010,
+    2011,
+    2012,
+    2013,
+    2014,
+    2015,
+    2016,
+    2017,
+    2018,
+    2019,
+    2020,
+    2021,
+    2022,
+    2023,
+    2024,
+    2025
+  ],
+  "testYears": [
+    2018,
+    2019,
+    2020,
+    2021,
+    2022,
+    2023,
+    2024,
+    2025
+  ],
+  "candidates": [
+    {
+      "crop": "beans (current excl chickpeas)",
+      "published": 110,
+      "observations": 81,
+      "coverage": 0.7364,
+      "spearman": 0.3184,
+      "bootstrap95": [
+        0.0036,
+        0.5446
+      ],
+      "maePercentile": 0.2328,
+      "perYear": [
+        {
+          "year": 2018,
+          "observations": 0,
+          "spearman": null
+        },
+        {
+          "year": 2019,
+          "observations": 0,
+          "spearman": null
+        },
+        {
+          "year": 2020,
+          "observations": 0,
+          "spearman": null
+        },
+        {
+          "year": 2021,
+          "observations": 20,
+          "spearman": 0.6034
+        },
+        {
+          "year": 2022,
+          "observations": 17,
+          "spearman": 0.6834
+        },
+        {
+          "year": 2023,
+          "observations": 19,
+          "spearman": 0.0026
+        },
+        {
+          "year": 2024,
+          "observations": 10,
+          "spearman": -0.4909
+        },
+        {
+          "year": 2025,
+          "observations": 15,
+          "spearman": 0.3536
+        }
+      ],
+      "passed": false
+    },
+    {
+      "crop": "beans (legacy incl chickpeas)",
+      "published": 59,
+      "observations": 57,
+      "coverage": 0.9661,
+      "spearman": 0.7787,
+      "bootstrap95": [
+        0.6647,
+        0.8472
+      ],
+      "maePercentile": 0.1589,
+      "perYear": [
+        {
+          "year": 2018,
+          "observations": 57,
+          "spearman": 0.7787
+        },
+        {
+          "year": 2019,
+          "observations": 0,
+          "spearman": null
+        },
+        {
+          "year": 2020,
+          "observations": 0,
+          "spearman": null
+        },
+        {
+          "year": 2021,
+          "observations": 0,
+          "spearman": null
+        },
+        {
+          "year": 2022,
+          "observations": 0,
+          "spearman": null
+        },
+        {
+          "year": 2023,
+          "observations": 0,
+          "spearman": null
+        },
+        {
+          "year": 2024,
+          "observations": 0,
+          "spearman": null
+        },
+        {
+          "year": 2025,
+          "observations": 0,
+          "spearman": null
+        }
+      ],
+      "passed": false
+    },
+    {
+      "crop": "potato",
+      "published": 4,
+      "observations": 4,
+      "coverage": 1.0,
+      "spearman": 0.4,
+      "bootstrap95": [
+        -1.0,
+        1.0
+      ],
+      "maePercentile": 0.2518,
+      "perYear": [
+        {
+          "year": 2018,
+          "observations": 4,
+          "spearman": 0.4
+        },
+        {
+          "year": 2019,
+          "observations": 0,
+          "spearman": null
+        },
+        {
+          "year": 2020,
+          "observations": 0,
+          "spearman": null
+        },
+        {
+          "year": 2021,
+          "observations": 0,
+          "spearman": null
+        },
+        {
+          "year": 2022,
+          "observations": 0,
+          "spearman": null
+        },
+        {
+          "year": 2023,
+          "observations": 0,
+          "spearman": null
+        },
+        {
+          "year": 2024,
+          "observations": 0,
+          "spearman": null
+        },
+        {
+          "year": 2025,
+          "observations": 0,
+          "spearman": null
+        }
+      ],
+      "passed": false
+    },
+    {
+      "crop": "sunflower",
+      "published": 142,
+      "observations": 135,
+      "coverage": 0.9507,
+      "spearman": 0.2724,
+      "bootstrap95": [
+        0.0285,
+        0.4578
+      ],
+      "maePercentile": 0.2415,
+      "perYear": [
+        {
+          "year": 2018,
+          "observations": 15,
+          "spearman": 0.1844
+        },
+        {
+          "year": 2019,
+          "observations": 0,
+          "spearman": null
+        },
+        {
+          "year": 2020,
+          "observations": 31,
+          "spearman": 0.0603
+        },
+        {
+          "year": 2021,
+          "observations": 27,
+          "spearman": 0.3077
+        },
+        {
+          "year": 2022,
+          "observations": 25,
+          "spearman": 0.4531
+        },
+        {
+          "year": 2023,
+          "observations": 17,
+          "spearman": 0.652
+        },
+        {
+          "year": 2024,
+          "observations": 10,
+          "spearman": 0.1879
+        },
+        {
+          "year": 2025,
+          "observations": 10,
+          "spearman": 0.0182
+        }
+      ],
+      "passed": false
+    }
+  ],
+  "acceptedCrops": [],
+  "gate": {
+    "rule": "Each crop needs >=100 forward observations, Spearman >=0.50, grouped-bootstrap lower bound >0.30, and >=50% published-row coverage."
+  },
+  "dataNotes": [
+    "USDA NASS changed the dry-edible-bean definition in 2019: the current category excludes chickpeas.",
+    "Legacy and current bean definitions are evaluated separately and are never joined as one time series."
+  ],
+  "definitionSource": "https://www.nass.usda.gov/Publications/Todays_Reports/reports/cropan20.pdf",
+  "interpretation": "Passing supports county-level regional ordering only, not parcel yield or purchase returns."
+}

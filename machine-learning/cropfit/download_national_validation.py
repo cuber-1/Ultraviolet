@@ -20,6 +20,12 @@ from .download_observed_validation import COUNTIES_URL, PARAMETERS, POWER_URL, d
 DATASETS_PAGE = "https://www.nass.usda.gov/datasets"
 YEARS = tuple(range(2018, 2026))
 ATLAS_YEARS = tuple(range(2010, 2026))
+ATLAS_CANDIDATES = {
+    ("BEANS", "DRY EDIBLE, INCL CHICKPEAS", "ALL UTILIZATION PRACTICES", "LB / ACRE"),
+    ("BEANS", "DRY EDIBLE, (EXCL CHICKPEAS)", "ALL UTILIZATION PRACTICES", "LB / ACRE"),
+    ("SUNFLOWER", "OIL TYPE", "ALL UTILIZATION PRACTICES", "LB / ACRE"),
+    ("POTATOES", "ALL CLASSES", "ALL UTILIZATION PRACTICES", "CWT / ACRE"),
+}
 LATITUDE_BANDS = ((24, 34), (34, 44), (44, 50))
 LONGITUDE_BANDS = ((-125, -115), (-115, -105), (-105, -95), (-95, -85), (-85, -75), (-75, -66))
 
@@ -33,7 +39,7 @@ def latest_crops_url(session: requests.Session) -> str:
     return urljoin(DATASETS_PAGE, matches[-1])
 
 
-def keep(row: dict[str, str], years: tuple[int, ...] = YEARS) -> bool:
+def keep(row: dict[str, str], years: tuple[int, ...] = YEARS, include_atlas_candidates: bool = False) -> bool:
     if row["YEAR"] not in {str(year) for year in years}:
         return False
     if row["AGG_LEVEL_DESC"] != "COUNTY" or row["STATISTICCAT_DESC"] != "YIELD" or row["FREQ_DESC"] != "ANNUAL":
@@ -41,23 +47,25 @@ def keep(row: dict[str, str], years: tuple[int, ...] = YEARS) -> bool:
     if row["PRODN_PRACTICE_DESC"] != "ALL PRODUCTION PRACTICES" or row["DOMAIN_DESC"] != "TOTAL":
         return False
     crop = row["COMMODITY_DESC"]
-    return (
+    standard = (
         crop == "CORN" and row["CLASS_DESC"] == "ALL CLASSES" and row["UTIL_PRACTICE_DESC"] == "GRAIN" and row["UNIT_DESC"] == "BU / ACRE"
         or crop == "SOYBEANS" and row["CLASS_DESC"] == "ALL CLASSES" and row["UTIL_PRACTICE_DESC"] == "ALL UTILIZATION PRACTICES" and row["UNIT_DESC"] == "BU / ACRE"
         or crop == "WHEAT" and row["CLASS_DESC"] == "WINTER" and row["UTIL_PRACTICE_DESC"] == "ALL UTILIZATION PRACTICES" and row["UNIT_DESC"] == "BU / ACRE"
     )
+    candidate = (crop, row["CLASS_DESC"], row["UTIL_PRACTICE_DESC"], row["UNIT_DESC"]) in ATLAS_CANDIDATES
+    return standard or include_atlas_candidates and candidate
 
 
-def extract(source: Path, destination: Path, years: tuple[int, ...] = YEARS) -> int:
+def extract(source: Path, destination: Path, years: tuple[int, ...] = YEARS, include_atlas_candidates: bool = False) -> int:
     if destination.exists():
         with destination.open(newline="") as existing:
             return max(0, sum(1 for _ in existing) - 1)
     selected = []
     with gzip.open(source, "rt", encoding="utf-8", errors="replace", newline="") as raw:
         reader = csv.DictReader(raw, delimiter="\t")
-        fields = ["COMMODITY_DESC", "STATE_FIPS_CODE", "STATE_ALPHA", "STATE_NAME", "COUNTY_CODE", "COUNTY_NAME", "YEAR", "VALUE", "CV_%"]
+        fields = ["COMMODITY_DESC", "CLASS_DESC", "UTIL_PRACTICE_DESC", "UNIT_DESC", "STATE_FIPS_CODE", "STATE_ALPHA", "STATE_NAME", "COUNTY_CODE", "COUNTY_NAME", "YEAR", "VALUE", "CV_%"]
         for row in reader:
-            if keep(row, years):
+            if keep(row, years, include_atlas_candidates):
                 selected.append({field: row[field].replace("\x00", "") for field in fields})
     with destination.open("w", encoding="utf-8", newline="") as output:
         writer = csv.DictWriter(output, fieldnames=fields, delimiter="\t")
@@ -121,6 +129,8 @@ def main() -> None:
         download(session, crops_url, bulk)
     atlas_filtered = args.output / "quickstats-county-yield-2010-2025.tsv"
     atlas_rows = extract(bulk, atlas_filtered, ATLAS_YEARS)
+    expanded_filtered = args.output / "quickstats-county-yield-2010-2025-expanded-v3.tsv"
+    expanded_rows = extract(bulk, expanded_filtered, ATLAS_YEARS, include_atlas_candidates=True)
     tasks = []
     for year in YEARS:
         for parameter in PARAMETERS:
@@ -137,8 +147,9 @@ def main() -> None:
         "years": YEARS,
         "atlasFilteredRows": atlas_rows,
         "atlasYears": ATLAS_YEARS,
+        "expandedAtlasFilteredRows": expanded_rows,
     }, indent=2) + "\n")
-    print(json.dumps({"output": str(args.output), "filteredRows": rows, "atlasFilteredRows": atlas_rows, "powerTiles": len(tasks)}, indent=2))
+    print(json.dumps({"output": str(args.output), "filteredRows": rows, "atlasFilteredRows": atlas_rows, "expandedAtlasFilteredRows": expanded_rows, "powerTiles": len(tasks)}, indent=2))
 
 
 if __name__ == "__main__":

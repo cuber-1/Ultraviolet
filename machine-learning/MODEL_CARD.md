@@ -89,3 +89,17 @@ for every supported crop. A 90% prior / 10% climate blend was rejected because
 soybean regressed despite a small positive pooled result. Urban rooftop ranking
 is unchanged because county farm yields are not roof-specific. See
 `evaluation/ranking-validation-v1.md`.
+
+## Crop-coverage expansion gate
+
+Three additional USDA county series were tested before expanding the observed
+prior: dry edible beans, potatoes, and oil-type sunflowers. None passed the
+predeclared forward-year gate (at least 100 predictions, Spearman at least
+0.50, county-bootstrap lower bound above 0.30, and at least 50% coverage).
+
+The current bean definition produced 81 forward predictions with Spearman
+0.3184 (95% interval 0.0036–0.5446). The apparently stronger legacy bean series
+was not joined to it: USDA NASS states that dry edible beans began excluding
+chickpeas in 2019. Potatoes had only four predictions, while sunflower reached
+135 but only 0.2724 Spearman. Production coverage therefore remains corn,
+soybeans, and wheat. See `evaluation/crop-expansion-validation-v1.md`.

@@ -137,3 +137,14 @@ This compares the observed county prior, CropFit agroclimatic score, and a
 candidate blend. Weights are selected on 2018–2020; 2021–2022 is confirmation;
 2023–2025 is the final untouched test. The current report rejects the fragile
 blend and validates using the observed prior for supported rural crops only.
+
+## Gate additional observed-prior crops
+
+```bash
+npm run ml:evaluate:crop-expansion
+```
+
+This evaluates candidate USDA county series as forward-year rank priors without
+changing production coverage. The committed v1 report rejects beans, potatoes,
+and sunflowers. It also keeps the pre-2019 bean definition separate because
+that series includes chickpeas, unlike the current USDA category.
