@@ -7,9 +7,10 @@ import DeepAgentLoader, { type LoaderStage } from '../components/DeepAgentLoader
 import { SiteWorkspace } from './AgriculturePage';
 import { runAgentComparison, type AgentComparison, type CropModelInfo, type CropPrediction, type SearchResult } from '../services/vexcel';
 import {
-  MONTH_LONG, MONTH_SHORT, applyModel, briefCrops, cropProfiles, fetchMonthlyClimate, fetchRegionPredictions, formatArea, loadBrief, planForLocation, ruralPlaces,
+  MONTH_LONG, MONTH_SHORT, applyModel, briefCrops, cropProfiles, fetchMonthlyClimate, fetchRegionPredictions, formatArea, loadBrief, planForLocation, ruralPlaces, saveBrief,
   urbanAgentCriteria, urbanAreaLabel, type Brief, type CropTiming, type LocationPlan,
 } from '../services/cropPlan';
+import { getRun, saveRun, savedTime } from '../services/runs';
 import './PlanPage.css';
 
 const TOP_N = 5;
@@ -46,9 +47,10 @@ const shortDate = (date: string) => new Date(`${date}T12:00:00`).toLocaleDateStr
 export default function PlanPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const routeState = location.state as { brief?: Brief; run?: number } | null;
+  const routeState = location.state as { brief?: Brief; run?: number; savedId?: string } | null;
   const brief = useMemo(() => routeState?.brief ?? loadBrief(), [routeState?.brief]);
-  const [outcome, setOutcome] = useState<Outcome | null>(() => (brief && !routeState?.run ? loadOutcome(brief) : null));
+  const [outcome, setOutcome] = useState<Outcome | null>(() => (brief && !routeState?.run && !routeState?.savedId ? loadOutcome(brief) : null));
+  const [savedAt, setSavedAt] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [stageIndex, setStageIndex] = useState(0);
@@ -65,7 +67,7 @@ export default function PlanPage() {
     const live = () => requestRef.current === controller && !controller.signal.aborted;
     const push = (message: string) => { if (live()) setLog((items) => [...items, message]); };
     const advance = (stages: LoaderStage[], key: string) => { if (live()) setStageIndex((current) => Math.max(current, stages.findIndex((stage) => stage.key === key))); };
-    setRunning(true); setError(null); setOutcome(null); setLog([]); setStageIndex(0); setStartedAt(Date.now()); setClimatePlan(null);
+    setRunning(true); setError(null); setOutcome(null); setSavedAt(null); setLog([]); setStageIndex(0); setStartedAt(Date.now()); setClimatePlan(null);
     try {
       if (input.scale === 'urban') {
         push(`Reading NASA monthly climate for ${urbanAreaLabel(input)}`);
@@ -85,7 +87,7 @@ export default function PlanPage() {
         const byId = new Map(comparison.candidates.map((candidate) => [candidate.id, candidate]));
         const top = comparison.simulations.flatMap((simulation) => byId.get(simulation.candidateId) ?? []).slice(0, TOP_N);
         const next: UrbanOutcome = { kind: 'urban', brief: input, plan, criteria, comparison, top };
-        setOutcome(next); saveOutcome(next);
+        setOutcome(next); saveOutcome(next); void saveRun(input, next).catch(() => undefined);
         navigate('/plan', { replace: true, state: { brief: input } });
       } else {
         const places = ruralPlaces(input);
@@ -106,17 +108,31 @@ export default function PlanPage() {
         await new Promise((resolve) => setTimeout(resolve, 600));
         if (!live()) return;
         const next: RuralOutcome = { kind: 'rural', brief: input, plans, errors: climate.errors, model: model?.model ?? null };
-        setOutcome(next); saveOutcome(next);
+        setOutcome(next); saveOutcome(next); void saveRun(input, next).catch(() => undefined);
         navigate('/plan', { replace: true, state: { brief: input } });
       }
     } catch (reason) {
-      if (live()) setError(reason instanceof Error ? reason.message : 'The search failed.');
+      const message = reason instanceof Error ? reason.message : 'The search failed.';
+      // A dropped stream (server restart, Wi-Fi blip) surfaces as a bare "network error" / "Failed to fetch".
+      if (live()) setError(/network|failed to fetch|load failed|terminated/i.test(message) ? 'The connection to the Ultraviolet server dropped mid-search (it may have restarted). Your answers are saved; try again.' : message);
     } finally {
       if (requestRef.current === controller && !controller.signal.aborted) setRunning(false);
     }
   }, [navigate]);
 
+  // Open a saved result instantly instead of running the search again.
   useEffect(() => {
+    const id = routeState?.savedId;
+    if (!id) return;
+    const controller = new AbortController();
+    getRun<Outcome>(id, controller.signal).then((record) => {
+      setOutcome(record.outcome); saveOutcome(record.outcome); saveBrief(record.outcome.brief); setSavedAt(record.savedAt); setError(null);
+    }).catch((reason) => { if (!controller.signal.aborted) setError(reason instanceof Error ? reason.message : 'Saved run not found.'); });
+    return () => controller.abort();
+  }, [routeState?.savedId]);
+
+  useEffect(() => {
+    if (routeState?.savedId) return;
     if (brief && !outcome) void run(brief);
     return () => requestRef.current?.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -165,6 +181,7 @@ export default function PlanPage() {
       <button className="plan-rerun" onClick={() => void run(brief)} disabled={running}><RotateCcw size={14} /> Run again</button>
     </header>
 
+    {savedAt && outcome && !running && <div className="saved-banner"><span className="mono">SAVED RESULT</span><span>From {savedTime(savedAt)}. Opened instantly; nothing was re-run.</span><button onClick={() => void run(brief)}><RotateCcw size={13} /> Run live now</button></div>}
     {error && <main className="plan-main"><div className="plan-error"><CircleAlert /><div><strong>{urban ? 'The Deep Agent could not finish' : 'Climate lookup failed'}</strong><p>{error}</p><div><button onClick={() => void run(brief)}>Try again</button><button onClick={() => navigate('/start')}>Edit answers</button></div></div></div></main>}
     {outcome?.kind === 'urban' && <UrbanResults outcome={outcome} onOpen={openSite} />}
     {outcome?.kind === 'rural' && <RuralResults outcome={outcome} />}

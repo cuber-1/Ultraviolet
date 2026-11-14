@@ -5,6 +5,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import { geometryBounds, geometryRequiredRadius, insideMetricGeometry, metricPointToLonLat, roofWktToMetricGeometry, type MetricRoofGeometry } from '../src/services/roofGeometry';
 import { sharedMeetingArea, simulate, type AreaSelection, type Obstruction } from '../src/services/sunSimulation';
 import { handleMonthlyClimate } from './monthlyClimate';
+import { handleRunsRoute } from './runStore';
 import { combinedRoofScore, handleMlRoute, mlModelStatus, predictCropSuitability, siteSuitability, type MlCrop } from './mlModel';
 import { landLensAgentStatus, roofSites, runLandLensAgent, type AgentCandidate, type GeometryEvidence, type SunlightEvidence } from './landlensAgent';
 import { createPhotonConversation, photonStatus, sendPhotonMessage, type PhotonPlatform } from './photon';
@@ -471,6 +472,7 @@ export function vexcelApiPlugin(root: string) {
     try {
       if (await handleMonthlyClimate(url.pathname, req, res)) return;
       if (await handleMlRoute(url.pathname, req, res)) return;
+      if (await handleRunsRoute(url.pathname, req, res, root)) return;
       if (url.pathname === '/api/rural/compare' && req.method === 'POST') {
         const input = await body(req);
         const goal = ['balanced', 'sun', 'low-irrigation'].includes(String(input.goal)) ? String(input.goal) as RuralGoal : 'balanced';

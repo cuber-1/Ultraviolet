@@ -90,3 +90,7 @@
   .review-list div { grid-template-columns: 1fr auto; }
   .review-list dt { grid-column: 1 / -1; }
 }
+
+.onboarding-final { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px; }
+.onboarding-saved { padding: 13px 18px; border: 1px solid var(--earth); border-radius: 999px; background: var(--white); color: var(--earth-dark); font-size: 13px; font-weight: 600; }
+.onboarding-saved:hover { background: var(--orange-soft); }
