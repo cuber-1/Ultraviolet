@@ -406,6 +406,7 @@
    and every metric overlay in the same square frame so neither is cropped or
    independently stretched by the workspace aspect ratio. */
 .site-workspace .roof-stage>img,
+.site-workspace .roof-stage>.roof-infrared-surface,
 .site-workspace .roof-stage>.roof-overlay {
   position: relative;
   inset: auto;
@@ -416,6 +417,13 @@
 }
 
 .site-workspace .roof-stage>img { object-fit: fill; }
+.site-workspace .roof-stage>.roof-infrared-surface {
+  display: block;
+  background: #f5f2eb;
+  opacity: 0;
+  transition: opacity .18s ease;
+}
+.site-workspace .roof-stage>.roof-infrared-surface.ready { opacity: 1; }
 .site-workspace .roof-stage>.roof-overlay { pointer-events: none; cursor: default; }
 .site-workspace .roof-stage>.roof-overlay.interactive { pointer-events: auto; cursor: crosshair; }
 
