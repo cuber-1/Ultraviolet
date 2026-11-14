@@ -79,7 +79,6 @@ export default function LandingPage() {
         <nav>
           <button onClick={() => navigate('/agriculture/urban')}>Urban</button>
           <button onClick={() => navigate('/agriculture/rural')}>Rural</button>
-          <button onClick={() => navigate('/listings')}>Listings</button>
         </nav>
       </header>
 
@@ -95,7 +94,7 @@ export default function LandingPage() {
         </p>
         <div className="landing-actions">
           <button className="primary" onClick={() => navigate('/agriculture/urban')}>Explore urban rooftops →</button>
-          <button className="secondary" onClick={() => navigate('/listings')}>Browse listings</button>
+          <button className="secondary" onClick={() => navigate('/agriculture/rural')}>Compare rural land</button>
         </div>
       </main>
     </div>

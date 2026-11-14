@@ -7,8 +7,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "test:simulation": "node --experimental-strip-types scripts/verifySunSimulation.ts",
-    "preview": "vite preview",
-    "sync:vexcel": "node scripts/syncVexcelImages.mjs"
+    "preview": "vite preview"
   },
   "dependencies": {
     "@langchain/anthropic": "^1.6.5",

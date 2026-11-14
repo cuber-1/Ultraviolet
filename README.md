@@ -126,19 +126,9 @@ acceptance comparison uses April 15 and October 15, 2026. “Try December
 instead” reruns the tools for April 15 and December 15, 2026 rather than
 relabeling the earlier result. Matterport is only a near-tie tiebreaker.
 
-## Add Vexcel imagery
+## Keep keys server-side
 
-Set the key and run the downloader in the same terminal:
-
-```bash
-cd ../Vexcel_API_Hackathon_Tutorial_PDF_PY
-export VEXCEL_API_KEY="paste-your-key-here"
-python3 vexcel_four_sites.py
-
-cd ../land-intelligence
-npm run sync:vexcel
-```
-
-The key must remain in the terminal environment. Never store it in React code,
+All imagery, property and sunlight data is fetched live through the server-side
+`/api/vexcel/*` routes; the app ships no bundled sample sites or images. The key must remain in the terminal environment. Never store it in React code,
 `VITE_*`, or a frontend `.env` file because Vite exposes those values to the
 browser.
