@@ -1,6 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { ArrowRight, Heart, X } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { Heart, X } from 'lucide-react';
 import RoofPreview3D from './RoofPreview3D';
 import { OptimalPointsChart } from './charts/DeepAgentCharts';
 import { getRun, listRuns } from '../services/runs';
@@ -11,6 +10,8 @@ import './Showcase.css';
 
 type DemoOutcome = { kind: 'urban'; brief: Brief; criteria: { dates: string[]; targetHours: number; targetAreaSqft: number }; comparison: AgentComparison; top: SearchResult[] };
 
+// Step 1 roof: a Houston rooftop with ~30 measured obstacles (vents, HVAC, parapets).
+const OBSTACLE_ROOF = { lat: 29.70201, lon: -95.42821 };
 // Drop the classification scatter image here to replace the live chart in step 2.
 const CLASSIFICATION_IMAGE = '/showcase/ml-classification.png';
 const fmt = (value: number) => new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(value);
@@ -22,14 +23,10 @@ const STEPS = [
 ];
 
 /** Scroll-driven tour of the app's features on the home page, built from a stored demo run. */
-export default function Showcase() {
-  const navigate = useNavigate();
-  const [active, setActive] = useState(0);
+export default function Showcase({ active }: { active: number }) {
   const [demo, setDemo] = useState<DemoOutcome | null>(null);
   const [imageOk, setImageOk] = useState(true);
-  const [seen3d, setSeen3d] = useState(false);
-  const steps = useRef<Array<HTMLElement | null>>([]);
-  const section = useRef<HTMLElement>(null);
+  const [obstacleRoof, setObstacleRoof] = useState<SearchResult | null>(null);
 
   // Demo data: the first stored urban demo run (Neon), else any saved urban run.
   useEffect(() => {
@@ -43,23 +40,17 @@ export default function Showcase() {
     return () => controller.abort();
   }, []);
 
-  // Which step is in the middle of the screen.
+  // The obstacle example roof, fetched live from Vexcel.
   useEffect(() => {
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach((entry) => { if (entry.isIntersecting) setActive(Number((entry.target as HTMLElement).dataset.step)); });
-    }, { rootMargin: '-45% 0px -45% 0px' });
-    steps.current.forEach((node) => node && observer.observe(node));
-    return () => observer.disconnect();
-  }, []);
-  // Only start the 3D roof once the section is near the viewport.
-  useEffect(() => {
-    const node = section.current; if (!node) return;
-    const observer = new IntersectionObserver(([entry]) => { if (entry.isIntersecting) setSeen3d(true); }, { rootMargin: '200px' });
-    observer.observe(node);
-    return () => observer.disconnect();
+    const controller = new AbortController();
+    fetch(`/api/vexcel/site?lat=${OBSTACLE_ROOF.lat}&lon=${OBSTACLE_ROOF.lon}`, { signal: controller.signal })
+      .then((response) => response.ok ? response.json() : null)
+      .then((site: SearchResult | null) => { if (site?.property?.roofWkt) setObstacleRoof(site); })
+      .catch(() => undefined);
+    return () => controller.abort();
   }, []);
 
-  const roof = demo?.top[0] ?? null;
+  const roof = obstacleRoof ?? demo?.top[0] ?? null;
   const crops = demo ? briefCrops(demo.brief).map(({ id, name }) => ({ id, name })) : [];
   const points = useMemo(() => {
     if (!demo) return [];
@@ -78,20 +69,10 @@ export default function Showcase() {
     return { id: result.id, image: result.imageryUrl, rank: index + 1, sun: simulation?.sharedAreaSqft ?? null, fit };
   });
 
-  return <section className="sc" ref={section} aria-label="What Ultraviolet does">
-    <div className="sc-steps">
-      {STEPS.map((step, index) => <article key={step.title} ref={(node) => { steps.current[index] = node; }} data-step={index} className={active === index ? 'sc-step active' : 'sc-step'}>
-        <span className="sc-kicker"><b>{String(index + 1).padStart(2, '0')}</b> {step.kicker}</span>
-        <h2>{step.title}</h2>
-        <p>{step.body}</p>
-      </article>)}
-      <div className="sc-end"><button onClick={() => navigate('/start')}>Get started <ArrowRight size={20} /></button></div>
-    </div>
-
-    <div className="sc-stage">
+  return <div className="scs" aria-label="What Ultraviolet does">
       <div className="sc-frame">
         <div className={`sc-layer${active === 0 ? ' on' : ''}`}>
-          {roof && seen3d ? <RoofPreview3D result={roof} date={demo!.criteria.dates[0]} targetHours={demo!.criteria.targetHours} targetAreaSqft={demo!.criteria.targetAreaSqft} controls={false} /> : <div className="sc-wait">Loading a demo roof…</div>}
+          {roof ? <RoofPreview3D result={roof} date={demo?.criteria.dates[0] ?? '2026-04-15'} targetHours={demo?.criteria.targetHours ?? 6} targetAreaSqft={roof.property?.roofAreaSqft ?? demo?.criteria.targetAreaSqft ?? 3_000} controls={false} /> : <div className="sc-wait">Loading a demo roof…</div>}
           <span className="sc-caption">Clean mode · measured obstacles in orange</span>
         </div>
         <div className={`sc-layer sc-chart${active === 1 ? ' on' : ''}`}>
@@ -106,7 +87,13 @@ export default function Showcase() {
           {cards.length > 0 && <div className="sc-deck-actions"><span className="pass"><X size={24} /></span><span className="save"><Heart size={24} /></span></div>}
         </div>
       </div>
+      <div className="scs-caption" aria-live="polite">
+        {STEPS.map((step, index) => <div key={step.title} className={active === index ? 'on' : ''}>
+          <span className="sc-kicker"><b>{String(index + 1).padStart(2, '0')}</b> {step.kicker}</span>
+          <h2>{step.title}</h2>
+          <p>{step.body}</p>
+        </div>)}
+      </div>
       <div className="sc-dots">{STEPS.map((step, index) => <i key={step.title} className={active === index ? 'on' : ''} />)}</div>
-    </div>
-  </section>;
+  </div>;
 }

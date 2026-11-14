@@ -50,3 +50,13 @@
   .sc-step { min-height: 70vh; }
 }
 @media (prefers-reduced-motion: reduce) { .sc-layer, .sc-step { transition: none; } .sc-deck.on .c1 { animation: none; } }
+
+/* Hero-side showcase: visual on top, caption underneath that fades between steps. */
+.scs { display: grid; gap: 18px; }
+.scs .sc-frame { height: min(56vh, 520px); }
+.scs-caption { position: relative; min-height: 150px; }
+.scs-caption > div { position: absolute; inset: 0; display: grid; align-content: start; gap: 8px; opacity: 0; transform: translateY(10px); transition: opacity .5s ease, transform .5s ease; pointer-events: none; }
+.scs-caption > div.on { opacity: 1; transform: none; pointer-events: auto; }
+.scs-caption h2 { font-size: clamp(26px, 2.4vw, 34px); font-weight: 700; line-height: 1.02; letter-spacing: -.045em; }
+.scs-caption p { max-width: 34rem; color: var(--gray-600); font-size: 16px; line-height: 1.5; }
+.scs .sc-dots { justify-content: flex-start; }

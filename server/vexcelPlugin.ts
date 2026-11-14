@@ -537,6 +537,17 @@ export function vexcelApiPlugin(root: string) {
         const hydrated = await searchCandidates(key, costar, { query, location: searchLocation, lat: 0, lon: 0, radiusM: 20_000 });
         return json(res, 200, { query, results: hydrated, source: costar.available ? 'Vexcel available embedding collections + property geometry + CoStar local property inventory' : 'Vexcel available embedding collections + property geometry' });
       }
+      // One roof by coordinates, shaped like a search result (used by the home page showcase).
+      if (url.pathname === '/api/vexcel/site' && req.method === 'GET') {
+        const lat = Number(url.searchParams.get('lat')); const lon = Number(url.searchParams.get('lon'));
+        if (!Number.isFinite(lat) || !Number.isFinite(lon)) return json(res, 400, { error: 'lat and lon are required.' });
+        const property = await propertyAt(key, lat, lon).catch(() => null);
+        return json(res, 200, {
+          id: `${lat.toFixed(6)},${lon.toFixed(6)}`, rank: 1, lat, lon, score: 0, matchReason: 'Selected roof',
+          property, costar: costar.available ? matchCostar(costar, lat, lon) : null,
+          imageryUrl: `/api/vexcel/imagery?lat=${lat}&lon=${lon}`,
+        });
+      }
       if (url.pathname === '/api/vexcel/elevation' && req.method === 'POST') {
         const input = await body(req);
         const points = Array.isArray(input.points) ? input.points.slice(0, 196).map((point) => ({ lat: Number((point as JsonRecord).lat), lon: Number((point as JsonRecord).lon) })) : [];

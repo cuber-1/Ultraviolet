@@ -60,3 +60,15 @@
 .landing-page { background: var(--off-white); }
 .landing-scroll { position: absolute; z-index: 7; left: 50%; bottom: 26px; padding: 10px 18px; border: 0; border-radius: 999px; background: rgba(255, 255, 255, .8); color: var(--gray-600); font-size: 15px; transform: translateX(-50%); animation: landingBob 2.4s ease-in-out infinite; }
 @keyframes landingBob { 50% { transform: translate(-50%, 6px); } }
+
+/* Pinned hero + right-side showcase driven by scroll. */
+.landing-track { position: relative; height: 320vh; }
+.landing-track > .landing { position: sticky; top: 0; }
+.landing-showcase { position: absolute; z-index: 6; top: 50%; right: var(--pad); width: min(44vw, 640px); transform: translateY(-44%); }
+@media (min-width: 1000px) { .landing-content { max-width: min(900px, 50vw); } .landing-content h1 { font-size: clamp(42px, min(5.4vw, 11dvh), 82px); } }
+@media (max-width: 999px) {
+  .landing-track { height: auto; }
+  .landing-track > .landing { position: relative; }
+  .landing-showcase { display: none; }
+  .landing-scroll { display: none; }
+}

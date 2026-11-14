@@ -72,9 +72,25 @@ function DataField() {
 
 export default function LandingPage() {
   const navigate = useNavigate();
+  // The hero stays pinned while the page scrolls through a tall track; scroll progress picks the showcase step.
+  const track = useRef<HTMLDivElement>(null);
+  const [step, setStep] = useState(0);
+  useEffect(() => {
+    const onScroll = () => {
+      const node = track.current; if (!node) return;
+      const total = node.offsetHeight - window.innerHeight;
+      const progress = total > 0 ? Math.min(1, Math.max(0, -node.getBoundingClientRect().top / total)) : 0;
+      setStep(Math.min(2, Math.floor(progress * 3)));
+    };
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll);
+    return () => { window.removeEventListener('scroll', onScroll); window.removeEventListener('resize', onScroll); };
+  }, []);
 
   return (
     <div className="landing-page">
+    <div className="landing-track" ref={track}>
     <div className="landing">
       <header className="landing-header">
         <Wordmark />
@@ -100,9 +116,10 @@ export default function LandingPage() {
           <button className="secondary" onClick={() => navigate('/agriculture/urban')}>Search rooftops directly</button>
         </div>
       </main>
-      <button className="landing-scroll" onClick={() => window.scrollTo({ top: window.innerHeight, behavior: 'smooth' })}>See how it works ↓</button>
+      <aside className="landing-showcase"><Showcase active={step} /></aside>
+      <button className="landing-scroll" onClick={() => window.scrollTo({ top: window.scrollY + window.innerHeight * .9, behavior: 'smooth' })}>{step < 2 ? 'Scroll to explore ↓' : 'Get started above ↑'}</button>
     </div>
-    <Showcase />
+    </div>
     </div>
   );
 }
