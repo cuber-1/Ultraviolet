@@ -9,10 +9,12 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
 from .inference import CropFitPredictor
+from .yield_atlas import load_atlas, nearest_evidence
 
 
 ROOT = Path(__file__).resolve().parents[1]
-app = FastAPI(title="Ultraviolet CropFit", version="0.5.0")
+YIELD_ATLAS = ROOT / "evaluation/yield-atlas-v1.json"
+app = FastAPI(title="Ultraviolet CropFit", version="0.5.1")
 
 
 class PredictionRequest(BaseModel):
@@ -45,7 +47,7 @@ def observed_evidence() -> dict:
     if not path.exists():
         return {"grade": "agroclimatic-screening", "observedOutcomeGate": None}
     report = json.loads(path.read_text())
-    return {
+    evidence = {
         "grade": "agroclimatic-screening",
         "observedOutcomeGate": {
             "passed": report["gate"]["passed"],
@@ -55,6 +57,13 @@ def observed_evidence() -> dict:
             "bootstrap95": (report.get("pooledWithinCropYear") or report["pooledWithinCrop"])["bootstrap95"],
         },
     }
+    if YIELD_ATLAS.exists():
+        atlas = load_atlas(str(YIELD_ATLAS.resolve()))
+        evidence["historicalYieldAtlas"] = {
+            "available": True, "records": len(atlas["records"]), "crops": atlas["crops"],
+            "years": atlas["years"], "validation": atlas["validation"],
+        }
+    return evidence
 
 
 @app.get("/health")
@@ -66,7 +75,9 @@ def health():
 @app.post("/predict")
 def predict(value: PredictionRequest):
     try:
-        return predictor().predict(value.crop, value.latitude, value.longitude, value.soilPh, value.irrigated, value.climate, value.climateHistory)
+        result = predictor().predict(value.crop, value.latitude, value.longitude, value.soilPh, value.irrigated, value.climate, value.climateHistory)
+        result["observedYieldEvidence"] = nearest_evidence(value.crop, value.latitude, value.longitude, YIELD_ATLAS) if YIELD_ATLAS.exists() else None
+        return result
     except KeyError as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
     except Exception as error:

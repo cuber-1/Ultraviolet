@@ -10,6 +10,10 @@
 > corn, soybeans→soybean, wheat, potatoes→potato); other crops use the calendar.
 > Optional: `ML_SOIL_PH` (default 6.5), `ML_IRRIGATED` (default true).
 
+For corn, soybean, and wheat, CropFit v0.5.1 also returns optional
+`observedYieldEvidence` from the nearest USDA reporting county within 100 km.
+It is historical context only and does not modify suitability or site ranking.
+
 The app supplies a 2015–2024 NASA POWER monthly history. CropFit scores every
 planting month in every year and returns p10/median/p90 suitability plus the
 fraction of years scoring at least 55. `bestReliablePlantingMonth` maximizes the

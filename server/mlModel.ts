@@ -34,6 +34,7 @@ export type MlPrediction = {
   profile?: { scientificName: string | null; tempOptC: [number, number] | null; rainOptMm: [number, number] | null; phOpt: [number, number] | null } | null;
   evidenceGrade?: string | null;
   plantingReliability?: { years: number; successRate: number; p10Score: number; medianScore: number; p90Score: number; threshold: number } | null;
+  observedYieldEvidence?: { county: string; state: string; distanceKm: number; years: number[]; observations: number; meanPercentile: number; p10Percentile: number; p90Percentile: number; meanYieldBushelsPerAcre: number; evidenceGrade: string; source: string; disclaimer: string } | null;
 };
 export type MlResponse = { model: { name: string; version: string | null; source: 'ml' | 'calendar-fallback'; error: string | null }; predictions: MlPrediction[] };
 
@@ -47,6 +48,7 @@ export const modelBaseUrl = () => explicitModelUrl() ?? 'http://127.0.0.1:8100';
 const modelTimeoutMs = () => Number(process.env.ML_MODEL_TIMEOUT_MS) || 15_000;
 const clamp01 = (value: number) => Math.max(0, Math.min(1, value));
 const isMonth = (value: unknown): value is number => Number.isInteger(value) && Number(value) >= 0 && Number(value) <= 11;
+const modelIdentity = (value: string) => { const match = value.match(/^(.*)\s+(v\d+(?:\.\d+)*)$/i); return match ? { name: match[1], version: match[2] } : { name: value }; };
 
 /** ML_STRICT=1: never substitute the crop calendar. Unsupported crops get no prediction; model failures surface as errors. */
 export const mlStrict = () => ['1', 'true', 'yes'].includes(String(process.env.ML_STRICT ?? '').toLowerCase());
@@ -66,9 +68,9 @@ export async function mlModelHealth() {
     const started = Date.now();
     try {
       const response = await fetch(`${url}/health`, { signal: AbortSignal.timeout(4_000) });
-      const payload = await response.json().catch(() => ({})) as { model?: string | { name?: string; version?: string }; metrics?: Record<string, number>; evidence?: unknown };
+      const payload = await response.json().catch(() => ({})) as { apiVersion?: string; model?: string | { name?: string; version?: string }; metrics?: Record<string, number>; evidence?: unknown };
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const model = typeof payload.model === 'string' ? { name: payload.model } : payload.model ?? null;
+      const model = typeof payload.model === 'string' ? modelIdentity(payload.model) : payload.model ?? null;
       return { configured: true, online: true, latencyMs: Date.now() - started, model, metrics: payload.metrics ?? null, evidence: payload.evidence ?? null, error: null, url, role: index === 0 ? 'primary' : 'backup', primaryError: index ? errors[0] : null };
     } catch (reason) {
       errors.push(`${index === 0 ? 'primary' : 'backup'}: ${reason instanceof Error ? reason.message : 'unreachable'}`);
@@ -163,6 +165,7 @@ type CropFitResult = {
   plantingReliability?: { years?: number; successRate?: number; p10Score?: number; medianScore?: number; p90Score?: number; threshold?: number } | null;
   monthlyCurve?: Array<{ month?: unknown; score?: number; uncertainty?: number; expectedAbsoluteErrorP80?: number; expectedAbsoluteErrorP90?: number; historicalP10?: number; historicalMedian?: number; historicalP90?: number; reliability?: number; components?: Record<string, number> }>;
   profile?: Record<string, unknown>; evidenceGrade?: string;
+  observedYieldEvidence?: { county?: unknown; state?: unknown; distanceKm?: number; years?: unknown[]; observations?: number; meanPercentile?: number; p10Percentile?: number; p90Percentile?: number; meanYieldBushelsPerAcre?: number; evidenceGrade?: unknown; source?: unknown; disclaimer?: unknown } | null;
 };
 const apiKindCache = new Map<string, { kind: 'contract' | 'cropfit'; expires: number }>();
 const cropFitCache = new Map<string, { expires: number; value: Promise<CropFitResult> }>();
@@ -215,9 +218,12 @@ function fromCropFit(site: MlSite, crop: MlCrop, preferredMonth: number, result:
   const score = plant !== null && curve.has(plant) ? curve.get(plant)! : Number(result.score ?? 0);
   const limiting = [...(result.limitingFactors ?? [])].filter((item) => Number.isFinite(item.score)).sort((a, b) => Number(a.score) - Number(b.score))[0];
   const reliability = result.plantingReliability;
+  const observed = result.observedYieldEvidence;
   const successRate = Number(reliability?.successRate);
-  const reliabilityNote = Number.isFinite(successRate) ? `${Math.round(successRate * 100)}% of ${Number(reliability?.years) || 0} historical years cleared the suitability threshold.` : null;
+  const reliableMonth = monthIndex(result.bestReliablePlantingMonth);
+  const reliabilityNote = Number.isFinite(successRate) ? `Risk-adjusted ${reliableMonth === null ? 'best' : MONTH_KEYS[reliableMonth].toUpperCase()} window cleared the threshold in ${Math.round(successRate * 100)}% of ${Number(reliability?.years) || 0} historical years.` : null;
   const limitingNote = limiting?.factor && Number(limiting.score) < 90 ? `Most limited by ${limiting.factor.replace(/_/g, ' ')} (${Math.round(Number(limiting.score))}/100).` : limiting?.factor ? 'No strong limiting factor.' : null;
+  const observedNote = observed && typeof observed.county === 'string' && Number.isFinite(observed.meanPercentile) ? `USDA history near ${observed.county}, ${String(observed.state)}: ${Math.round(Number(observed.meanPercentile) * 100)}th percentile across ${Number(observed.observations)} published years (${Math.round(Number(observed.distanceKm))} km away).` : null;
   return {
     siteId: site.id, cropId: crop.id,
     suitability: clamp01(score / 100),
@@ -225,7 +231,7 @@ function fromCropFit(site: MlSite, crop: MlCrop, preferredMonth: number, result:
     harvestMonth: plant === null ? null : (plant + Math.max(1, Math.round(days / 30)) - 1) % 12,
     confidence: Number.isFinite(result.confidence) ? clamp01(Number(result.confidence)) : null,
     expectedYield: null,
-    notes: [reliabilityNote, limitingNote].filter(Boolean).join(' ') || null,
+    notes: [reliabilityNote, observedNote, limitingNote].filter(Boolean).join(' ') || null,
     source: 'ml',
     curve: (result.monthlyCurve ?? []).flatMap((item) => {
       const month = monthIndex(item.month);
@@ -242,6 +248,9 @@ function fromCropFit(site: MlSite, crop: MlCrop, preferredMonth: number, result:
     } : null,
     evidenceGrade: typeof result.evidenceGrade === 'string' ? result.evidenceGrade : null,
     plantingReliability: reliability && [reliability.years, reliability.successRate, reliability.p10Score, reliability.medianScore, reliability.p90Score, reliability.threshold].every((value) => Number.isFinite(Number(value))) ? { years: Number(reliability.years), successRate: Number(reliability.successRate), p10Score: Number(reliability.p10Score), medianScore: Number(reliability.medianScore), p90Score: Number(reliability.p90Score), threshold: Number(reliability.threshold) } : null,
+    observedYieldEvidence: observed && typeof observed.county === 'string' && typeof observed.state === 'string' && Array.isArray(observed.years) && [observed.distanceKm, observed.observations, observed.meanPercentile, observed.p10Percentile, observed.p90Percentile, observed.meanYieldBushelsPerAcre].every((value) => Number.isFinite(Number(value))) ? {
+      county: observed.county, state: observed.state, distanceKm: Number(observed.distanceKm), years: observed.years.map(Number).filter(Number.isFinite), observations: Number(observed.observations), meanPercentile: Number(observed.meanPercentile), p10Percentile: Number(observed.p10Percentile), p90Percentile: Number(observed.p90Percentile), meanYieldBushelsPerAcre: Number(observed.meanYieldBushelsPerAcre), evidenceGrade: String(observed.evidenceGrade ?? 'historical-county-context'), source: String(observed.source ?? 'USDA NASS Quick Stats'), disclaimer: String(observed.disclaimer ?? 'Historical county context; not a parcel yield forecast.'),
+    } : null,
   };
 }
 const pair = (a: unknown, b: unknown): [number, number] | null => Number.isFinite(Number(a)) && Number.isFinite(Number(b)) ? [Number(a), Number(b)] : null;
@@ -266,8 +275,9 @@ async function predictViaCropFit(url: string, request: MlRequest): Promise<MlRes
   if (!predictions.some((item) => item.source === 'ml')) throw new Error(errors[0] ?? 'CropFit returned no predictions for these crops.');
   if (errors.length) console.warn(`CropFit failed for ${errors.length} pair(s): ${errors[0]}`);
   let name = 'CropFit';
-  try { const health = await (await fetch(`${url}/health`, { signal: AbortSignal.timeout(3_000) })).json() as { model?: string }; if (health.model) name = health.model; } catch { /* keep default */ }
-  return { model: { name, version: null, source: 'ml', error: errors.length ? `${errors.length} pair(s) used the crop calendar: ${errors[0]}` : null }, predictions };
+  let version: string | null = null;
+  try { const health = await (await fetch(`${url}/health`, { signal: AbortSignal.timeout(3_000) })).json() as { model?: string }; if (health.model) { const identity = modelIdentity(health.model); name = identity.name; version = identity.version ?? null; } } catch { /* keep default */ }
+  return { model: { name, version, source: 'ml', error: errors.length ? `${errors.length} pair(s) used the crop calendar: ${errors[0]}` : null }, predictions };
 }
 
 async function predictFromUrl(url: string, request: MlRequest): Promise<MlResponse> {

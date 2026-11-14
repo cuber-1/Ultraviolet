@@ -76,6 +76,11 @@ each month across all ten years and returns a risk-adjusted planting month,
 historical success rate, and p10/median/p90 suitability bands. These describe
 climate consistency, not observed yield accuracy.
 
+For corn, soybeans, and wheat, the response may also include
+`observedYieldEvidence`: the nearest USDA reporting county within 100 km, its
+2018–2022 within-crop/year percentile range, and published yield history. This
+is displayed as historical context and never changes the suitability score.
+
 ## Next evidence gate
 
 External observed-outcome validation is reproducible with:
@@ -108,3 +113,13 @@ npm run ml:evaluate:features
 This compares the v0.4 absolute-feature design with v0.5 range-relative
 agronomic features on five identical grouped crop-profile splits. The committed
 report explicitly measures EcoCrop-teacher fidelity, not observed yield.
+
+## Rebuild the county yield atlas
+
+```bash
+npm run ml:build:yield-atlas
+```
+
+The builder uses the filtered USDA Quick Stats and Census county files from the
+national observed-validation download. It writes the compact atlas, a
+forward-year validation report, and a presentation PNG under `evaluation/`.

@@ -6,6 +6,7 @@ from pathlib import Path
 from .features import FEATURE_NAMES
 from .inference import MONTHS, CropFitPredictor
 from .profiles import resolve_profile
+from .yield_atlas import nearest_evidence
 
 
 def climate(temperature: float) -> list[dict]:
@@ -43,7 +44,13 @@ def verify(artifact: Path, profiles: Path) -> None:
     else:
         raise AssertionError("invalid second-year climate was accepted")
 
-    print(f"CropFit inference verified: {predictor.metadata['model']} ({len(FEATURE_NAMES)} features, 10-year reliability)")
+    atlas = artifact.parents[1] / "evaluation/yield-atlas-v1.json"
+    if atlas.exists():
+        evidence = nearest_evidence("corn", 29.7604, -95.3698, atlas)
+        assert evidence and evidence["county"] == "Fort Bend County" and evidence["observations"] >= 2
+        assert nearest_evidence("tomato", 29.7604, -95.3698, atlas) is None
+
+    print(f"CropFit inference verified: {predictor.metadata['model']} ({len(FEATURE_NAMES)} features, 10-year reliability, county evidence)")
 
 
 def main() -> None:
