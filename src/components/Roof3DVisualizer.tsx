@@ -263,6 +263,45 @@ function RoofSurface({ geometry, ...props }: Omit<Parameters<typeof RoofPolygonS
   return <>{geometry.map((polygon, index) => <RoofPolygonSurface key={index} polygon={polygon} {...props} />)}</>;
 }
 
+// Faint compass on the ground around the building base. Scene axes: north = -Z, east = +X.
+function letterTexture(letter: string, color: string) {
+  const canvas = document.createElement('canvas');
+  canvas.width = 128; canvas.height = 128;
+  const context = canvas.getContext('2d')!;
+  context.fillStyle = color;
+  context.font = '700 92px system-ui, -apple-system, sans-serif';
+  context.textAlign = 'center'; context.textBaseline = 'middle';
+  context.fillText(letter, 64, 70);
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.anisotropy = 4;
+  return texture;
+}
+
+function CompassRose({ radius }: { radius: number }) {
+  const letters = useMemo(() => ([
+    { letter: 'N', x: 0, z: -1, color: '#e85d04', opacity: .85 },
+    { letter: 'E', x: 1, z: 0, color: '#6d625a', opacity: .5 },
+    { letter: 'S', x: 0, z: 1, color: '#6d625a', opacity: .5 },
+    { letter: 'W', x: -1, z: 0, color: '#6d625a', opacity: .5 },
+  ]).map((item) => ({ ...item, texture: letterTexture(item.letter, item.color) })), []);
+  useEffect(() => () => letters.forEach((item) => item.texture.dispose()), [letters]);
+  const size = radius * .17;
+  return <group position={[0, .04, 0]}>
+    <mesh rotation={[-Math.PI / 2, 0, 0]} renderOrder={1}>
+      <ringGeometry args={[radius * .985, radius, 128]} />
+      <meshBasicMaterial color="#8a7a6c" transparent opacity={.28} depthWrite={false} />
+    </mesh>
+    {[0, Math.PI / 2].map((angle) => <mesh key={angle} rotation={[-Math.PI / 2, 0, angle]} renderOrder={1}>
+      <planeGeometry args={[radius * .012, radius * 2]} />
+      <meshBasicMaterial color="#8a7a6c" transparent opacity={.14} depthWrite={false} />
+    </mesh>)}
+    {letters.map((item) => <mesh key={item.letter} position={[item.x * radius * 1.13, 0, item.z * radius * 1.13]} rotation={[-Math.PI / 2, 0, 0]} renderOrder={2}>
+      <planeGeometry args={[size, size]} />
+      <meshBasicMaterial map={item.texture} transparent opacity={item.opacity} depthWrite={false} />
+    </mesh>)}
+  </group>;
+}
+
 function Scene({ props, surfaceMode }: { props: Roof3DVisualizerProps; surfaceMode: SurfaceMode }) {
   const isInfrared = props.surfaceLabel.startsWith('CIR');
   const isNight = props.sun.altitude <= 0;
@@ -281,6 +320,7 @@ function Scene({ props, surfaceMode }: { props: Roof3DVisualizerProps; surfaceMo
   const outlineRings = props.roofGeometry.flatMap((polygon) => [polygon.outer, ...polygon.holes]);
 
   return <>
+    {surfaceMode === 'clean' && <CompassRose radius={span * .72} />}
     <ambientLight intensity={.78} color="#ffffff" />
     {props.sun.altitude > 0 && <directionalLight
       position={sunPosition.toArray()}

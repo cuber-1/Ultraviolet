@@ -61,7 +61,7 @@ export default function RoofPreview3D({ result, date, targetHours, targetAreaSqf
     return { x: bounds.x + bounds.width * (1 - scale) / 2, y: bounds.y + bounds.height * (1 - scale) / 2, width: bounds.width * scale, height: bounds.height * scale };
   }, [bounds, roofArea, targetAreaSqft]);
   // Gentle sun sweep from 7 AM to 7 PM, looping.
-  useEffect(() => { const timer = window.setInterval(() => setMinute((value) => value >= 19 * 60 ? 7 * 60 : value + 10), 450); return () => window.clearInterval(timer); }, []);
+  useEffect(() => { const timer = window.setInterval(() => setMinute((value) => value >= 19 * 60 ? 7 * 60 : value + 10), 220); return () => window.clearInterval(timer); }, []);
   const simulation = useMemo(() => simulate({ date, minute, timezoneOffsetHours: offsetForDate(date, siteTimeZone(result.lon)), lat: result.lat, lon: result.lon, roofAreaSqft: roofArea, roofWidthM: size, roofDepthM: size, roofGeometry, selection, obstructions: model?.obstructions ?? null, targetHours }), [date, minute, model, result.lat, result.lon, roofArea, roofGeometry, selection, size, targetHours]);
   const imageryUrl = `${result.imageryUrl}&radiusM=${radius}${infrared ? '&bands=irg' : ''}`;
 
@@ -69,8 +69,8 @@ export default function RoofPreview3D({ result, date, targetHours, targetAreaSqf
     {model ? <Suspense fallback={<div className="roof-preview-wait"><LoaderCircle className="spin" /> Building the roof</div>}>
       <Roof3DVisualizer key={infrared ? 'ir' : 'rgb'} roofGeometry={roofGeometry} roofBounds={bounds} roofWidthM={size} roofDepthM={size} buildingHeightM={model.buildingHeightM} obstructions={model.obstructions} cells={simulation.cells} imageryUrl={imageryUrl} surfaceLabel={infrared ? 'CIR / IRG' : 'RGB'} sun={simulation.sun} localTime={clock(minute)} autoRotate initialSurfaceMode="clean" minimal />
     </Suspense> : failed ? <img className="roof-preview-fallback" src={result.imageryUrl} alt="Aerial view of the roof" /> : <div className="roof-preview-wait"><LoaderCircle className="spin" /> Reading roof heights</div>}
+    {model && <div className="roof-preview-chip">☀ {clock(minute)} · {model.obstructions.length} {model.obstructions.length === 1 ? 'obstacle' : 'obstacles'}</div>}
     {model && controls && <>
-      <div className="roof-preview-chip">☀ {clock(minute)} · {model.obstructions.length} {model.obstructions.length === 1 ? 'obstacle' : 'obstacles'}</div>
       <button className={infrared ? 'roof-preview-ir active' : 'roof-preview-ir'} onClick={() => setInfrared((value) => !value)} aria-pressed={infrared}>{infrared ? 'Infrared on' : 'Infrared'}</button>
     </>}
   </div>;
