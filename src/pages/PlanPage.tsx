@@ -7,7 +7,7 @@ import DeepAgentLoader, { type LoaderStage } from '../components/DeepAgentLoader
 import { SiteWorkspace } from './AgriculturePage';
 import { runAgentComparison, type AgentComparison, type CropModelInfo, type CropPrediction, type SearchResult } from '../services/vexcel';
 import {
-  MONTH_LONG, MONTH_SHORT, applyModel, briefCrops, cropProfiles, fetchMonthlyClimate, fetchRegionPredictions, formatArea, loadBrief, planForLocation, ruralPlaces, saveBrief,
+  MONTH_LONG, MONTH_SHORT, applyModel, briefCrops, cropProfiles, fetchMlCapabilities, fetchMonthlyClimate, fetchRegionPredictions, formatArea, loadBrief, planForLocation, ruralPlaces, saveBrief,
   urbanAgentCriteria, urbanAreaLabel, type Brief, type CropTiming, type LocationPlan,
 } from '../services/cropPlan';
 import { getRun, saveRun, savedTime } from '../services/runs';
@@ -92,20 +92,16 @@ export default function PlanPage() {
       } else {
         const places = ruralPlaces(input);
         push(`Locating ${places.length} farming towns`);
-        const pending = fetchMonthlyClimate(places, controller.signal);
-        pending.catch(() => undefined);
-        await new Promise((resolve) => setTimeout(resolve, 700));
-        advance(RURAL_STAGES, 'climate'); push('Reading NASA POWER monthly climatology');
-        const climate = await pending;
+        const [climate, caps] = await Promise.all([fetchMonthlyClimate(places, controller.signal), fetchMlCapabilities(controller.signal)]);
         if (!live()) return;
+        advance(RURAL_STAGES, 'climate'); push('Reading NASA POWER monthly climatology');
         advance(RURAL_STAGES, 'calendar'); push(`Scoring ${briefCrops(input).length} crops in ${climate.results.length} towns with the crop model`);
-        const model = await fetchRegionPredictions(input, climate.results, controller.signal).catch(() => null);
+        // Strict live mode: a model failure is an error, never a quiet calendar substitute.
+        const model = await fetchRegionPredictions(input, climate.results, controller.signal).catch((reason) => { if (caps?.strict) throw reason; return null; });
         if (!live()) return;
         if (model) push(model.model.source === 'ml' ? `Crop model ${model.model.name} scored every town` : 'Crop model offline; using the climate crop calendar');
         const plans = climate.results.map((result) => applyModel(planForLocation(input, result), model?.predictions ?? [], input.preferredMonth)).sort((a, b) => b.score - a.score);
-        await new Promise((resolve) => setTimeout(resolve, 900));
         advance(RURAL_STAGES, 'ranking'); push('Ranking by crop fit');
-        await new Promise((resolve) => setTimeout(resolve, 600));
         if (!live()) return;
         const next: RuralOutcome = { kind: 'rural', brief: input, plans, errors: climate.errors, model: model?.model ?? null };
         setOutcome(next); saveOutcome(next); void saveRun(input, next).catch(() => undefined);
@@ -329,9 +325,10 @@ function RuralResults({ outcome }: { outcome: RuralOutcome }) {
 function ModelCard({ model }: { model: CropModelInfo }) {
   const live = model.source === 'ml';
   return <div className={live ? 'plan-card model-card live' : 'plan-card model-card'}>
-    <header><Sun size={15} /><strong>{live ? 'Crop model' : 'Crop calendar'}</strong><span className="mono">{live ? `${model.name}${model.version ? ` · ${model.version}` : ''}` : 'MODEL OFFLINE'}</span></header>
+    <header><Sun size={15} /><strong>{live ? (model.error ? 'Crop model error' : 'Crop model') : 'Crop calendar'}</strong><span className="mono">{live ? `${model.name}${model.version ? ` · ${model.version}` : ''}` : 'MODEL OFFLINE'}</span></header>
     <p>{live
       ? 'Suitability and planting windows come from the trained crop model, using each site’s climate and measured sunlight. Ranking blends 60% sunlit area with 40% crop suitability.'
       : 'The trained crop model is not connected, so suitability and timing come from NASA monthly temperatures and each crop’s growing range.'}</p>
+    {model.error && <p className="model-error">{model.error}</p>}
   </div>;
 }

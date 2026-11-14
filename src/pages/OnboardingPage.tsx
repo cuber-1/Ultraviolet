@@ -4,7 +4,7 @@ import { ArrowLeft, ArrowRight, Building2, Check, Sprout, Tractor, Warehouse } f
 import Wordmark from '../components/Wordmark';
 import {
   ACRE_SQFT, CROPS, MONTH_LONG, MONTH_SHORT, RURAL_REGIONS, URBAN_AREAS,
-  formatArea, loadBrief, saveBrief, scaleForArea, type Brief,
+  fetchMlCapabilities, formatArea, loadBrief, saveBrief, scaleForArea, type Brief, type MlCapabilities,
 } from '../services/cropPlan';
 import { briefKey, listRuns, savedTime, type SavedRunMeta } from '../services/runs';
 import './OnboardingPage.css';
@@ -31,8 +31,13 @@ export default function OnboardingPage() {
   const [preferredMonth, setPreferredMonth] = useState(saved?.preferredMonth ?? new Date().getMonth());
 
   const scale = scaleForArea(areaSqft);
+  const [caps, setCaps] = useState<MlCapabilities | null>(null);
+  useEffect(() => { const controller = new AbortController(); void fetchMlCapabilities(controller.signal).then(setCaps); return () => controller.abort(); }, []);
+  // Strict live mode: only crops the trained model scores natively can be chosen.
+  const modelCrop = (id: string) => !caps?.supportedCrops || caps.supportedCrops.includes(id);
+  const strictBlocked = (id: string) => Boolean(caps?.strict) && !modelCrop(id);
   const cropOptions = CROPS.filter((crop) => crop.scale === 'both' || crop.scale === scale);
-  const chosenCrops = crops.filter((id) => cropOptions.some((crop) => crop.id === id));
+  const chosenCrops = crops.filter((id) => cropOptions.some((crop) => crop.id === id) && !strictBlocked(id));
   const ready = [areaSqft > 0, chosenCrops.length > 0, scale === 'urban' ? Boolean(urbanArea) : ruralRegions.length > 0, true, true];
 
   const brief: Brief = { scale, areaSqft, crops: chosenCrops, urbanArea: scale === 'urban' ? urbanArea : undefined, ruralRegions: scale === 'rural' ? ruralRegions : undefined, preferredMonth };
@@ -83,10 +88,11 @@ export default function OnboardingPage() {
         <h1>What do you want to grow?</h1>
         <p className="onboarding-lede">Pick up to {MAX_CROPS}. Each crop sets the sunlight the roof needs and the months it can grow.</p>
         <div className="crop-grid">
-          {cropOptions.map((crop) => { const active = chosenCrops.includes(crop.id); return <button key={crop.id} className={active ? 'crop active' : 'crop'} onClick={() => toggleCrop(crop.id)} disabled={!active && chosenCrops.length >= MAX_CROPS}>
+          {cropOptions.map((crop) => { const active = chosenCrops.includes(crop.id); return <button key={crop.id} className={active ? 'crop active' : 'crop'} onClick={() => toggleCrop(crop.id)} disabled={strictBlocked(crop.id) || (!active && chosenCrops.length >= MAX_CROPS)} title={strictBlocked(crop.id) ? 'Not scored by the trained CropFit model' : undefined}>
             <span className="crop-check">{active && <Check size={12} />}</span>
             <strong>{crop.name}</strong><small>{crop.note}</small>
             <span className="crop-facts mono">{crop.sunHours}H SUN · {crop.tempMinC}–{crop.tempMaxC}°C · {crop.growMonths} MO</span>
+            {caps?.supportedCrops && <span className={modelCrop(crop.id) ? 'crop-model on' : 'crop-model'}>{modelCrop(crop.id) ? 'CropFit model' : caps.strict ? 'Not in CropFit' : 'Calendar estimate'}</span>}
           </button>; })}
         </div>
       </section>}

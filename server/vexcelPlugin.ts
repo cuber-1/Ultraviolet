@@ -610,11 +610,15 @@ export function vexcelApiPlugin(root: string) {
           const scored = new Set(output.predictions.map((item) => item.siteId));
           const unscored = output.candidates.filter((candidate) => !scored.has(candidate.id));
           if (cropProfiles.length && unscored.length) {
-            const response = await predictCropSuitability({ crops: cropProfiles, preferredMonth, targetAreaSqft, targetSunHours: targetHours, sites: await roofSites(unscored, new Map(output.simulations.map((item) => [item.candidateId, item]))) });
-            output.predictions.push(...response.predictions);
-            output.mlModel ??= response.model;
+            try {
+              const response = await predictCropSuitability({ crops: cropProfiles, preferredMonth, targetAreaSqft, targetSunHours: targetHours, sites: await roofSites(unscored, new Map(output.simulations.map((item) => [item.candidateId, item]))) });
+              output.predictions.push(...response.predictions);
+              output.mlModel ??= response.model;
+            } catch (reason) {
+              output.mlModel = { name: 'CropFit', version: null, source: 'ml', error: reason instanceof Error ? reason.message : 'Crop model failed.' };
+            }
           }
-          const suitability = siteSuitability({ model: output.mlModel!, predictions: output.predictions });
+          const suitability = siteSuitability({ model: output.mlModel ?? { name: 'none', version: null, source: 'ml', error: null }, predictions: output.predictions });
           const rankScore = (id: string, shared: number | null) => cropProfiles.length ? combinedRoofScore(shared, targetAreaSqft, suitability.get(id) ?? null) : null;
           output.simulations.sort((a, b) => {
             const scoreA = rankScore(a.candidateId, a.sharedAreaSqft);

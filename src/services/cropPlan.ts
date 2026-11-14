@@ -203,3 +203,8 @@ export function applyModel(plan: LocationPlan, predictions: CropPrediction[], pr
   const moveInMonth = started.length ? started.reduce((best, timing) => timing.waitMonths! < best.waitMonths! ? timing : best).startMonth : null;
   return { ...plan, timings, moveInMonth, score: Math.round(100 * suitability), reasons: [`Crop model suitability ${Math.round(100 * suitability)}%`, ...plan.reasons] };
 }
+
+export type MlCapabilities = { strict: boolean; configured: boolean; api: 'contract' | 'cropfit' | null; supportedCrops: string[] | null };
+export async function fetchMlCapabilities(signal?: AbortSignal): Promise<MlCapabilities | null> {
+  try { const response = await fetch('/api/ml/capabilities', { signal }); return response.ok ? await response.json() as MlCapabilities : null; } catch { return null; }
+}

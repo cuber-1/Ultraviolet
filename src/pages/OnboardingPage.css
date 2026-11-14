@@ -94,3 +94,6 @@
 .onboarding-final { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px; }
 .onboarding-saved { padding: 13px 18px; border: 1px solid var(--earth); border-radius: 999px; background: var(--white); color: var(--earth-dark); font-size: 13px; font-weight: 600; }
 .onboarding-saved:hover { background: var(--orange-soft); }
+
+.crop-model { justify-self: start; margin-top: 6px; padding: 3px 7px; border-radius: 999px; background: var(--gray-50); color: var(--gray-400); font: 8px var(--font-mono); letter-spacing: .08em; text-transform: uppercase; }
+.crop-model.on { background: #e3f3e8; color: #2e6d47; }

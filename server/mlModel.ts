@@ -37,9 +37,12 @@ const modelTimeoutMs = () => Number(process.env.ML_MODEL_TIMEOUT_MS) || 15_000;
 const clamp01 = (value: number) => Math.max(0, Math.min(1, value));
 const isMonth = (value: unknown): value is number => Number.isInteger(value) && Number(value) >= 0 && Number(value) <= 11;
 
+/** ML_STRICT=1: never substitute the crop calendar. Unsupported crops get no prediction; model failures surface as errors. */
+export const mlStrict = () => ['1', 'true', 'yes'].includes(String(process.env.ML_STRICT ?? '').toLowerCase());
+
 export function mlModelStatus() {
   const url = modelUrl();
-  return { configured: Boolean(url), url, fallback: 'calendar' };
+  return { configured: Boolean(url), url, fallback: mlStrict() ? 'none' : 'calendar', strict: mlStrict() };
 }
 
 /** Ping the model's /health endpoint and time it. */
@@ -123,6 +126,13 @@ const CROPFIT_NAMES: Record<string, string> = {
   greens: 'lettuce', tomatoes: 'tomato', peppers: 'pepper', strawberries: 'strawberry', cucumbers: 'cucumber',
   corn: 'corn', soybeans: 'soybean', wheat: 'wheat', potatoes: 'potato', microgreens: 'lettuce',
 };
+/** Crops the model scores natively (microgreens borrows lettuce, so it is excluded in strict mode). */
+export const cropFitCropIds = () => Object.keys(CROPFIT_NAMES).filter((id) => !(mlStrict() && id === 'microgreens'));
+
+export async function mlCapabilities() {
+  const url = modelUrl();
+  return { strict: mlStrict(), configured: Boolean(url), api: url ? await modelApiKind(url) : null, supportedCrops: url && await modelApiKind(url) === 'cropfit' ? cropFitCropIds() : null };
+}
 const MONTH_KEYS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
 const monthIndex = (value: unknown) => {
   if (Number.isInteger(value)) { const n = Number(value); return n >= 1 && n <= 12 ? n - 1 : n >= 0 && n <= 11 ? n : null; }
@@ -191,16 +201,21 @@ function fromCropFit(site: MlSite, crop: MlCrop, preferredMonth: number, result:
 }
 
 async function predictViaCropFit(url: string, request: MlRequest): Promise<MlResponse> {
-  const pairs = request.sites.flatMap((site) => request.crops.map((crop) => ({ site, crop, name: CROPFIT_NAMES[crop.id] })));
+  const strict = mlStrict();
+  const pairs = request.sites.flatMap((site) => request.crops.map((crop) => ({ site, crop, name: strict && crop.id === 'microgreens' ? undefined : CROPFIT_NAMES[crop.id] })));
   const errors: string[] = [];
   const predictions: MlPrediction[] = [];
   for (let i = 0; i < pairs.length; i += 6) {
     const batch = await Promise.all(pairs.slice(i, i + 6).map(async ({ site, crop, name }) => {
-      if (!name) return calendarPrediction(site, crop, request.preferredMonth);
+      if (!name) return strict ? null : calendarPrediction(site, crop, request.preferredMonth);
       try { return fromCropFit(site, crop, request.preferredMonth, await cropFitCall(url, name, site.lat, site.lon)); }
-      catch (reason) { errors.push(reason instanceof Error ? reason.message : 'CropFit failed'); return calendarPrediction(site, crop, request.preferredMonth); }
+      catch (reason) {
+        const message = reason instanceof Error ? reason.message : 'CropFit failed';
+        if (strict) throw new Error(`CropFit failed for ${crop.name}: ${message}`);
+        errors.push(message); return calendarPrediction(site, crop, request.preferredMonth);
+      }
     }));
-    predictions.push(...batch);
+    predictions.push(...batch.filter((item): item is MlPrediction => item !== null));
   }
   if (!predictions.some((item) => item.source === 'ml')) throw new Error(errors[0] ?? 'CropFit returned no predictions for these crops.');
   if (errors.length) console.warn(`CropFit failed for ${errors.length} pair(s): ${errors[0]}`);
@@ -212,6 +227,7 @@ async function predictViaCropFit(url: string, request: MlRequest): Promise<MlRes
 /** Ask the trained model; fill any gaps (or everything, on failure) from the crop calendar. */
 export async function predictCropSuitability(request: MlRequest): Promise<MlResponse> {
   const url = modelUrl();
+  if (mlStrict() && !url) throw new Error('Strict live mode: ML_MODEL_URL is not set.');
   if (!url || !request.sites.length || !request.crops.length) return calendarResponse(request, url ? null : 'ML_MODEL_URL is not set.');
   try {
     if (await modelApiKind(url) === 'cropfit') return await predictViaCropFit(url, request);
@@ -236,6 +252,7 @@ export async function predictCropSuitability(request: MlRequest): Promise<MlResp
     };
   } catch (reason) {
     const message = reason instanceof Error ? reason.message : 'Model request failed.';
+    if (mlStrict()) throw reason instanceof Error ? reason : new Error(message);
     console.warn(`Crop model unavailable, using crop calendar: ${message}`);
     return calendarResponse(request, message);
   }
@@ -272,6 +289,7 @@ function isCrop(value: unknown): value is MlCrop {
 /** POST /api/ml/predict: browser-facing proxy so the model URL stays server-side. */
 export async function handleMlRoute(pathname: string, req: IncomingMessage, res: ServerResponse) {
   if (pathname === '/api/ml/status') { res.setHeader('Content-Type', 'application/json'); res.end(JSON.stringify(mlModelStatus())); return true; }
+  if (pathname === '/api/ml/capabilities') { res.setHeader('Content-Type', 'application/json'); res.end(JSON.stringify(await mlCapabilities())); return true; }
   if (pathname === '/api/ml/health') { res.setHeader('Content-Type', 'application/json'); res.end(JSON.stringify(await mlModelHealth())); return true; }
   if (pathname !== '/api/ml/predict' || req.method !== 'POST') return false;
   const input = await readJson(req);
@@ -279,12 +297,15 @@ export async function handleMlRoute(pathname: string, req: IncomingMessage, res:
   const sites = (Array.isArray(input.sites) ? input.sites : []).filter((site): site is MlSite => Boolean(site) && typeof (site as MlSite).id === 'string' && Number.isFinite((site as MlSite).lat) && Number.isFinite((site as MlSite).lon)).slice(0, 40);
   res.setHeader('Content-Type', 'application/json');
   if (!crops.length || !sites.length) { res.statusCode = 400; res.end(JSON.stringify({ error: 'Send at least one crop and one site.' })); return true; }
-  const result = await predictCropSuitability({
+  let result: MlResponse;
+  try {
+  result = await predictCropSuitability({
     crops, sites,
     preferredMonth: isMonth(input.preferredMonth) ? input.preferredMonth : new Date().getMonth(),
     targetAreaSqft: Number(input.targetAreaSqft) || 0,
     targetSunHours: Number(input.targetSunHours) || 6,
   });
+  } catch (reason) { res.statusCode = 502; res.end(JSON.stringify({ error: reason instanceof Error ? reason.message : 'Crop model failed.' })); return true; }
   res.end(JSON.stringify(result));
   return true;
 }

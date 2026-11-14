@@ -241,11 +241,19 @@ export async function runLandLensAgent(input: {
     if (!known.length) return { available: false, reason: 'Run rooftop imagery search first.' };
     progress({ stage: 'model', message: `Scoring ${cropProfiles.map((crop) => crop.name.toLowerCase()).join(', ')} on ${known.length} roofs with the crop model` });
     const latestSimulation = new Map([...simulations.values()].map((item) => [item.candidateId, item]));
-    const response = await predictCropSuitability({
-      crops: cropProfiles, preferredMonth: input.preferredMonth ?? new Date().getMonth(),
-      targetAreaSqft: input.targetAreaSqft, targetSunHours: input.targetHours,
-      sites: await roofSites(known, latestSimulation),
-    });
+    let response: MlResponse;
+    try {
+      response = await predictCropSuitability({
+        crops: cropProfiles, preferredMonth: input.preferredMonth ?? new Date().getMonth(),
+        targetAreaSqft: input.targetAreaSqft, targetSunHours: input.targetHours,
+        sites: await roofSites(known, latestSimulation),
+      });
+    } catch (reason) {
+      const message = reason instanceof Error ? reason.message : 'Crop model failed.';
+      modelInfo = { name: 'CropFit', version: null, source: 'ml', error: message };
+      progress({ stage: 'model', message: `Crop model failed: ${message}` });
+      return { available: false, error: message, instruction: 'Rank by sunlit area only and say the crop model was unavailable.' };
+    }
     modelInfo = response.model;
     response.predictions.forEach((item) => predictions.set(`${item.siteId}::${item.cropId}`, item));
     const bySite = siteSuitability(response);
