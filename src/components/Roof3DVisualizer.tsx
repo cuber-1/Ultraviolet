@@ -233,9 +233,9 @@ function Scene({ props, surfaceMode }: { props: Roof3DVisualizerProps; surfaceMo
       >
         <boxGeometry args={[obstruction.width * .94, obstruction.heightM, obstruction.depth * .94]} />
         {surfaceMode === 'clean'
-          ? <meshBasicMaterial colorWrite={false} depthWrite={false} />
+          ? <meshStandardMaterial color="#2f6242" roughness={.82} metalness={0} />
           : <meshStandardMaterial color="#d9d2ca" roughness={.68} metalness={.02} transparent opacity={.48} depthWrite={false} />}
-        {surfaceMode === 'imagery' && <Edges color="#e85d04" threshold={12} />}
+        <Edges color={surfaceMode === 'clean' ? '#173c29' : '#e85d04'} threshold={12} />
       </mesh>)}
     </group>
 
