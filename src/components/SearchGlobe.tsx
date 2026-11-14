@@ -7,7 +7,6 @@ import 'leaflet/dist/leaflet.css';
 
 const countryFeatures = feature(countriesTopology as never, countriesTopology.objects.countries as never);
 
-type Scope = { name: string; lat: number; lon: number; radiusM: number };
 type GlobePoint = { id: string; lat: number; lon: number; rank: number };
 
 function project(lat: number, lon: number, centerLon: number, radius: number) {
@@ -17,7 +16,7 @@ function project(lat: number, lon: number, centerLon: number, radius: number) {
   return { x: radius + radius * Math.cos(phi) * Math.sin(lambda), y: radius - radius * Math.sin(phi), visible };
 }
 
-export default function SearchGlobe({ scope, points = [], onPointClick }: { scope: Scope; points?: GlobePoint[]; onPointClick?: (id: string) => void }) {
+export default function SearchGlobe({ points = [], onPointClick }: { points?: GlobePoint[]; onPointClick?: (id: string) => void }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const mapElementRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<LeafletMap | null>(null);
@@ -51,12 +50,6 @@ export default function SearchGlobe({ scope, points = [], onPointClick }: { scop
     context.beginPath(); globePath(countryFeatures); context.fillStyle = 'rgba(255,249,240,.55)'; context.fill('evenodd');
     context.beginPath(); globePath(geoGraticule10()); context.strokeStyle = 'rgba(123,62,19,.15)'; context.lineWidth = .75; context.stroke();
     context.beginPath(); globePath(countryFeatures); context.strokeStyle = 'rgba(91,44,14,.62)'; context.lineWidth = 1.05; context.lineJoin = 'round'; context.stroke();
-    const marker = project(scope.lat, scope.lon, rotation, radius);
-    if (marker.visible) {
-      const x = marker.x + center - radius; const y = marker.y + center - radius;
-      context.beginPath(); context.arc(x, y, 15, 0, Math.PI * 2); context.fillStyle = 'rgba(232,93,4,.2)'; context.fill();
-      context.beginPath(); context.arc(x, y, 5, 0, Math.PI * 2); context.fillStyle = '#e85d04'; context.fill();
-    }
     markers.current = [];
     points.forEach((item) => {
       const point = project(item.lat, item.lon, rotation, radius);
@@ -67,7 +60,7 @@ export default function SearchGlobe({ scope, points = [], onPointClick }: { scop
       context.fillStyle = '#b84400'; context.font = 'bold 8px system-ui'; context.textAlign = 'center'; context.textBaseline = 'middle'; context.fillText(String(item.rank), x, y + .5);
     });
     context.restore();
-  }, [points, rotation, scope, zoom]);
+  }, [points, rotation, zoom]);
 
   useEffect(() => {
     if (!hasResults || !mapElementRef.current || mapRef.current) return;
@@ -76,7 +69,7 @@ export default function SearchGlobe({ scope, points = [], onPointClick }: { scop
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap contributors' }).addTo(map);
     L.control.zoom({ position: 'bottomleft' }).addTo(map);
     markerLayerRef.current = L.layerGroup().addTo(map);
-    map.setView([scope.lat, scope.lon], 12);
+    map.setView([points[0].lat, points[0].lon], 12);
     return () => { map.remove(); mapRef.current = null; markerLayerRef.current = null; };
   }, [hasResults]);
 

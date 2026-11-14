@@ -162,6 +162,8 @@ async function body(req: IncomingMessage) {
 }
 
 const ruralClimateCache = new Map<string, { expires: number; value: unknown }>();
+let embeddingCollectionCache: { expires: number; values: string[] } | null = null;
+const embeddingSearchCache = new Map<string, { expires: number; features: Array<{ geometry: JsonRecord; properties: JsonRecord }> }>();
 const clamp01 = (value: number) => Math.max(0, Math.min(1, value));
 
 async function geocodePlace(place: string) {
@@ -214,6 +216,25 @@ async function ruralClimate(place: string, goal: RuralGoal) {
   };
   ruralClimateCache.set(cacheKey, { expires: Date.now() + 86_400_000, value });
   return value;
+}
+
+async function availableEmbeddingCollections(key: string) {
+  if (embeddingCollectionCache && embeddingCollectionCache.expires > Date.now()) return embeddingCollectionCache.values;
+  const response = await vexcel(key, 'embedding/collections?include=collection,layer,last-capture-date');
+  const payload = await response.json() as { features?: Array<{ properties?: JsonRecord }> };
+  const values = [...new Set((payload.features ?? []).flatMap((feature) => {
+    const layer = String(feature.properties?.layer || '');
+    const collection = feature.properties?.collection;
+    return ['urban', 'urban-r', 'wide-area', 'urban-g'].includes(layer) && typeof collection === 'string' ? [collection] : [];
+  }))];
+  if (!values.length) throw new Error('Vexcel returned no searchable imagery collections.');
+  embeddingCollectionCache = { expires: Date.now() + 10 * 60_000, values };
+  return values;
+}
+
+function locationPhrase(query: string) {
+  const match = query.match(/\b(?:near|around|in)\s+([a-z][a-z .'-]*(?:,\s*[a-z]{2,})?)(?=\s+(?:with|that|having|and|at least|over|under|for)\b|[.?!]|$)/i);
+  return match?.[1]?.trim() || null;
 }
 
 async function vexcel(key: string, path: string, init: RequestInit = {}) {
@@ -274,17 +295,37 @@ async function elevationsAt(key: string, points: Array<{ lat: number; lon: numbe
 }
 
 async function searchCandidates(key: string, costar: ReturnType<typeof costarIndex>, input: { query: string; lat: number; lon: number; radiusM: number }) {
-  const response = await vexcel(key, 'embedding/extract', { method: 'POST', body: JSON.stringify({
-    wkt: square(input.lat, input.lon, input.radiusM), srid: 4326, 'search-text': input.query,
-    include: 'score,geometry,collection', 'total-records': 12, 'page-size': 12,
-  }) });
-  const payload = await response.json() as { features?: Array<{ geometry: JsonRecord; properties: JsonRecord }> };
+  const place = locationPhrase(input.query);
+  let searchBody: JsonRecord;
+  let searchDescription: string;
+  if (place) {
+    const location = await geocodePlace(place);
+    searchBody = { wkt: square(location.lat, location.lon, 20_000), srid: 4326 };
+    searchDescription = `within available coverage near ${location.name}, ${location.region}`;
+  } else {
+    const collections = await availableEmbeddingCollections(key);
+    searchBody = { collection: collections };
+    searchDescription = `across all ${collections.length} available standard imagery collections`;
+  }
+  const cacheKey = `${input.query.trim().toLowerCase()}:${place || 'all-coverage'}`;
+  const cached = embeddingSearchCache.get(cacheKey);
+  let features: Array<{ geometry: JsonRecord; properties: JsonRecord }>;
+  if (cached && cached.expires > Date.now()) features = cached.features;
+  else {
+    const response = await vexcel(key, 'embedding/extract', { method: 'POST', body: JSON.stringify({
+      ...searchBody, 'search-text': input.query,
+      include: 'score,geometry,collection', 'total-records': 24, 'page-size': 24,
+    }) });
+    const payload = await response.json() as { features?: Array<{ geometry: JsonRecord; properties: JsonRecord }> };
+    features = payload.features ?? [];
+    embeddingSearchCache.set(cacheKey, { expires: Date.now() + 5 * 60_000, features });
+  }
   const unique = new Map<string, { geometry: JsonRecord; properties: JsonRecord; center: { lat: number; lon: number } }>();
-  for (const feature of payload.features ?? []) {
+  for (const feature of features) {
     const center = centroid(feature.geometry);
     unique.set(`${center.lat.toFixed(4)}:${center.lon.toFixed(4)}`, { ...feature, center });
   }
-  return Promise.all([...unique.values()].slice(0, 8).map(async (feature, rank) => {
+  return Promise.all([...unique.values()].slice(0, 12).map(async (feature, rank) => {
     const property = await propertyAt(key, feature.center.lat, feature.center.lon).catch(() => null);
     const costarProperty = costar.available ? matchCostar(costar, feature.center.lat, feature.center.lon) : null;
     return {
@@ -293,7 +334,7 @@ async function searchCandidates(key: string, costar: ReturnType<typeof costarInd
       lat: feature.center.lat,
       lon: feature.center.lon,
       score: Number(feature.properties.score ?? 0),
-      matchReason: `Vexcel imagery match for “${input.query}”`,
+      matchReason: `Vexcel imagery match for “${input.query}” ${searchDescription}`,
       tileGeometry: feature.geometry,
       property,
       costar: costarProperty,
@@ -405,7 +446,7 @@ export function vexcelApiPlugin(root: string) {
           watch.lastCheckedAt = new Date().toISOString();
           if (!newOpenings.length) { saveWatches(); continue; }
           const geometryCache = new Map<string, Promise<ResolvedGeometry | null>>();
-          const output = await runLandLensAgent({ goal: watch.goal, location: watch.location, dates: watch.dates, targetHours: watch.targetHours, targetAreaSqft: watch.targetAreaSqft }, {
+          const output = await runLandLensAgent({ goal: watch.goal, location: locationPhrase(watch.goal) || 'all available Vexcel coverage', dates: watch.dates, targetHours: watch.targetHours, targetAreaSqft: watch.targetAreaSqft }, {
             search: async () => candidates,
             geometry: async (candidate) => { if (!geometryCache.has(candidate.id)) geometryCache.set(candidate.id, resolveCandidateGeometry(key, candidate).catch(() => null)); const resolved = await geometryCache.get(candidate.id)!; return resolved?.evidence ?? unavailableGeometry(candidate, 'Roof or DSM/DTM geometry is unavailable.'); },
             simulate: async (candidate, dates, hours, area) => { if (!geometryCache.has(candidate.id)) geometryCache.set(candidate.id, resolveCandidateGeometry(key, candidate).catch(() => null)); return simulateCandidate(key, candidate, dates, hours, area, await geometryCache.get(candidate.id)!); },
@@ -463,13 +504,9 @@ export function vexcelApiPlugin(root: string) {
       }
       if (url.pathname === '/api/vexcel/search' && req.method === 'POST') {
         const input = await body(req);
-        const lat = Number(input.lat);
-        const lon = Number(input.lon);
-        const radiusM = Math.min(20_000, Math.max(500, Number(input.radiusM) || 5_000));
         const query = String(input.query || 'large flat unobstructed commercial rooftop');
-        if (!Number.isFinite(lat) || !Number.isFinite(lon)) return json(res, 400, { error: 'A valid search center is required.' });
-        const hydrated = await searchCandidates(key, costar, { query, lat, lon, radiusM });
-        return json(res, 200, { query, center: { lat, lon }, radiusM, results: hydrated, source: costar.available ? 'Vexcel imagery and property geometry + CoStar local property inventory' : 'Vexcel imagery and property geometry' });
+        const hydrated = await searchCandidates(key, costar, { query, lat: 0, lon: 0, radiusM: 20_000 });
+        return json(res, 200, { query, results: hydrated, source: costar.available ? 'Vexcel available embedding collections + property geometry + CoStar local property inventory' : 'Vexcel available embedding collections + property geometry' });
       }
       if (url.pathname === '/api/vexcel/elevation' && req.method === 'POST') {
         const input = await body(req);
@@ -532,7 +569,7 @@ export function vexcelApiPlugin(root: string) {
           return simulateCandidate(key, candidate, requestedDates, requestedHours, requestedArea, await geometryCache.get(candidate.id)!);
         };
         try {
-          const output = await runLandLensAgent({ goal, followUp: typeof input.followUp === 'string' ? input.followUp : undefined, location: String(input.location || `${lat}, ${lon}`), dates, targetHours, targetAreaSqft }, { search, geometry, simulate: sunlight }, (event) => send({ type: 'progress', ...event }));
+          const output = await runLandLensAgent({ goal, followUp: typeof input.followUp === 'string' ? input.followUp : undefined, location: locationPhrase(goal) || 'all available Vexcel coverage', dates, targetHours, targetAreaSqft }, { search, geometry, simulate: sunlight }, (event) => send({ type: 'progress', ...event }));
           const simulatedIds = new Set(output.simulations.map((item) => item.candidateId));
           for (const candidate of output.candidates) if (!simulatedIds.has(candidate.id)) output.simulations.push(await sunlight(candidate, dates, targetHours, targetAreaSqft));
           const byId = new Map(output.candidates.map((candidate) => [candidate.id, candidate]));

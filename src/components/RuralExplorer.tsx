@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { CircleAlert, Droplets, LoaderCircle, MapPin, Search, Sun, ThermometerSun } from 'lucide-react';
 import SearchGlobe from './SearchGlobe';
 import { compareRuralLocations, type RuralClimateResult, type RuralComparison, type RuralGoal } from '../services/rural';
@@ -30,13 +30,6 @@ export default function RuralExplorer() {
   }, [goal, places]);
   useEffect(() => { void run(); return () => requestRef.current?.abort(); }, []);
   const results = comparison?.results ?? [];
-  const scope = useMemo(() => results.length ? {
-    name: 'Compared regions',
-    lat: results.reduce((sum, result) => sum + result.lat, 0) / results.length,
-    lon: results.reduce((sum, result) => sum + result.lon, 0) / results.length,
-    radiusM: 20_000,
-  } : { name: 'United States', lat: 38.5, lon: -98.5, radiusM: 20_000 }, [results]);
-
   return <main className="rural-explorer">
     <section className="rural-commandbar">
       <div><span className="mono">RURAL REGION SCREENING</span><h1>Compare growing regions</h1><p>Start with climate evidence. Verify soil, water rights, and parcels before choosing land.</p></div>
@@ -49,7 +42,7 @@ export default function RuralExplorer() {
       <div className="rural-source-line"><span><i /> NASA POWER LIVE</span><span>OPEN-METEO GEOCODING</span><span>SOIL + PARCELS NOT ASSESSED</span></div>
     </section>
     <section className="rural-workbench">
-      <div className="rural-map-panel"><div className="panel-label"><span className="mono">01 / REGIONS</span><span>{results.length ? 'Ranked locations · map fit to results' : 'Loading regional evidence'}</span></div><SearchGlobe scope={scope} points={results.map((result, index) => ({ id: result.query, lat: result.lat, lon: result.lon, rank: index + 1 }))} /></div>
+      <div className="rural-map-panel"><div className="panel-label"><span className="mono">01 / REGIONS</span><span>{results.length ? 'Ranked locations · map fit to results' : 'Loading regional evidence'}</span></div><SearchGlobe points={results.map((result, index) => ({ id: result.query, lat: result.lat, lon: result.lon, rank: index + 1 }))} /></div>
       <aside className="rural-results">
         <header><div><span className="mono">02 / CLIMATE FIT</span><h2>{loading ? 'Reading climate…' : results.length ? `${results.length} regions` : 'No results'}</h2></div><span>{goalLabels[goal]}</span></header>
         {error && <div className="rural-error"><CircleAlert /><span>{error}</span></div>}

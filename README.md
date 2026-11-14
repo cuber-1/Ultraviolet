@@ -91,8 +91,12 @@ handles and message contents are customer data and must remain outside source
 control.
 
 Live urban discovery uses `embedding/extract`, then resolves returned
-coordinates with `property/extract`. Results are not replaced with a fixed
-shortlist when access or geographic coverage is missing. The site workspace
+coordinates with `property/extract`. An ordinary query searches every standard
+embedding collection currently exposed to the authorized Vexcel account;
+emergency GraySky collections are excluded. Queries that explicitly say
+`near`, `around`, or `in` a place geocode that phrase and use a bounded WKT
+search instead. Results are not replaced with a fixed shortlist when access or
+geographic coverage is missing. The site workspace
 requests Vexcel false-color infrared with `bands=irg`; RGB and CIR can be
 switched without leaving the 3D roof view.
 

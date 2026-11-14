@@ -46,13 +46,11 @@ export type CostarProperty = {
 
 export type SearchResponse = {
   query: string;
-  center: { lat: number; lon: number };
-  radiusM: number;
   results: SearchResult[];
   source: string;
 };
 
-export async function searchVexcel(input: { query: string; lat: number; lon: number; radiusM: number }, signal?: AbortSignal) {
+export async function searchVexcel(input: { query: string }, signal?: AbortSignal) {
   const response = await fetch('/api/vexcel/search', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
