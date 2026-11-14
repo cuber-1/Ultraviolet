@@ -1,4 +1,31 @@
-# CropFit ML
+# CropFit vector-map demo
+
+The default demo does not train a model. It compares the request with five
+transparent examples (Houston, Fresno, Des Moines, Miami, and Seattle) and
+returns the nearest crop recommendations. The original experimental training
+pipeline remains in this folder for later work, but is not used by Docker.
+
+## Run on macOS or any ordinary computer
+
+```bash
+python3 -m venv machine-learning/.venv
+machine-learning/.venv/bin/pip install -r machine-learning/requirements-runtime.txt
+PYTHONPATH=machine-learning machine-learning/.venv/bin/python -m uvicorn cropfit.api:app --host 127.0.0.1 --port 8100
+```
+
+Try the Houston example:
+
+```bash
+curl -X POST http://127.0.0.1:8100/recommend \
+  -H 'content-type: application/json' \
+  -d '{"latitude":29.7604,"longitude":-95.3698,"acreage":10,"environment":"rural","irrigated":true,"commercial":true,"preferences":["vegetable"]}'
+```
+
+The endpoint is also available through Ultraviolet at
+`POST /api/cropfit/recommend`. `POST /predict` remains compatible with the
+existing planting-window chart and uses the same demo vectors.
+
+## Experimental training pipeline
 
 CropFit is Ultraviolet's first crop-location model. Version 0.1 learns an
 agroclimatic suitability function from FAO EcoCrop environmental requirements.
@@ -21,15 +48,15 @@ learning-rate schedule, error distribution, and feature importance to
 `machine-learning/runs/<run-id>/`. A candidate is only promoted when it improves held-out
 crop-profile error.
 
-## Serve
+## Serve the experimental trained model
 
 ```bash
 PYTHONPATH=machine-learning machine-learning/.venv/bin/python -m uvicorn cropfit.api:app --host 127.0.0.1 --port 8100
 ```
 
-The service obtains monthly climatology from NASA POWER unless the caller
-provides climate values. `POST /predict` returns a 12-month suitability curve,
-component scores, uncertainty, and the best screening window.
+The legacy inference module obtains monthly climatology from NASA POWER. It is
+kept for future evidence work, but the default API and Docker image do not load
+its model artifact.
 
 ## Next evidence gate
 

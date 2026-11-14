@@ -24,9 +24,10 @@ availability.
 
 ### Run the complete CropFit demo
 
-The complete demo has two services: the Ultraviolet web/server process and the
-local CropFit inference API. Docker builds the model from the pinned EcoCrop
-pipeline, so no model file or external inference machine is required:
+The complete demo has two lightweight services: the Ultraviolet web/server
+process and the local CropFit FastAPI. CropFit uses five committed demo vectors,
+so Docker performs no training and no GPU or external inference machine is
+required:
 
 ```bash
 export VEXCEL_API_KEY="your-key"       # optional for the rural-only demo

@@ -501,6 +501,14 @@ export function vexcelApiPlugin(root: string) {
         const payload = await response.json();
         return json(res, response.status, response.ok ? payload : { error: payload.detail || 'CropFit prediction failed.' });
       }
+      if (url.pathname === '/api/cropfit/recommend' && req.method === 'POST') {
+        const input = await body(req);
+        const response = await fetch(`${CROPFIT_URL}/recommend`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(input), signal: AbortSignal.timeout(5_000),
+        });
+        const payload = await response.json();
+        return json(res, response.status, response.ok ? payload : { error: payload.detail || 'CropFit recommendation failed.' });
+      }
       if (url.pathname === '/api/rural/compare' && req.method === 'POST') {
         const input = await body(req);
         const goal = ['balanced', 'sun', 'low-irrigation'].includes(String(input.goal)) ? String(input.goal) as RuralGoal : 'balanced';
