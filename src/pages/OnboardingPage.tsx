@@ -11,10 +11,10 @@ import { briefKey, listRuns, savedTime, type SavedRunMeta } from '../services/ru
 import './OnboardingPage.css';
 
 const SIZE_PRESETS = [
-  { id: 'patio', label: 'Small roof', detail: 'Up to 1,500 ft²', areaSqft: 1_000, icon: Building2 },
-  { id: 'roof', label: 'Large roof', detail: '1,500 – 20,000 ft²', areaSqft: 5_000, icon: Warehouse },
-  { id: 'small-farm', label: 'Small farm', detail: '1 – 20 acres', areaSqft: 5 * ACRE_SQFT, icon: Sprout },
-  { id: 'farm', label: 'Large farm', detail: '20+ acres', areaSqft: 80 * ACRE_SQFT, icon: Tractor },
+  { id: 'small', label: 'Small roof', detail: 'About 1,500 ft² · café, shop', areaSqft: 1_500, icon: Building2 },
+  { id: 'medium', label: 'Medium roof', detail: 'About 5,000 ft² · apartment, school', areaSqft: 5_000, icon: Building2 },
+  { id: 'large', label: 'Large roof', detail: 'About 15,000 ft² · office, store', areaSqft: 15_000, icon: Warehouse },
+  { id: 'warehouse', label: 'Warehouse roof', detail: 'About 40,000 ft² · industrial', areaSqft: 40_000, icon: Warehouse },
 ] as const;
 
 const STEPS = ['Space', 'Crops', 'Location', 'Timing', 'Review'] as const;
@@ -25,8 +25,7 @@ export default function OnboardingPage() {
   const navigate = useNavigate();
   const saved = useMemo(loadBrief, []);
   const [step, setStep] = useState(0);
-  const [areaSqft, setAreaSqft] = useState(saved?.areaSqft ?? 5_000);
-  const [unit, setUnit] = useState<'sqft' | 'acres'>(saved && saved.areaSqft >= ACRE_SQFT ? 'acres' : 'sqft');
+  const [areaSqft, setAreaSqft] = useState(saved && saved.areaSqft < ACRE_SQFT ? saved.areaSqft : 5_000); // rooftops only
   const [crops, setCrops] = useState<string[]>(saved?.crops ?? []);
   const [urbanArea, setUrbanArea] = useState<string>(saved?.urbanArea ?? URBAN_AREAS[0].value);
   const [ruralRegions, setRuralRegions] = useState<string[]>(saved?.ruralRegions ?? []);
@@ -45,7 +44,6 @@ export default function OnboardingPage() {
   const progress = step === STEPS.length - 1 ? 1 : Math.min(1, (step + (ready[step] ? .75 : .2)) / STEPS.length);
 
   const brief: Brief = { scale, areaSqft, crops: chosenCrops, urbanArea: scale === 'urban' ? urbanArea : undefined, ruralRegions: scale === 'rural' ? ruralRegions : undefined, preferredMonth };
-  const unitValue = unit === 'acres' ? +(areaSqft / ACRE_SQFT).toFixed(2) : Math.round(areaSqft);
   const toggleCrop = (id: string) => setCrops((items) => items.includes(id) ? items.filter((item) => item !== id) : items.length >= MAX_CROPS ? items : [...items, id]);
   const toggleRegion = (id: string) => setRuralRegions((items) => items.includes(id) ? items.filter((item) => item !== id) : [...items, id]);
   const next = () => setStep((value) => Math.min(STEPS.length - 1, value + 1));
@@ -102,15 +100,14 @@ export default function OnboardingPage() {
       {step === 0 && <section>
         <p className="onboarding-kicker mono">01 · YOUR SPACE</p>
         <h1>How much space do you want to grow on?</h1>
-        <p className="onboarding-lede">Rooftops under an acre search live aerial imagery. An acre or more compares farming regions.</p>
+        <p className="onboarding-lede">Ultraviolet searches live aerial imagery for rooftops with this much space in full sun.</p>
         <div className="size-grid">
-          {SIZE_PRESETS.map(({ id, label, detail, areaSqft: preset, icon: Icon }) => <button key={id} className={Math.abs(areaSqft - preset) < 1 ? 'choice active' : 'choice'} onClick={() => { setAreaSqft(preset); setUnit(preset >= ACRE_SQFT ? 'acres' : 'sqft'); }}>
+          {SIZE_PRESETS.map(({ id, label, detail, areaSqft: preset, icon: Icon }) => <button key={id} className={Math.abs(areaSqft - preset) < 1 ? 'choice active' : 'choice'} onClick={() => setAreaSqft(preset)}>
             <Icon size={22} /><strong>{label}</strong><span>{detail}</span>
           </button>)}
         </div>
         <div className="size-exact">
-          <label>Exact size<input type="number" min={unit === 'acres' ? 0.1 : 50} step={unit === 'acres' ? 0.5 : 100} value={unitValue} onChange={(event) => { const value = Math.max(0, Number(event.target.value) || 0); setAreaSqft(unit === 'acres' ? value * ACRE_SQFT : value); }} /></label>
-          <div className="unit-switch"><button className={unit === 'sqft' ? 'active' : ''} onClick={() => setUnit('sqft')}>ft²</button><button className={unit === 'acres' ? 'active' : ''} onClick={() => setUnit('acres')}>acres</button></div>
+          <label>Exact size<input type="number" min={200} max={43_000} step={100} value={Math.round(areaSqft)} onChange={(event) => setAreaSqft(Math.min(43_000, Math.max(0, Number(event.target.value) || 0)))} /><span className="size-unit">ft²</span></label>
           <span className={`scale-pill ${scale}`}>{scale === 'urban' ? <Building2 size={14} /> : <Tractor size={14} />}{scale === 'urban' ? 'Urban rooftop search' : 'Rural region search'}</span>
         </div>
       </section>}

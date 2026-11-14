@@ -114,3 +114,4 @@
 @keyframes onboardingQuipB { from { opacity: 0; transform: translateY(6px) scale(.85); } to { opacity: 1; transform: none; } }
 @media (max-width: 760px) { .onboarding-scribe { top: 92px; } .onboarding-scribe .mouse-scribe { width: 84px; } .onboarding-quip { font-size: 14px; margin-top: 14px; } }
 @media (prefers-reduced-motion: reduce) { .onboarding-quip { animation: none; } }
+.size-unit { color: var(--gray-500); font-size: 15px; }

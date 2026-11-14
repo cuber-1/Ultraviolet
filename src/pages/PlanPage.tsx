@@ -12,10 +12,11 @@ import '../pages/results/ResultsApp.css';
 import { OptimalPointsChart, PlantingCurveChart, SunCoverageChart } from '../components/charts/DeepAgentCharts';
 import { runAgentComparison, type AgentComparison, type AgentTraceEvent, type CropModelInfo, type CropPrediction, type SearchResult } from '../services/vexcel';
 import {
-  MONTH_LONG, MONTH_SHORT, applyModel, briefCrops, briefFocus, cropProfiles, fetchMlCapabilities, fetchMonthlyClimate, fetchRegionPredictions, formatArea, loadBrief, planForLocation, ruralPlaces, saveBrief,
+  MONTH_LONG, MONTH_SHORT, applyModel, briefCrops, briefFocus, estimateFood, formatLbs, cropProfiles, fetchMlCapabilities, fetchMonthlyClimate, fetchRegionPredictions, formatArea, loadBrief, planForLocation, ruralPlaces, saveBrief,
   urbanAgentCriteria, urbanAreaLabel, type Brief, type CropTiming, type LocationPlan,
 } from '../services/cropPlan';
 import { getRun, saveRun, savedTime } from '../services/runs';
+import { roofTitle, useAddresses } from '../services/addresses';
 import './PlanPage.css';
 
 const TOP_N = 5;
@@ -155,6 +156,8 @@ export default function PlanPage() {
   const openSite = useCallback((id: string) => navigate(`/plan?site=${encodeURIComponent(id)}&back=${encodeURIComponent(location.search)}`), [location.search, navigate]);
   const backSearch = new URLSearchParams(location.search).get('back') ?? '';
 
+  const pinAddresses = useAddresses(outcome?.kind === 'urban' ? outcome.top.map((result) => ({ id: result.id, lat: result.lat, lon: result.lon, known: Boolean(result.costar?.buildingName || result.costar?.address) })) : []);
+
   if (!brief) return <Navigate to="/start" replace />;
 
   const selectedId = new URLSearchParams(location.search).get('site');
@@ -184,12 +187,12 @@ export default function PlanPage() {
     ctaLabel="" onContinue={() => undefined} onCancel={cancel} />;
   if (outcome && reveal && !running && !error) {
     const pins = outcome.kind === 'urban'
-      ? outcome.top.map((result, index) => ({ id: result.id, lat: result.lat, lon: result.lon, rank: index + 1, label: result.costar?.buildingName || (result.property?.roofAreaSqft ? `${Math.round(result.property.roofAreaSqft / 1000)}k ft² roof` : `Roof ${index + 1}`) }))
+      ? outcome.top.map((result, index) => ({ id: result.id, lat: result.lat, lon: result.lon, rank: index + 1, label: roofTitle(result, pinAddresses.get(result.id)).name }))
       : outcome.plans.slice(0, TOP_N).map((plan, index) => ({ id: plan.climate.query, lat: plan.climate.lat, lon: plan.climate.lon, rank: index + 1, label: plan.climate.name }));
     const bestSun = outcome.kind === 'urban' ? Math.max(0, ...outcome.comparison.simulations.slice(0, TOP_N).map((item) => item.sharedAreaSqft ?? 0)) : 0;
     return <MapStage mode="done" focus={focus} discovered={[]} pins={pins}
       title={outcome.kind === 'urban' ? `${pins.length} roofs found` : `${pins.length} regions found`}
-      subtitle={outcome.kind === 'urban' ? `Best roof keeps ${new Intl.NumberFormat('en-US').format(Math.round(bestSun))} ft² in ${outcome.criteria.targetHours}+ hours of sun.` : `Top match: ${pins[0]?.label ?? '—'}.`}
+      subtitle={outcome.kind === 'urban' ? `The best roof keeps ${new Intl.NumberFormat('en-US').format(Math.round(bestSun))} ft² in full sun, enough for about ${formatLbs(estimateFood(bestSun, briefCrops(outcome.brief))?.lbsPerYear ?? 0)} lbs of food a year.` : `Top match: ${pins[0]?.label ?? '—'}.`}
       stages={urban ? URBAN_STAGES : RURAL_STAGES} activeIndex={(urban ? URBAN_STAGES : RURAL_STAGES).length} message="" startedAt={startedAt}
       summary={outcome.kind === 'urban' ? `${outcome.comparison.candidates.length} roofs checked in ${urbanAreaLabel(brief)}` : `${outcome.plans.length} towns compared`}
       ctaLabel={outcome.kind === 'urban' ? 'See your top 5' : 'See your top regions'} onContinue={() => setReveal(false)} onCancel={() => setReveal(false)} onHome={() => navigate('/')} />;
@@ -392,7 +395,7 @@ function UrbanInsights({ outcome, onOpen }: { outcome: UrbanOutcome; onOpen: (id
   const firstStart = series.filter((item) => item.plantMonth !== null).sort((a, b) => ((a.plantMonth! - brief.preferredMonth + 12) % 12) - ((b.plantMonth! - brief.preferredMonth + 12) % 12))[0];
   return <section className="insights">
     <article className="insight-card">
-      <header><span className="mono">01 · SUN COVERAGE</span><h2>{best?.sunlitSqft ? `Up to ${new Intl.NumberFormat('en-US').format(Math.round(best.sunlitSqft))} ft² gets ${criteria.targetHours} h of sun.` : 'Sun coverage'}</h2><p>{meeting} of {roofs.length} roofs checked have enough area in {criteria.targetHours}+ hours of direct sun on every date.</p></header>
+      <header><span className="mono">01 · SUN COVERAGE</span><h2>{best?.sunlitSqft ? `Up to ${new Intl.NumberFormat('en-US').format(Math.round(best.sunlitSqft))} ft² in full sun: about ${formatLbs(estimateFood(best.sunlitSqft, briefCrops(brief))?.lbsPerYear ?? 0)} lbs of food a year.` : 'Sun coverage'}</h2><p>{meeting} of {roofs.length} roofs checked have enough area in {criteria.targetHours}+ hours of direct sun on every date.</p></header>
       <SunCoverageChart rows={roofs} targetAreaSqft={criteria.targetAreaSqft} targetHours={criteria.targetHours} onSelect={onOpen} />
     </article>
     <article className="insight-card">

@@ -4,6 +4,8 @@ import { SiteWorkspace } from './AgriculturePage';
 import RoofPreview3D from '../components/RoofPreview3D';
 import { CLASSES, ComponentBars, CropTimeline, PlantingCurveChart, classify, CROP_COLORS } from '../components/charts/DeepAgentCharts';
 import type { CropModelInfo, CropPrediction, SearchResult, SunlightEvidence } from '../services/vexcel';
+import { cropById, estimateFood, formatLbs, type Crop } from '../services/cropPlan';
+import { roofTitle, useAddresses } from '../services/addresses';
 import './DeepAgentSite.css';
 
 export type SiteCrop = { id: string; name: string };
@@ -19,13 +21,17 @@ export default function DeepAgentSite({ result, rank, total, simulation, predict
   explanation: string | null; mlModel: CropModelInfo | null; preferredMonth: number; onClose: () => void;
 }) {
   const [tab, setTab] = useState<Tab>('overview');
-  const name = result.costar?.buildingName || result.costar?.address || (result.property?.roofAreaSqft ? `${fmt(result.property.roofAreaSqft)} ft² roof` : 'Rooftop');
+  const addresses = useAddresses([{ id: result.id, lat: result.lat, lon: result.lon, known: Boolean(result.costar?.buildingName || result.costar?.address) }]);
+  const title = roofTitle(result, addresses.get(result.id));
+  const name = title.name;
   const sunlit = simulation?.sharedAreaSqft ?? null;
   const hours = simulation?.perDate.map((item) => item.meanHours).filter((value): value is number => value !== null) ?? [];
   const meanHours = hours.length ? hours.reduce((sum, value) => sum + value, 0) / hours.length : null;
   const modelPredictions = predictions.filter((item) => item.source === 'ml');
   const avgFit = modelPredictions.length ? (modelPredictions.reduce((sum, item) => sum + item.suitability, 0) / modelPredictions.length) * 100 : null;
   const cls = classify(sunlit, avgFit, criteria.targetAreaSqft);
+  const cropProfiles = crops.map((crop) => cropById(crop.id)).filter((crop): crop is Crop => Boolean(crop));
+  const food = estimateFood(sunlit, cropProfiles, new Set(predictions.filter((item) => item.source === 'ml' && item.plantMonth === null).map((item) => item.cropId)));
   const starts = predictions.filter((item) => item.plantMonth !== null).sort((a, b) => ((a.plantMonth! - preferredMonth + 12) % 12) - ((b.plantMonth! - preferredMonth + 12) % 12));
   const cropName = (id: string) => crops.find((crop) => crop.id === id)?.name ?? id;
   const tabs: Array<{ key: Tab; label: string; icon: typeof Sun }> = [
@@ -36,7 +42,7 @@ export default function DeepAgentSite({ result, rank, total, simulation, predict
   return <div className="das">
     <header className="das-header">
       <button className="das-back" onClick={onClose}><ArrowLeft size={16} /> Top {total}</button>
-      <div className="das-title"><span className="das-eyebrow">Roof {rank} of {total}</span><h1>{name}</h1><p><MapPin size={13} /> {result.costar?.address || `${result.lat.toFixed(5)}, ${result.lon.toFixed(5)}`}</p></div>
+      <div className="das-title"><span className="das-eyebrow">Roof {rank} of {total}</span><h1>{name}</h1><p><MapPin size={13} /> {title.line}</p></div>
       <span className="das-class" style={{ borderColor: CLASSES[cls].color }}><i style={{ background: CLASSES[cls].color }} />{CLASSES[cls].label}</span>
     </header>
     <nav className="das-tabs" role="tablist">{tabs.map(({ key, label, icon: Icon }) => <button key={key} role="tab" aria-selected={tab === key} className={tab === key ? 'active' : ''} onClick={() => setTab(key)}><Icon size={15} /> {label}</button>)}</nav>
@@ -44,6 +50,11 @@ export default function DeepAgentSite({ result, rank, total, simulation, predict
     {tab === 'overview' && <main className="das-body das-overview">
       <RoofPreview3D result={result} date={criteria.dates[0]} targetHours={criteria.targetHours} targetAreaSqft={criteria.targetAreaSqft} />
       <section>
+        {food && <div className="das-food">
+          <span className="das-label">Food this roof could grow (estimate)</span>
+          <strong>≈ {formatLbs(food.lbsPerYear)} lbs a year</strong>
+          <small>{fmt(food.usableSqft)} ft² of beds in full sun · {food.perCrop.filter((item) => item.lbs > 0).map((item) => `${item.name} ${formatLbs(item.lbs)} lbs (${item.cycles}× / yr)`).join(' · ')}</small>
+        </div>}
         <div className="das-stats">
           <Stat label={`Area with ${criteria.targetHours} h sun`} value={sunlit === null ? 'Not assessed' : `${fmt(sunlit)} ft²`} hint={sunlit === null ? 'Missing roof geometry' : sunlit >= criteria.targetAreaSqft ? `Meets your ${fmt(criteria.targetAreaSqft)} ft²` : `${Math.round((sunlit / criteria.targetAreaSqft) * 100)}% of your target`} />
           <Stat label="Average daily sun" value={meanHours === null ? '—' : `${meanHours.toFixed(1)} h`} hint={`On ${criteria.dates.map(shortDate).join(' and ')}`} />

@@ -16,25 +16,29 @@ export type Crop = {
   tempMaxC: number;
   growMonths: number;
   note: string;
+  /** Rough planning yield for intensive rooftop beds: lbs per ft² per harvest cycle. */
+  yieldLbsPerSqft: number;
+  /** Typical harvest cycles per year on a rooftop bed. */
+  cyclesPerYear: number;
 };
 
 export const CROPS: Crop[] = [
-  { id: 'greens', name: 'Leafy greens', scale: 'both', sunHours: 4, tempMinC: 7, tempMaxC: 24, growMonths: 2, note: 'Lettuce, spinach, chard' },
-  { id: 'herbs', name: 'Herbs', scale: 'urban', sunHours: 6, tempMinC: 15, tempMaxC: 30, growMonths: 2, note: 'Basil, cilantro, mint' },
-  { id: 'microgreens', name: 'Microgreens', scale: 'urban', sunHours: 3, tempMinC: 13, tempMaxC: 27, growMonths: 1, note: 'Fast 2–3 week cycles' },
-  { id: 'tomatoes', name: 'Tomatoes', scale: 'both', sunHours: 8, tempMinC: 16, tempMaxC: 30, growMonths: 3, note: 'Needs full sun' },
-  { id: 'peppers', name: 'Peppers', scale: 'both', sunHours: 8, tempMinC: 18, tempMaxC: 31, growMonths: 3, note: 'Heat-loving' },
-  { id: 'strawberries', name: 'Strawberries', scale: 'both', sunHours: 6, tempMinC: 10, tempMaxC: 26, growMonths: 3, note: 'Cool nights help' },
-  { id: 'kale', name: 'Kale & brassicas', scale: 'both', sunHours: 5, tempMinC: 5, tempMaxC: 24, growMonths: 2, note: 'Frost-tolerant' },
-  { id: 'beans', name: 'Beans', scale: 'both', sunHours: 6, tempMinC: 16, tempMaxC: 30, growMonths: 2, note: 'Fixes nitrogen' },
-  { id: 'cucumbers', name: 'Cucumbers & squash', scale: 'both', sunHours: 7, tempMinC: 18, tempMaxC: 32, growMonths: 2, note: 'Vining, warm season' },
-  { id: 'corn', name: 'Corn', scale: 'rural', sunHours: 8, tempMinC: 16, tempMaxC: 32, growMonths: 4, note: 'Row crop' },
-  { id: 'soybeans', name: 'Soybeans', scale: 'rural', sunHours: 7, tempMinC: 18, tempMaxC: 30, growMonths: 4, note: 'Row crop' },
-  { id: 'wheat', name: 'Wheat', scale: 'rural', sunHours: 6, tempMinC: 3, tempMaxC: 24, growMonths: 4, note: 'Cool-season grain' },
-  { id: 'potatoes', name: 'Potatoes', scale: 'rural', sunHours: 6, tempMinC: 10, tempMaxC: 24, growMonths: 4, note: 'Cool-season tuber' },
-  { id: 'melons', name: 'Melons', scale: 'rural', sunHours: 8, tempMinC: 20, tempMaxC: 34, growMonths: 3, note: 'Long hot season' },
-  { id: 'onions', name: 'Onions', scale: 'rural', sunHours: 6, tempMinC: 10, tempMaxC: 27, growMonths: 4, note: 'Long-day or short-day' },
-  { id: 'sunflowers', name: 'Sunflowers', scale: 'rural', sunHours: 7, tempMinC: 16, tempMaxC: 32, growMonths: 3, note: 'Drought-tolerant' },
+  { id: 'greens', name: 'Leafy greens', scale: 'both', sunHours: 4, tempMinC: 7, tempMaxC: 24, growMonths: 2, note: 'Lettuce, spinach, chard', yieldLbsPerSqft: 0.75, cyclesPerYear: 3 },
+  { id: 'herbs', name: 'Herbs', scale: 'urban', sunHours: 6, tempMinC: 15, tempMaxC: 30, growMonths: 2, note: 'Basil, cilantro, mint', yieldLbsPerSqft: 0.4, cyclesPerYear: 3 },
+  { id: 'microgreens', name: 'Microgreens', scale: 'urban', sunHours: 3, tempMinC: 13, tempMaxC: 27, growMonths: 1, note: 'Fast 2–3 week cycles', yieldLbsPerSqft: 0.25, cyclesPerYear: 10 },
+  { id: 'tomatoes', name: 'Tomatoes', scale: 'both', sunHours: 8, tempMinC: 16, tempMaxC: 30, growMonths: 3, note: 'Needs full sun', yieldLbsPerSqft: 1.5, cyclesPerYear: 1 },
+  { id: 'peppers', name: 'Peppers', scale: 'both', sunHours: 8, tempMinC: 18, tempMaxC: 31, growMonths: 3, note: 'Heat-loving', yieldLbsPerSqft: 0.75, cyclesPerYear: 1 },
+  { id: 'strawberries', name: 'Strawberries', scale: 'both', sunHours: 6, tempMinC: 10, tempMaxC: 26, growMonths: 3, note: 'Cool nights help', yieldLbsPerSqft: 0.5, cyclesPerYear: 1 },
+  { id: 'kale', name: 'Kale & brassicas', scale: 'both', sunHours: 5, tempMinC: 5, tempMaxC: 24, growMonths: 2, note: 'Frost-tolerant', yieldLbsPerSqft: 0.75, cyclesPerYear: 2 },
+  { id: 'beans', name: 'Beans', scale: 'both', sunHours: 6, tempMinC: 16, tempMaxC: 30, growMonths: 2, note: 'Fixes nitrogen', yieldLbsPerSqft: 0.5, cyclesPerYear: 2 },
+  { id: 'cucumbers', name: 'Cucumbers & squash', scale: 'both', sunHours: 7, tempMinC: 18, tempMaxC: 32, growMonths: 2, note: 'Vining, warm season', yieldLbsPerSqft: 1.25, cyclesPerYear: 2 },
+  { id: 'corn', name: 'Corn', scale: 'rural', sunHours: 8, tempMinC: 16, tempMaxC: 32, growMonths: 4, note: 'Row crop', yieldLbsPerSqft: 0.25, cyclesPerYear: 1 },
+  { id: 'soybeans', name: 'Soybeans', scale: 'rural', sunHours: 7, tempMinC: 18, tempMaxC: 30, growMonths: 4, note: 'Row crop', yieldLbsPerSqft: 0.1, cyclesPerYear: 1 },
+  { id: 'wheat', name: 'Wheat', scale: 'rural', sunHours: 6, tempMinC: 3, tempMaxC: 24, growMonths: 4, note: 'Cool-season grain', yieldLbsPerSqft: 0.12, cyclesPerYear: 1 },
+  { id: 'potatoes', name: 'Potatoes', scale: 'rural', sunHours: 6, tempMinC: 10, tempMaxC: 24, growMonths: 4, note: 'Cool-season tuber', yieldLbsPerSqft: 1.0, cyclesPerYear: 1 },
+  { id: 'melons', name: 'Melons', scale: 'rural', sunHours: 8, tempMinC: 20, tempMaxC: 34, growMonths: 3, note: 'Long hot season', yieldLbsPerSqft: 0.6, cyclesPerYear: 1 },
+  { id: 'onions', name: 'Onions', scale: 'rural', sunHours: 6, tempMinC: 10, tempMaxC: 27, growMonths: 4, note: 'Long-day or short-day', yieldLbsPerSqft: 1.0, cyclesPerYear: 1 },
+  { id: 'sunflowers', name: 'Sunflowers', scale: 'rural', sunHours: 7, tempMinC: 16, tempMaxC: 32, growMonths: 3, note: 'Drought-tolerant', yieldLbsPerSqft: 0.1, cyclesPerYear: 1 },
 ];
 
 export const URBAN_AREAS = [
@@ -214,3 +218,27 @@ export function briefFocus(brief: Brief): Array<{ lat: number; lon: number }> {
   if (brief.scale === 'urban') { const area = URBAN_AREAS.find((item) => item.value === brief.urbanArea); return area ? [{ lat: area.lat, lon: area.lon }] : []; }
   return (brief.ruralRegions ?? []).flatMap((id) => { const region = RURAL_REGIONS.find((item) => item.id === id); return region ? [{ lat: region.lat, lon: region.lon }] : []; });
 }
+
+// ---- Food estimate ---------------------------------------------------------
+/** Share of sunlit roof that becomes growing beds (the rest is paths, access, setbacks). */
+export const USABLE_BED_SHARE = 0.75;
+
+export type FoodEstimate = { lbsPerYear: number; usableSqft: number; perCrop: Array<{ id: string; name: string; lbs: number; cycles: number }> };
+
+/**
+ * Rough yearly food from a roof's area in full sun: usable bed area is split evenly across
+ * the chosen crops; each crop yields its per-ft² planning figure per harvest cycle. Crops the
+ * crop model says have no workable planting month this year contribute nothing.
+ */
+export function estimateFood(sunlitSqft: number | null, crops: Crop[], noSeason: Set<string> = new Set()): FoodEstimate | null {
+  if (sunlitSqft === null || sunlitSqft <= 0 || !crops.length) return null;
+  const usableSqft = sunlitSqft * USABLE_BED_SHARE;
+  const share = usableSqft / crops.length;
+  const perCrop = crops.map((crop) => {
+    const cycles = noSeason.has(crop.id) ? 0 : crop.cyclesPerYear;
+    return { id: crop.id, name: crop.name, cycles, lbs: share * crop.yieldLbsPerSqft * cycles };
+  });
+  return { lbsPerYear: perCrop.reduce((sum, item) => sum + item.lbs, 0), usableSqft, perCrop };
+}
+
+export const formatLbs = (lbs: number) => lbs >= 10_000 ? `${(lbs / 1000).toFixed(0)}k` : lbs >= 1000 ? `${(lbs / 1000).toFixed(1)}k` : `${Math.round(lbs)}`;

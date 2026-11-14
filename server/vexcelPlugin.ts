@@ -6,6 +6,7 @@ import { geometryBounds, geometryRequiredRadius, insideMetricGeometry, metricPoi
 import { sharedMeetingArea, simulate, type AreaSelection, type Obstruction } from '../src/services/sunSimulation';
 import { handleMonthlyClimate } from './monthlyClimate';
 import { handleRunsRoute } from './runStore';
+import { handleGeoRoute } from './geocode';
 import { combinedRoofScore, handleMlRoute, mlModelStatus, modelBaseUrl, predictCropSuitability, siteSuitability, type MlCrop } from './mlModel';
 import { landLensAgentStatus, roofSites, runLandLensAgent, type AgentCandidate, type GeometryEvidence, type SunlightEvidence } from './landlensAgent';
 import { createPhotonConversation, photonStatus, sendPhotonMessage, type PhotonPlatform } from './photon';
@@ -473,6 +474,7 @@ export function vexcelApiPlugin(root: string) {
       if (await handleMonthlyClimate(url.pathname, req, res)) return;
       if (await handleMlRoute(url.pathname, req, res)) return;
       if (await handleRunsRoute(url.pathname, req, res, root)) return;
+      if (await handleGeoRoute(url.pathname, url, res, root)) return;
       if (url.pathname === '/api/cropfit/status') {
         const response = await fetch(`${modelBaseUrl()}/health`, { signal: AbortSignal.timeout(3_000) });
         return json(res, response.status, await response.json());

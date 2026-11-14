@@ -4,7 +4,8 @@ import { ArrowRight, Heart, Home, Layers, LineChart, Map as MapIcon, Pencil, Rot
 import Wordmark from '../../components/Wordmark';
 import { AgentTrace } from './AgentTrace';
 import { CLASSES, CROP_COLORS, classify } from '../../components/charts/DeepAgentCharts';
-import { briefCrops, urbanAreaLabel, type Brief } from '../../services/cropPlan';
+import { briefCrops, estimateFood, formatLbs, urbanAreaLabel, type Brief } from '../../services/cropPlan';
+import { roofTitle, useAddresses } from '../../services/addresses';
 import { addFavorite, loadFavorites, removeFavorite, type Favorite } from '../../services/favorites';
 import type { AgentComparison, SearchResult } from '../../services/vexcel';
 import './ResultsApp.css';
@@ -41,6 +42,7 @@ export default function ResultsApp({ brief, criteria, comparison, top, insights,
   const [favorites, setFavorites] = useState<Favorite[]>(loadFavorites);
 
   const crops = briefCrops(brief);
+  const addresses = useAddresses(top.map((result) => ({ id: result.id, lat: result.lat, lon: result.lon, known: Boolean(result.costar?.buildingName || result.costar?.address) })));
   const roofs = useMemo(() => top.map((result, rank) => {
     const simulation = comparison.simulations.find((item) => item.candidateId === result.id);
     const predictions = (comparison.predictions ?? []).filter((item) => item.siteId === result.id);
@@ -51,14 +53,16 @@ export default function ResultsApp({ brief, criteria, comparison, top, insights,
     const sunlit = simulation?.sharedAreaSqft ?? null;
     return {
       result, rank: rank + 1, predictions,
-      name: result.costar?.buildingName || result.costar?.address?.split(',')[0] || (result.property?.roofAreaSqft ? `${fmt(result.property.roofAreaSqft)} ft² rooftop` : 'Rooftop'),
-      address: result.costar?.address || `${result.lat.toFixed(4)}, ${result.lon.toFixed(4)}`,
+      name: roofTitle(result, addresses.get(result.id)).name,
+      address: roofTitle(result, addresses.get(result.id)).line,
+      food: estimateFood(sunlit, crops, new Set(predictions.filter((item) => item.source === 'ml' && item.plantMonth === null).map((item) => item.cropId))),
       sunlit, fit, start: (starts[0] ?? null) as number | null,
       meanHours: hours.length ? hours.reduce((a, b) => a + b, 0) / hours.length : null,
       why: firstSentence(comparison.narrative?.explanations.find((item) => item.candidateId === result.id)?.explanation),
       cls: classify(sunlit, fit, criteria.targetAreaSqft),
     };
-  }), [brief.preferredMonth, comparison, criteria.targetAreaSqft, top]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }), [addresses, brief.preferredMonth, comparison, criteria.targetAreaSqft, top]);
 
   const save = (roof: typeof roofs[number]) => setFavorites(addFavorite({
     id: roof.result.id, name: roof.name, address: roof.address, imageryUrl: roof.result.imageryUrl, city: urbanAreaLabel(brief),
@@ -109,7 +113,7 @@ export default function ResultsApp({ brief, criteria, comparison, top, insights,
   </div>;
 }
 
-type Roof = { result: SearchResult; rank: number; name: string; address: string; sunlit: number | null; fit: number | null; start: number | null; meanHours: number | null; why: string | null; cls: keyof typeof CLASSES; predictions: NonNullable<AgentComparison['predictions']> };
+type Roof = { food: ReturnType<typeof estimateFood>; result: SearchResult; rank: number; name: string; address: string; sunlit: number | null; fit: number | null; start: number | null; meanHours: number | null; why: string | null; cls: keyof typeof CLASSES; predictions: NonNullable<AgentComparison['predictions']> };
 
 function Deck({ roofs, index, total, criteria, crops, cropNames, savedIds, onIndex, onSave, onOpen, onShowSaved }: {
   roofs: Roof[]; index: number; total: number; criteria: Props['criteria']; crops: string[]; cropNames: string[]; savedIds: Set<string>;
@@ -164,6 +168,7 @@ function Deck({ roofs, index, total, criteria, crops, cropNames, savedIds, onInd
         <h1>{roof.name}</h1>
         <p className="ra-address">{roof.address}</p>
         <div className="ra-stats">
+          <div className="ra-food"><strong>{roof.food ? `≈${formatLbs(roof.food.lbsPerYear)}` : '—'}<small> lbs</small></strong><span>food a year (est.)</span></div>
           <div><strong>{roof.sunlit === null ? '—' : `${fmt(roof.sunlit)}`}<small> ft²</small></strong><span>{meets ? 'in full sun, meets your area' : `in ${criteria.targetHours}h+ sun`}</span></div>
           <div><strong>{roof.fit === null ? '—' : Math.round(roof.fit)}</strong><span>crop fit</span></div>
           <div><strong>{roof.start === null ? '—' : MONTHS[roof.start].slice(0, 3)}</strong><span>start</span></div>
