@@ -60,3 +60,11 @@
 @media (prefers-reduced-motion: reduce) {
   .agent-loader-sun, .agent-loader-roof i, .agent-loader-kicker i { animation: none; }
 }
+
+/* Larger, sentence-case loader text (no tiny mono labels). */
+.agent-loader-cancel { font-family: var(--font-sans); font-size: 14px; letter-spacing: 0; padding: 9px 16px; }
+.agent-loader-kicker { font-family: var(--font-sans); font-size: 14px; font-weight: 600; letter-spacing: .02em; }
+.agent-loader-subtitle { font-size: 17px; }
+.agent-loader-rail small { font-size: 14px; }
+.agent-loader-now strong { font-size: 17px; }
+.agent-loader-now span { font-family: var(--font-sans); font-size: 14px; letter-spacing: 0; }

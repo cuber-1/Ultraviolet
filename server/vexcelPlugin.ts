@@ -602,7 +602,7 @@ export function vexcelApiPlugin(root: string) {
           return simulateCandidate(key, candidate, requestedDates, requestedHours, requestedArea, await geometryCache.get(candidate.id)!);
         };
         try {
-          const output = await runLandLensAgent({ goal, followUp: typeof input.followUp === 'string' ? input.followUp : undefined, location: searchLocation || locationPhrase(goal) || 'all available Vexcel coverage', dates, targetHours, targetAreaSqft, crops: Array.isArray(input.crops) ? input.crops.map(String).slice(0, 6) : undefined, cropProfiles, preferredMonth, source: input.source === 'guided' ? 'guided' : 'search' }, { search, geometry, simulate: sunlight }, (event) => send({ type: 'progress', ...event }));
+          const output = await runLandLensAgent({ goal, followUp: typeof input.followUp === 'string' ? input.followUp : undefined, location: searchLocation || locationPhrase(goal) || 'all available Vexcel coverage', dates, targetHours, targetAreaSqft, crops: Array.isArray(input.crops) ? input.crops.map(String).slice(0, 6) : undefined, cropProfiles, preferredMonth, source: input.source === 'guided' ? 'guided' : 'search' }, { search, geometry, simulate: sunlight }, (event) => send({ type: 'progress', ...event }), (event) => send({ type: 'trace', event }));
           const simulatedIds = new Set(output.simulations.map((item) => item.candidateId));
           for (const candidate of output.candidates) if (!simulatedIds.has(candidate.id)) output.simulations.push(await sunlight(candidate, dates, targetHours, targetAreaSqft));
           const byId = new Map(output.candidates.map((candidate) => [candidate.id, candidate]));

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, CalendarDays, Cpu, LayoutGrid, MapPin, Sun } from 'lucide-react';
 import { SiteWorkspace } from './AgriculturePage';
+import RoofPreview3D from '../components/RoofPreview3D';
 import { CLASSES, ComponentBars, CropTimeline, PlantingCurveChart, classify, CROP_COLORS } from '../components/charts/DeepAgentCharts';
 import type { CropModelInfo, CropPrediction, SearchResult, SunlightEvidence } from '../services/vexcel';
 import './DeepAgentSite.css';
@@ -35,13 +36,13 @@ export default function DeepAgentSite({ result, rank, total, simulation, predict
   return <div className="das">
     <header className="das-header">
       <button className="das-back" onClick={onClose}><ArrowLeft size={16} /> Top {total}</button>
-      <div className="das-title"><span className="mono">DEEP AGENT · ROOF #{rank} OF {total}</span><h1>{name}</h1><p><MapPin size={13} /> {result.costar?.address || `${result.lat.toFixed(5)}, ${result.lon.toFixed(5)}`}</p></div>
+      <div className="das-title"><span className="das-eyebrow">Roof {rank} of {total}</span><h1>{name}</h1><p><MapPin size={13} /> {result.costar?.address || `${result.lat.toFixed(5)}, ${result.lon.toFixed(5)}`}</p></div>
       <span className="das-class" style={{ borderColor: CLASSES[cls].color }}><i style={{ background: CLASSES[cls].color }} />{CLASSES[cls].label}</span>
     </header>
     <nav className="das-tabs" role="tablist">{tabs.map(({ key, label, icon: Icon }) => <button key={key} role="tab" aria-selected={tab === key} className={tab === key ? 'active' : ''} onClick={() => setTab(key)}><Icon size={15} /> {label}</button>)}</nav>
 
     {tab === 'overview' && <main className="das-body das-overview">
-      <img src={result.imageryUrl} alt={`Aerial image of ${name}`} />
+      <RoofPreview3D result={result} date={criteria.dates[0]} targetHours={criteria.targetHours} targetAreaSqft={criteria.targetAreaSqft} />
       <section>
         <div className="das-stats">
           <Stat label={`Area with ${criteria.targetHours} h sun`} value={sunlit === null ? 'Not assessed' : `${fmt(sunlit)} ft²`} hint={sunlit === null ? 'Missing roof geometry' : sunlit >= criteria.targetAreaSqft ? `Meets your ${fmt(criteria.targetAreaSqft)} ft²` : `${Math.round((sunlit / criteria.targetAreaSqft) * 100)}% of your target`} />
@@ -49,13 +50,13 @@ export default function DeepAgentSite({ result, rank, total, simulation, predict
           <Stat label="Crop-model fit" value={avgFit === null ? '—' : `${avgFit.toFixed(0)} / 100`} hint={mlModel?.source === 'ml' ? mlModel.name : 'Model unavailable'} />
           <Stat label="Best start" value={starts[0] ? MONTHS[starts[0].plantMonth!] : '—'} hint={starts[0] ? `${cropName(starts[0].cropId)} first` : 'No workable month'} />
         </div>
-        {explanation && <div className="das-card"><span className="mono">WHY IT RANKS #{rank}</span><p>{explanation}</p></div>}
+        {explanation && <div className="das-card"><span className="das-label">Why it ranks #{rank}</span><p>{explanation}</p></div>}
         <div className="das-card">
-          <span className="mono">YOUR CROPS HERE</span>
+          <span className="das-label">Your crops here</span>
           <ul className="das-crops">{crops.map((crop, index) => { const item = predictions.find((p) => p.cropId === crop.id); return <li key={crop.id}><i style={{ background: CROP_COLORS[index % CROP_COLORS.length] }} /><strong>{crop.name}</strong>{item ? <span>{Math.round(item.suitability * 100)} fit · {item.plantMonth !== null ? `plant ${MONTHS[item.plantMonth].slice(0, 3)}${item.harvestMonth !== null ? ` → harvest ${MONTHS[item.harvestMonth].slice(0, 3)}` : ''}` : 'no workable month'}</span> : <span className="muted">Not scored by the model</span>}</li>; })}</ul>
         </div>
         <div className="das-card">
-          <span className="mono">PROPERTY</span>
+          <span className="das-label">Property</span>
           {result.costar ? <dl className="das-dl">
             <div><dt>Type</dt><dd>{result.costar.propertyType}</dd></div>
             <div><dt>Listing</dt><dd>{result.costar.listing?.active ? `Active · ${result.costar.listing.statuses.join(', ')}` : 'No active listing'}</dd></div>
@@ -68,8 +69,8 @@ export default function DeepAgentSite({ result, rank, total, simulation, predict
 
     {tab === 'sun' && <main className="das-sun">
       <div className="das-sun-strip">
-        {simulation ? simulation.perDate.map((item) => <div key={item.date}><span className="mono">{shortDate(item.date).toUpperCase()}</span><strong>{item.areaMeetingTargetSqft === null ? '—' : `${fmt(item.areaMeetingTargetSqft)} ft²`}</strong><small>get {criteria.targetHours} h+ · avg {item.meanHours === null ? '—' : `${item.meanHours.toFixed(1)} h`}</small></div>) : <div><strong>No sunlight simulation for this roof</strong></div>}
-        <div className="das-sun-total"><span className="mono">ON EVERY DATE</span><strong>{sunlit === null ? '—' : `${fmt(sunlit)} ft²`}</strong><small>{simulation?.geometry.obstructionCount ?? 0} obstructions · {simulation?.geometry.validSamples ?? 0} height points</small></div>
+        {simulation ? simulation.perDate.map((item) => <div key={item.date}><span className="das-label">{shortDate(item.date)}</span><strong>{item.areaMeetingTargetSqft === null ? '—' : `${fmt(item.areaMeetingTargetSqft)} ft²`}</strong><small>get {criteria.targetHours} h+ · avg {item.meanHours === null ? '—' : `${item.meanHours.toFixed(1)} h`}</small></div>) : <div><strong>No sunlight simulation for this roof</strong></div>}
+        <div className="das-sun-total"><span className="das-label">On every date</span><strong>{sunlit === null ? '—' : `${fmt(sunlit)} ft²`}</strong><small>{simulation?.geometry.obstructionCount ?? 0} obstructions · {simulation?.geometry.validSamples ?? 0} height points</small></div>
       </div>
       <SiteWorkspace embedded result={result} onClose={onClose} initialDate={criteria.dates[0]} initialTargetHours={criteria.targetHours} targetAreaSqft={criteria.targetAreaSqft} />
     </main>}
@@ -78,12 +79,12 @@ export default function DeepAgentSite({ result, rank, total, simulation, predict
 
     {tab === 'calendar' && <main className="das-body">
       <div className="das-card wide">
-        <span className="mono">WHEN TO START</span>
+        <span className="das-label">When to start</span>
         <h2>{starts[0] ? `Start with ${cropName(starts[0].cropId).toLowerCase()} in ${MONTHS[starts[0].plantMonth!]}.` : 'No workable planting month for these crops.'}</h2>
         <CropTimeline preferredMonth={preferredMonth} checkDates={criteria.dates} rows={crops.map((crop) => { const item = predictions.find((p) => p.cropId === crop.id); return { id: crop.id, name: crop.name, plantMonth: item?.plantMonth ?? null, harvestMonth: item?.harvestMonth ?? null, suitableMonths: item?.suitableMonths ?? [], growDays: item?.growingDays ?? null }; })} />
       </div>
       <div className="das-card wide">
-        <span className="mono">STEP BY STEP</span>
+        <span className="das-label">Step by step</span>
         <ol className="das-steps">{starts.map((item) => <li key={item.cropId}><strong>{MONTHS[item.plantMonth!]}</strong><span>Plant {cropName(item.cropId).toLowerCase()}{item.growingDays ? ` · ${Math.round(item.growingDays.min)}–${Math.round(item.growingDays.max)} days to harvest` : ''}{item.harvestMonth !== null ? ` · expect a harvest around ${MONTHS[item.harvestMonth]}` : ''}.</span>{(item.suitableMonths?.length ?? 0) > 1 && <small>Other workable starts: {item.suitableMonths!.filter((m) => m !== item.plantMonth).map((m) => MONTHS[m].slice(0, 3)).join(', ')}</small>}</li>)}
           <li><strong>Sun check</strong><span>Roof sunlight was simulated on {criteria.dates.map(shortDate).join(' and ')} for {criteria.targetHours} hours of direct sun.</span></li></ol>
       </div>
@@ -92,7 +93,7 @@ export default function DeepAgentSite({ result, rank, total, simulation, predict
 }
 
 function Stat({ label, value, hint }: { label: string; value: string; hint: string }) {
-  return <div className="das-stat"><span className="mono">{label.toUpperCase()}</span><strong>{value}</strong><small>{hint}</small></div>;
+  return <div className="das-stat"><span className="das-label">{label}</span><strong>{value}</strong><small>{hint}</small></div>;
 }
 
 function ModelTab({ predictions, crops, preferredMonth, mlModel }: { predictions: CropPrediction[]; crops: SiteCrop[]; preferredMonth: number; mlModel: CropModelInfo | null }) {
@@ -107,13 +108,13 @@ function ModelTab({ predictions, crops, preferredMonth, mlModel }: { predictions
   if (!item) return <main className="das-body"><p className="viz-empty">The crop model did not score these crops for this roof.</p></main>;
   return <main className="das-body das-model">
     <div className="das-card wide">
-      <div className="das-model-head"><div><span className="mono">CROP MODEL · {(mlModel?.name ?? 'unknown').toUpperCase()}</span><h2>Fit by planting month</h2></div>
+      <div className="das-model-head"><div><span className="das-label">Crop model · {mlModel?.name ?? 'unknown'}</span><h2>Fit by planting month</h2></div>
         <div className="viz-filters">{scored.map((crop) => <button key={crop.id} className={crop.id === cropId ? 'active' : ''} onClick={() => setCropId(crop.id)}>{crop.name}</button>)}</div></div>
       <PlantingCurveChart series={series} preferredMonth={preferredMonth} focusId={cropId} />
     </div>
     <div className="das-model-grid">
       <div className="das-card">
-        <span className="mono" style={{ color: CROP_COLORS[index % CROP_COLORS.length] }}>{crops[index]?.name.toUpperCase()}</span>
+        <span className="das-label" style={{ color: CROP_COLORS[index % CROP_COLORS.length] }}>{crops[index]?.name}</span>
         <div className="das-score"><strong>{Math.round(item.suitability * 100)}</strong><span>fit if planted in {item.plantMonth !== null ? MONTHS[item.plantMonth] : '—'}</span></div>
         <dl className="das-dl">
           <div><dt>Confidence</dt><dd>{item.confidence === null ? '—' : `${Math.round(item.confidence * 100)}%`}</dd></div>
@@ -123,12 +124,12 @@ function ModelTab({ predictions, crops, preferredMonth, mlModel }: { predictions
         </dl>
       </div>
       <div className="das-card">
-        <span className="mono">WHAT DRIVES THE SCORE · {item.plantMonth !== null ? MONTHS[item.plantMonth].toUpperCase() : ''}</span>
+        <span className="das-label">What drives the score{item.plantMonth !== null ? ` in ${MONTHS[item.plantMonth]}` : ''}</span>
         {components ? <ComponentBars components={components} /> : <p className="muted">No component breakdown returned.</p>}
         {item.notes && <p className="das-note">{item.notes}</p>}
       </div>
       <div className="das-card">
-        <span className="mono">CROP REQUIREMENTS (FAO ECOCROP)</span>
+        <span className="das-label">Crop requirements (FAO EcoCrop)</span>
         {item.profile ? <dl className="das-dl">
           <div><dt>Species</dt><dd><em>{item.profile.scientificName ?? '—'}</em></dd></div>
           <div><dt>Optimal temperature</dt><dd>{item.profile.tempOptC ? `${item.profile.tempOptC[0]}–${item.profile.tempOptC[1]} °C` : '—'}</dd></div>
@@ -137,7 +138,7 @@ function ModelTab({ predictions, crops, preferredMonth, mlModel }: { predictions
         </dl> : <p className="muted">No crop profile returned.</p>}
       </div>
       <div className="das-card">
-        <span className="mono">ABOUT THE MODEL</span>
+        <span className="das-label">About the model</span>
         <p>{health?.model?.name ?? mlModel?.name ?? 'Crop model'}{health?.metrics ? ` · held-out error ${health.metrics.mae?.toFixed(1)} points (MAE), R² ${health.metrics.r2?.toFixed(2)}` : ''}.</p>
         <p className="muted">Agroclimatic screening from climate, soil pH, irrigation, and FAO crop requirements. Not a yield forecast or purchase recommendation. Roof shading is handled separately by the sun simulator.</p>
       </div>

@@ -105,6 +105,7 @@ export type AgentComparison = {
   simulations: SunlightEvidence[];
   predictions?: CropPrediction[];
   mlModel?: CropModelInfo | null;
+  trace?: AgentTraceEvent[];
   narrative?: null | {
     summary: string;
     criteria: { location: string; targetAreaSqft: number; targetHours: number; dates: string[] };
@@ -141,6 +142,10 @@ export type CropPrediction = {
   profile?: { scientificName: string | null; tempOptC: [number, number] | null; rainOptMm: [number, number] | null; phOpt: [number, number] | null } | null;
   evidenceGrade?: string | null;
 };
+export type AgentTraceEvent =
+  | { kind: 'prompt'; role: 'system' | 'user'; title: string; text: string; at: number }
+  | { kind: 'llm'; text: string; toolCalls: Array<{ name: string; args: string }>; ms: number; tokens: number | null; at: number }
+  | { kind: 'tool'; name: string; args: string; result: string; ms: number; ok: boolean; at: number };
 export type CropModelInfo = { name: string; version: string | null; source: 'ml' | 'calendar-fallback'; error: string | null };
 export type CropProfileInput = { id: string; name: string; sunHours: number; tempMinC: number; tempMaxC: number; growMonths: number };
 
@@ -160,7 +165,7 @@ async function directComparison(input: ComparisonInput, signal?: AbortSignal) {
   return payload as AgentComparison;
 }
 
-export async function runAgentComparison(input: ComparisonInput, onProgress: (progress: AgentProgress) => void, signal?: AbortSignal): Promise<AgentComparison> {
+export async function runAgentComparison(input: ComparisonInput, onProgress: (progress: AgentProgress) => void, signal?: AbortSignal, onTrace?: (event: AgentTraceEvent) => void): Promise<AgentComparison> {
   const response = await fetch('/api/vexcel/agent', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(input), signal });
   if (response.status === 503) {
     onProgress({ stage: 'planning', message: 'Model unavailable; running the same comparison directly' });
@@ -185,6 +190,7 @@ export async function runAgentComparison(input: ComparisonInput, onProgress: (pr
       if (!line) continue;
       const payload = JSON.parse(line.slice(6));
       if (payload.type === 'progress') onProgress(payload as AgentProgress);
+      if (payload.type === 'trace') onTrace?.(payload.event as AgentTraceEvent);
       if (payload.type === 'error') throw new Error(payload.error || 'Deep Agents comparison failed.');
       if (payload.type === 'result') result = payload as AgentComparison;
     }

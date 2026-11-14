@@ -37,6 +37,11 @@ type Roof3DVisualizerProps = {
   surfaceLabel: string;
   sun: SunPosition;
   localTime: string;
+  /** Overview preview: spin slowly on its own. */
+  autoRotate?: boolean;
+  initialSurfaceMode?: SurfaceMode;
+  /** Hide the HUD, status, and surface switch (used by the Deep Agent overview). */
+  minimal?: boolean;
 };
 
 function RoofPolygonSurface({
@@ -353,6 +358,8 @@ function Scene({ props, surfaceMode }: { props: Roof3DVisualizerProps; surfaceMo
       minDistance={span * .45}
       maxDistance={span * 4}
       maxPolarAngle={Math.PI * .49}
+      autoRotate={props.autoRotate}
+      autoRotateSpeed={.9}
       makeDefault
     />
   </>;
@@ -361,7 +368,7 @@ function Scene({ props, surfaceMode }: { props: Roof3DVisualizerProps; surfaceMo
 export default function Roof3DVisualizer(props: Roof3DVisualizerProps) {
   const span = Math.max(props.roofBounds.width, props.roofBounds.height, 12);
   const buildingHeight = props.buildingHeightM ?? 0;
-  const [surfaceMode, setSurfaceMode] = useState<SurfaceMode>('imagery');
+  const [surfaceMode, setSurfaceMode] = useState<SurfaceMode>(props.initialSurfaceMode ?? 'imagery');
   const isNight = props.sun.altitude <= 0;
 
   return <div className="roof-3d-view">
@@ -380,6 +387,7 @@ export default function Roof3DVisualizer(props: Roof3DVisualizerProps) {
       <fog attach="fog" args={['#f7f5f2', span * 2.2, span * 6]} />
       <Suspense fallback={null}><Scene props={props} surfaceMode={surfaceMode} /></Suspense>
     </Canvas>
+    {!props.minimal && <>
     <div className="roof-3d-hud roof-3d-hud--left">
       <span className="mono">ROOF VIEW</span>
       <strong>{props.localTime}</strong>
@@ -394,6 +402,7 @@ export default function Roof3DVisualizer(props: Roof3DVisualizerProps) {
       <button className={surfaceMode === 'imagery' ? 'active' : ''} onClick={() => setSurfaceMode('imagery')} aria-pressed={surfaceMode === 'imagery'}>Imagery</button>
       <button className={surfaceMode === 'clean' ? 'active' : ''} onClick={() => setSurfaceMode('clean')} aria-pressed={surfaceMode === 'clean'}>Clean roof</button>
     </div>
-    {props.surfaceLabel.startsWith('CIR') && <div className="roof-3d-cir-note"><span className="mono">{surfaceMode === 'clean' ? 'RED / BLUE BALANCE' : 'NIR INTENSITY'}</span><small>{surfaceMode === 'clean' ? 'Smoothed IRG channels · three flat bands' : 'Denoised single-spectrum view'}</small></div>}
+    </>}
+    {!props.minimal && props.surfaceLabel.startsWith('CIR') && <div className="roof-3d-cir-note"><span className="mono">{surfaceMode === 'clean' ? 'RED / BLUE BALANCE' : 'NIR INTENSITY'}</span><small>{surfaceMode === 'clean' ? 'Smoothed IRG channels · three flat bands' : 'Denoised single-spectrum view'}</small></div>}
   </div>;
 }
