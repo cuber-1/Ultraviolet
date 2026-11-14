@@ -23,7 +23,8 @@ def validate(data: Path, artifact: Path, profiles: Path) -> dict:
     points = county_points(data / "2022_Gaz_counties_national.zip", state=None)
     predictor = CropFitPredictor(artifact, profiles)
     grids = {year: power_grids(data, year) for year in YEARS}
-    score_cache = data / "cropfit-v0.4-scores.json"
+    model_version = predictor.metadata["model"].rsplit(" ", 1)[-1]
+    score_cache = data / f"cropfit-{model_version}-scores.json"
     if score_cache.exists():
         observations = json.loads(score_cache.read_text())
     else:
@@ -119,7 +120,7 @@ def main() -> None:
     parser.add_argument("--data", type=Path, default=root / "data/raw/observed-validation/national")
     parser.add_argument("--artifact", type=Path, default=root / "artifacts/cropfit.joblib")
     parser.add_argument("--profiles", type=Path, default=root / "data/raw/ecocrop.csv")
-    parser.add_argument("--output", type=Path, default=root / "evaluation/national-observed-validation-v0.4.json")
+    parser.add_argument("--output", type=Path, default=root / "evaluation/national-observed-validation-v0.5.json")
     args = parser.parse_args()
     report = validate(args.data, args.artifact, args.profiles)
     args.output.parent.mkdir(parents=True, exist_ok=True)

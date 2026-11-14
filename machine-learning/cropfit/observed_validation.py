@@ -200,7 +200,7 @@ def main() -> None:
     parser.add_argument("--data", type=Path, default=root / "data/raw/observed-validation")
     parser.add_argument("--artifact", type=Path, default=root / "artifacts/cropfit.joblib")
     parser.add_argument("--profiles", type=Path, default=root / "data/raw/ecocrop.csv")
-    parser.add_argument("--output", type=Path, default=root / "evaluation/observed-validation-v0.4.json")
+    parser.add_argument("--output", type=Path, default=root / "evaluation/observed-validation-v0.5.json")
     parser.add_argument("--minimum-acres", type=float, default=100)
     args = parser.parse_args()
     report = validate(args.data, args.artifact, args.profiles, args.minimum_acres)

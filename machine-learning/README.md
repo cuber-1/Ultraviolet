@@ -7,7 +7,7 @@ revenue, or a buy/sell recommendation.
 
 ## Run the trained model
 
-On macOS or Linux, install the released v0.4 artifact, EcoCrop profiles, and
+On macOS or Linux, install the released v0.5 artifact, EcoCrop profiles, and
 inference dependencies without access to the Spark:
 
 ```bash
@@ -96,4 +96,15 @@ broader-state evidence supports a new claim.
 The national command streams USDA NASS Quick Stats into a small filtered cache
 and evaluates 17,857 county-year yields outside California. That independent
 gate also did not pass; its committed report is the primary observed-outcome
-evidence for v0.4.
+evidence for v0.5. The cache is versioned with the model so a new artifact
+cannot silently reuse an older model's scores.
+
+## Reproduce feature selection
+
+```bash
+npm run ml:evaluate:features
+```
+
+This compares the v0.4 absolute-feature design with v0.5 range-relative
+agronomic features on five identical grouped crop-profile splits. The committed
+report explicitly measures EcoCrop-teacher fidelity, not observed yield.

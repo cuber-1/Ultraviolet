@@ -12,7 +12,7 @@ from .inference import CropFitPredictor
 
 
 ROOT = Path(__file__).resolve().parents[1]
-app = FastAPI(title="Ultraviolet CropFit", version="0.4.1")
+app = FastAPI(title="Ultraviolet CropFit", version="0.5.0")
 
 
 class PredictionRequest(BaseModel):
@@ -35,9 +35,13 @@ def predictor() -> CropFitPredictor:
 
 @lru_cache(maxsize=1)
 def observed_evidence() -> dict:
-    path = ROOT / "evaluation/national-observed-validation-v0.4.json"
-    if not path.exists():
-        path = ROOT / "evaluation/observed-validation-v0.4.json"
+    candidates = [
+        ROOT / "evaluation/national-observed-validation-v0.5.json",
+        ROOT / "evaluation/observed-validation-v0.5.json",
+        ROOT / "evaluation/national-observed-validation-v0.4.json",
+        ROOT / "evaluation/observed-validation-v0.4.json",
+    ]
+    path = next((candidate for candidate in candidates if candidate.exists()), candidates[0])
     if not path.exists():
         return {"grade": "agroclimatic-screening", "observedOutcomeGate": None}
     report = json.loads(path.read_text())
@@ -56,7 +60,7 @@ def observed_evidence() -> dict:
 @app.get("/health")
 def health():
     model = predictor()
-    return {"status": "ok", "mode": "trained", "model": model.metadata["model"], "metrics": model.metadata["metrics"], "evidence": observed_evidence()}
+    return {"status": "ok", "mode": "trained", "apiVersion": app.version, "model": model.metadata["model"], "metrics": model.metadata["metrics"], "evidence": observed_evidence()}
 
 
 @app.post("/predict")

@@ -1,0 +1,99 @@
+{
+  "model": "CropFit EcoCrop surrogate v0.5",
+  "selectedModel": "randomForest",
+  "createdAt": "2026-11-14T21:51:02.033872+00:00",
+  "runId": "20261114T215102Z",
+  "device": "cuda",
+  "trainingSource": "FAO EcoCrop environmental requirement profiles via OpenCLIM",
+  "labelType": "mechanistic screening teacher; not observed farm yield",
+  "profiles": 1862,
+  "examples": 134064,
+  "heldOutProfiles": 373,
+  "boostingRounds": 500,
+  "metrics": {
+    "mae": 0.1519,
+    "r2": 0.9996,
+    "p90AbsoluteError": 0.4443
+  },
+  "validationMetrics": {
+    "mae": 0.1454,
+    "r2": 0.9997
+  },
+  "modelParameters": {
+    "nEstimators": 120,
+    "minSamplesLeaf": 1,
+    "maxFeatures": 1.0
+  },
+  "uncertaintyCalibration": {
+    "source": "validation crop profiles only",
+    "method": "tree-disagreement bins",
+    "bins": [
+      {
+        "lowerTreeStd": 0,
+        "upperTreeStd": 0.01,
+        "examples": 12861,
+        "p80AbsoluteError": 0.0,
+        "p90AbsoluteError": 0.0
+      },
+      {
+        "lowerTreeStd": 0.01,
+        "upperTreeStd": 2,
+        "examples": 1673,
+        "p80AbsoluteError": 0.5355,
+        "p90AbsoluteError": 0.7941
+      },
+      {
+        "lowerTreeStd": 2,
+        "upperTreeStd": 5,
+        "examples": 1479,
+        "p80AbsoluteError": 1.574,
+        "p90AbsoluteError": 2.0919
+      },
+      {
+        "lowerTreeStd": 5,
+        "upperTreeStd": 10,
+        "examples": 115,
+        "p80AbsoluteError": 3.8241,
+        "p90AbsoluteError": 5.0367
+      }
+    ],
+    "heldOutCoverage": {
+      "p80": 0.9571,
+      "p90": 0.9772
+    }
+  },
+  "selectionEvidence": "Range-relative agronomic features improved held-out MAE on all five seeds in the 20261110-20261114 robustness sweep; see evaluation/feature-validation-v0.5.json.",
+  "boostedCandidate": {
+    "mae": 0.6395,
+    "r2": 0.998,
+    "p90AbsoluteError": 1.7004,
+    "promoted": false,
+    "reason": "Held-out crop-profile MAE was worse than the selected Random Forest."
+  },
+  "featureNames": [
+    "temperature_c",
+    "annual_precipitation_mm",
+    "soil_ph",
+    "solar_mj_m2_day",
+    "irrigated",
+    "temp_opt_min",
+    "temp_opt_max",
+    "temp_abs_min",
+    "temp_abs_max",
+    "rain_opt_min",
+    "rain_opt_max",
+    "rain_abs_min",
+    "rain_abs_max",
+    "ph_opt_min",
+    "ph_opt_max",
+    "ph_abs_min",
+    "ph_abs_max",
+    "growing_days_min",
+    "growing_days_max",
+    "temperature_range_fit",
+    "water_range_fit",
+    "ph_range_fit",
+    "solar_range_fit"
+  ],
+  "seed": 20261114
+}

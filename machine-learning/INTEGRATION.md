@@ -33,7 +33,7 @@ tries `ML_MODEL_FALLBACK_URL`. If neither model answers, it falls back to a crop
 calendar (NASA monthly temperature within each crop's range) and labels the
 results "Crop calendar · model offline". The UI and Deep Agent keep working.
 
-CropFit (this folder) is the production model; the generic contract below is
+CropFit v0.5 (this folder) is the production model; the generic contract below is
 for any other model you want to plug in.
 
 ## `GET /health`
