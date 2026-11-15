@@ -255,6 +255,12 @@ The promotion comparison is independently reproducible with:
 npm run ml:evaluate:production-blend-v2
 ```
 
+A crop-region-specific interval-scaling follow-up is retained as a rejected
+candidate. It narrowed pooled 90% bands by 4.2%, but the scale required to meet
+wheat-West stability coverage pushed locked West coverage to 100%, above the
+predeclared 98% calibration ceiling. Atlas v10 therefore keeps its regional
+scales. Reproduce the rejection with `npm run ml:evaluate:interval-scaling`.
+
 ## Validate rural ranking evidence
 
 ```bash

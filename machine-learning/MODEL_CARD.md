@@ -261,6 +261,13 @@ no crop, final year, or Census region regresses. Fresh production-blend
 intervals cover 84.5%/93.0% with mean 90% width 0.5113. See
 `evaluation/production-blend-v2-validation-v10.md`.
 
+A subsequent crop-region interval-scaling candidate reduced pooled mean 90%
+width from 0.5113 to 0.4899 (4.2%) with pooled 81.6%/91.6% coverage. It was not
+promoted: meeting nominal wheat-West stability coverage required a 2.25× scale,
+which produced 100% locked West coverage and violated the predeclared 98%
+upper bound. Atlas v10 retains the region-level interval policy. See
+`evaluation/interval-scaling-validation-v11-candidate.md`.
+
 Atlas lookup now uses a cached exact haversine spatial index instead of scanning
 all 5,562 records per request. The reproducible benchmark and exact-identity
 check are in `evaluation/atlas-lookup-benchmark-v1.md`; timing ratios are
