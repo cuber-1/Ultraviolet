@@ -38,7 +38,7 @@ def benchmark(artifact: Path, profiles: Path, rounds: int) -> dict:
     legacy_ms = timed(legacy, rounds)
     batched_ms = timed(batched, rounds)
     return {
-        "name": "CropFit reliability inference benchmark v1",
+        "name": "CropFit reliability inference benchmark v4",
         "method": f"Median of {rounds} warm runs over one baseline plus ten historical climate scenarios; exact nested output equality required.",
         "scenarios": len(series),
         "legacyMilliseconds": round(legacy_ms, 4),
@@ -50,7 +50,7 @@ def benchmark(artifact: Path, profiles: Path, rounds: int) -> dict:
 
 def markdown(report: dict) -> str:
     return "\n".join([
-        "# CropFit reliability inference benchmark v1", "",
+        "# CropFit reliability inference benchmark v4", "",
         report["method"], "",
         "| Path | Median latency |", "|---|---:|",
         f'| One forest pass per scenario | {report["legacyMilliseconds"]:.2f} ms |',
@@ -65,7 +65,7 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--artifact", type=Path, default=root / "artifacts/cropfit.joblib")
     parser.add_argument("--profiles", type=Path, default=root / "data/raw/ecocrop.csv")
-    parser.add_argument("--output", type=Path, default=root / "evaluation/inference-benchmark-v1.json")
+    parser.add_argument("--output", type=Path, default=root / "evaluation/inference-benchmark-v4.json")
     parser.add_argument("--rounds", type=int, default=30)
     args = parser.parse_args()
     report = benchmark(args.artifact, args.profiles, args.rounds)

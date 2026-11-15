@@ -1,0 +1,647 @@
+{
+  "name": "USDA observed-prior crop expansion v2",
+  "historyYears": [
+    2010,
+    2011,
+    2012,
+    2013,
+    2014,
+    2015,
+    2016,
+    2017,
+    2018,
+    2019,
+    2020,
+    2021,
+    2022,
+    2023,
+    2024,
+    2025
+  ],
+  "testYears": [
+    2018,
+    2019,
+    2020,
+    2021,
+    2022,
+    2023,
+    2024,
+    2025
+  ],
+  "finalTestYears": [
+    2023,
+    2024,
+    2025
+  ],
+  "candidates": [
+    {
+      "crop": "beans (current excl chickpeas)",
+      "published": 110,
+      "observations": 81,
+      "coverage": 0.7364,
+      "spearman": 0.3184,
+      "bootstrap95": [
+        0.0036,
+        0.5446
+      ],
+      "maePercentile": 0.2328,
+      "finalTest": {
+        "published": 46,
+        "observations": 44,
+        "coverage": 0.9565,
+        "spearman": -0.0188,
+        "bootstrap95": [
+          -0.4046,
+          0.3311
+        ],
+        "maePercentile": 0.2756
+      },
+      "perYear": [
+        {
+          "year": 2018,
+          "observations": 0,
+          "spearman": null
+        },
+        {
+          "year": 2019,
+          "observations": 0,
+          "spearman": null
+        },
+        {
+          "year": 2020,
+          "observations": 0,
+          "spearman": null
+        },
+        {
+          "year": 2021,
+          "observations": 20,
+          "spearman": 0.6034
+        },
+        {
+          "year": 2022,
+          "observations": 17,
+          "spearman": 0.6834
+        },
+        {
+          "year": 2023,
+          "observations": 19,
+          "spearman": 0.0026
+        },
+        {
+          "year": 2024,
+          "observations": 10,
+          "spearman": -0.4909
+        },
+        {
+          "year": 2025,
+          "observations": 15,
+          "spearman": 0.3536
+        }
+      ],
+      "passed": false
+    },
+    {
+      "crop": "beans (legacy incl chickpeas)",
+      "published": 59,
+      "observations": 57,
+      "coverage": 0.9661,
+      "spearman": 0.7787,
+      "bootstrap95": [
+        0.6647,
+        0.8472
+      ],
+      "maePercentile": 0.1589,
+      "finalTest": {
+        "published": 0,
+        "observations": 0,
+        "coverage": 0.0,
+        "spearman": null,
+        "bootstrap95": [
+          null,
+          null
+        ],
+        "maePercentile": null
+      },
+      "perYear": [
+        {
+          "year": 2018,
+          "observations": 57,
+          "spearman": 0.7787
+        },
+        {
+          "year": 2019,
+          "observations": 0,
+          "spearman": null
+        },
+        {
+          "year": 2020,
+          "observations": 0,
+          "spearman": null
+        },
+        {
+          "year": 2021,
+          "observations": 0,
+          "spearman": null
+        },
+        {
+          "year": 2022,
+          "observations": 0,
+          "spearman": null
+        },
+        {
+          "year": 2023,
+          "observations": 0,
+          "spearman": null
+        },
+        {
+          "year": 2024,
+          "observations": 0,
+          "spearman": null
+        },
+        {
+          "year": 2025,
+          "observations": 0,
+          "spearman": null
+        }
+      ],
+      "passed": false
+    },
+    {
+      "crop": "dry peas",
+      "published": 166,
+      "observations": 162,
+      "coverage": 0.9759,
+      "spearman": 0.5775,
+      "bootstrap95": [
+        0.3754,
+        0.7079
+      ],
+      "maePercentile": 0.1904,
+      "finalTest": {
+        "published": 48,
+        "observations": 48,
+        "coverage": 1.0,
+        "spearman": 0.5301,
+        "bootstrap95": [
+          0.1947,
+          0.741
+        ],
+        "maePercentile": 0.1901
+      },
+      "perYear": [
+        {
+          "year": 2018,
+          "observations": 21,
+          "spearman": 0.6649
+        },
+        {
+          "year": 2019,
+          "observations": 16,
+          "spearman": 0.7623
+        },
+        {
+          "year": 2020,
+          "observations": 30,
+          "spearman": 0.5793
+        },
+        {
+          "year": 2021,
+          "observations": 27,
+          "spearman": 0.421
+        },
+        {
+          "year": 2022,
+          "observations": 20,
+          "spearman": 0.7792
+        },
+        {
+          "year": 2023,
+          "observations": 22,
+          "spearman": 0.6753
+        },
+        {
+          "year": 2024,
+          "observations": 20,
+          "spearman": 0.5143
+        },
+        {
+          "year": 2025,
+          "observations": 6,
+          "spearman": 0.3714
+        }
+      ],
+      "passed": false
+    },
+    {
+      "crop": "durum wheat",
+      "published": 168,
+      "observations": 160,
+      "coverage": 0.9524,
+      "spearman": 0.7202,
+      "bootstrap95": [
+        0.5425,
+        0.813
+      ],
+      "maePercentile": 0.1548,
+      "finalTest": {
+        "published": 47,
+        "observations": 47,
+        "coverage": 1.0,
+        "spearman": 0.7974,
+        "bootstrap95": [
+          0.6045,
+          0.897
+        ],
+        "maePercentile": 0.137
+      },
+      "perYear": [
+        {
+          "year": 2018,
+          "observations": 22,
+          "spearman": 0.8125
+        },
+        {
+          "year": 2019,
+          "observations": 8,
+          "spearman": 0.2857
+        },
+        {
+          "year": 2020,
+          "observations": 30,
+          "spearman": 0.8792
+        },
+        {
+          "year": 2021,
+          "observations": 28,
+          "spearman": 0.6623
+        },
+        {
+          "year": 2022,
+          "observations": 25,
+          "spearman": 0.6105
+        },
+        {
+          "year": 2023,
+          "observations": 26,
+          "spearman": 0.8018
+        },
+        {
+          "year": 2024,
+          "observations": 0,
+          "spearman": null
+        },
+        {
+          "year": 2025,
+          "observations": 21,
+          "spearman": 0.8286
+        }
+      ],
+      "passed": false
+    },
+    {
+      "crop": "potato",
+      "published": 4,
+      "observations": 4,
+      "coverage": 1.0,
+      "spearman": 0.4,
+      "bootstrap95": [
+        -1.0,
+        1.0
+      ],
+      "maePercentile": 0.2518,
+      "finalTest": {
+        "published": 0,
+        "observations": 0,
+        "coverage": 0.0,
+        "spearman": null,
+        "bootstrap95": [
+          null,
+          null
+        ],
+        "maePercentile": null
+      },
+      "perYear": [
+        {
+          "year": 2018,
+          "observations": 4,
+          "spearman": 0.4
+        },
+        {
+          "year": 2019,
+          "observations": 0,
+          "spearman": null
+        },
+        {
+          "year": 2020,
+          "observations": 0,
+          "spearman": null
+        },
+        {
+          "year": 2021,
+          "observations": 0,
+          "spearman": null
+        },
+        {
+          "year": 2022,
+          "observations": 0,
+          "spearman": null
+        },
+        {
+          "year": 2023,
+          "observations": 0,
+          "spearman": null
+        },
+        {
+          "year": 2024,
+          "observations": 0,
+          "spearman": null
+        },
+        {
+          "year": 2025,
+          "observations": 0,
+          "spearman": null
+        }
+      ],
+      "passed": false
+    },
+    {
+      "crop": "silage corn",
+      "published": 1611,
+      "observations": 1544,
+      "coverage": 0.9584,
+      "spearman": 0.5968,
+      "bootstrap95": [
+        0.5422,
+        0.6466
+      ],
+      "maePercentile": 0.1836,
+      "finalTest": {
+        "published": 585,
+        "observations": 576,
+        "coverage": 0.9846,
+        "spearman": 0.5506,
+        "bootstrap95": [
+          0.4691,
+          0.6172
+        ],
+        "maePercentile": 0.1937
+      },
+      "perYear": [
+        {
+          "year": 2018,
+          "observations": 128,
+          "spearman": 0.6768
+        },
+        {
+          "year": 2019,
+          "observations": 108,
+          "spearman": 0.4066
+        },
+        {
+          "year": 2020,
+          "observations": 249,
+          "spearman": 0.551
+        },
+        {
+          "year": 2021,
+          "observations": 235,
+          "spearman": 0.7424
+        },
+        {
+          "year": 2022,
+          "observations": 248,
+          "spearman": 0.6668
+        },
+        {
+          "year": 2023,
+          "observations": 210,
+          "spearman": 0.4163
+        },
+        {
+          "year": 2024,
+          "observations": 193,
+          "spearman": 0.6148
+        },
+        {
+          "year": 2025,
+          "observations": 173,
+          "spearman": 0.6528
+        }
+      ],
+      "passed": true
+    },
+    {
+      "crop": "spring wheat",
+      "published": 1033,
+      "observations": 1023,
+      "coverage": 0.9903,
+      "spearman": 0.7789,
+      "bootstrap95": [
+        0.7241,
+        0.8178
+      ],
+      "maePercentile": 0.1353,
+      "finalTest": {
+        "published": 258,
+        "observations": 257,
+        "coverage": 0.9961,
+        "spearman": 0.762,
+        "bootstrap95": [
+          0.6698,
+          0.8301
+        ],
+        "maePercentile": 0.1375
+      },
+      "perYear": [
+        {
+          "year": 2018,
+          "observations": 142,
+          "spearman": 0.7276
+        },
+        {
+          "year": 2019,
+          "observations": 105,
+          "spearman": 0.7611
+        },
+        {
+          "year": 2020,
+          "observations": 190,
+          "spearman": 0.7861
+        },
+        {
+          "year": 2021,
+          "observations": 169,
+          "spearman": 0.8271
+        },
+        {
+          "year": 2022,
+          "observations": 160,
+          "spearman": 0.8279
+        },
+        {
+          "year": 2023,
+          "observations": 143,
+          "spearman": 0.7384
+        },
+        {
+          "year": 2024,
+          "observations": 0,
+          "spearman": null
+        },
+        {
+          "year": 2025,
+          "observations": 114,
+          "spearman": 0.7977
+        }
+      ],
+      "passed": true
+    },
+    {
+      "crop": "sunflower",
+      "published": 142,
+      "observations": 135,
+      "coverage": 0.9507,
+      "spearman": 0.2724,
+      "bootstrap95": [
+        0.0285,
+        0.4578
+      ],
+      "maePercentile": 0.2415,
+      "finalTest": {
+        "published": 37,
+        "observations": 37,
+        "coverage": 1.0,
+        "spearman": 0.3538,
+        "bootstrap95": [
+          -0.1083,
+          0.6904
+        ],
+        "maePercentile": 0.2297
+      },
+      "perYear": [
+        {
+          "year": 2018,
+          "observations": 15,
+          "spearman": 0.1844
+        },
+        {
+          "year": 2019,
+          "observations": 0,
+          "spearman": null
+        },
+        {
+          "year": 2020,
+          "observations": 31,
+          "spearman": 0.0603
+        },
+        {
+          "year": 2021,
+          "observations": 27,
+          "spearman": 0.3077
+        },
+        {
+          "year": 2022,
+          "observations": 25,
+          "spearman": 0.4531
+        },
+        {
+          "year": 2023,
+          "observations": 17,
+          "spearman": 0.652
+        },
+        {
+          "year": 2024,
+          "observations": 10,
+          "spearman": 0.1879
+        },
+        {
+          "year": 2025,
+          "observations": 10,
+          "spearman": 0.0182
+        }
+      ],
+      "passed": false
+    },
+    {
+      "crop": "sunflower (non-oil)",
+      "published": 1,
+      "observations": 1,
+      "coverage": 1.0,
+      "spearman": null,
+      "bootstrap95": [
+        null,
+        null
+      ],
+      "maePercentile": 0.125,
+      "finalTest": {
+        "published": 0,
+        "observations": 0,
+        "coverage": 0.0,
+        "spearman": null,
+        "bootstrap95": [
+          null,
+          null
+        ],
+        "maePercentile": null
+      },
+      "perYear": [
+        {
+          "year": 2018,
+          "observations": 1,
+          "spearman": null
+        },
+        {
+          "year": 2019,
+          "observations": 0,
+          "spearman": null
+        },
+        {
+          "year": 2020,
+          "observations": 0,
+          "spearman": null
+        },
+        {
+          "year": 2021,
+          "observations": 0,
+          "spearman": null
+        },
+        {
+          "year": 2022,
+          "observations": 0,
+          "spearman": null
+        },
+        {
+          "year": 2023,
+          "observations": 0,
+          "spearman": null
+        },
+        {
+          "year": 2024,
+          "observations": 0,
+          "spearman": null
+        },
+        {
+          "year": 2025,
+          "observations": 0,
+          "spearman": null
+        }
+      ],
+      "passed": false
+    }
+  ],
+  "acceptedCrops": [
+    "silage corn",
+    "spring wheat"
+  ],
+  "gate": {
+    "rule": "Both the 2018\u20132025 forward test and locked 2023\u20132025 block need >=100 observations, Spearman >=0.50, grouped-bootstrap lower bound >0.30, and >=50% published-row coverage."
+  },
+  "dataNotes": [
+    "USDA NASS changed the dry-edible-bean definition in 2019: the current category excludes chickpeas.",
+    "Legacy and current bean definitions are evaluated separately and are never joined as one time series.",
+    "Winter, non-durum spring, and durum wheat remain separate definitions; their percentiles are never pooled.",
+    "Grain and silage corn, and oil and non-oil sunflower, remain separate definitions and units."
+  ],
+  "definitionSource": "https://www.nass.usda.gov/Publications/Todays_Reports/reports/cropan20.pdf",
+  "interpretation": "Passing supports county-level regional ordering only, not parcel yield or purchase returns."
+}

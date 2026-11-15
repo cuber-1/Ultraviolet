@@ -37,7 +37,14 @@ def conformal_quantile(values: np.ndarray, coverage: float) -> float:
     return float(np.quantile(values, level, method="higher"))
 
 
-def production_gate(metrics: dict, held_out_profiles: int, coverage80: float, coverage90: float) -> dict:
+def production_gate(
+    metrics: dict,
+    held_out_profiles: int,
+    coverage80: float,
+    coverage90: float,
+    active_coverage80: float,
+    active_coverage90: float,
+) -> dict:
     checks = {
         "mae": float(metrics["mae"]) <= PRODUCTION_THRESHOLDS["maximumMae"],
         "p90AbsoluteError": float(metrics["p90AbsoluteError"]) <= PRODUCTION_THRESHOLDS["maximumP90AbsoluteError"],
@@ -45,6 +52,8 @@ def production_gate(metrics: dict, held_out_profiles: int, coverage80: float, co
         "heldOutProfiles": held_out_profiles >= PRODUCTION_THRESHOLDS["minimumHeldOutProfiles"],
         "coverage80": abs(coverage80 - .8) <= PRODUCTION_THRESHOLDS["maximumCoverageDeviation"],
         "coverage90": abs(coverage90 - .9) <= PRODUCTION_THRESHOLDS["maximumCoverageDeviation"],
+        "activeCoverage80": abs(active_coverage80 - .8) <= PRODUCTION_THRESHOLDS["maximumCoverageDeviation"],
+        "activeCoverage90": abs(active_coverage90 - .9) <= PRODUCTION_THRESHOLDS["maximumCoverageDeviation"],
     }
     return {
         "passed": all(checks.values()),
@@ -76,7 +85,7 @@ def atomic_text_write(path: Path, value: str) -> None:
         temporary.unlink(missing_ok=True)
 
 
-def generate_examples(profiles, samples_per_crop: int, seed: int):
+def generate_examples(profiles, samples_per_crop: int, seed: int, include_interactions: bool = True):
     random = np.random.default_rng(seed)
     features, labels, groups = [], [], []
     for group, profile in enumerate(profiles):
@@ -87,7 +96,7 @@ def generate_examples(profiles, samples_per_crop: int, seed: int):
             ph = random.uniform(max(2.5, profile.ph_abs_min - 1.2), min(10.5, profile.ph_abs_max + 1.2))
             solar = random.uniform(4.0, 32.0)
             irrigated = bool(random.integers(0, 2))
-            features.append(feature_row(profile, temperature, precipitation, ph, solar, irrigated))
+            features.append(feature_row(profile, temperature, precipitation, ph, solar, irrigated, include_interactions))
             labels.append(teacher_scores(profile, temperature, precipitation, ph, solar, irrigated)["suitability"])
             groups.append(group)
     return np.asarray(features, dtype=np.float32), np.asarray(labels, dtype=np.float32), np.asarray(groups)
@@ -143,25 +152,38 @@ def save_run(run_dir: Path, metadata: dict, config: dict, history: dict, learnin
     figure, axis = plt.subplots(figsize=(8, 5)); axis.barh([item[0] for item in forest_importance], [item[1] for item in forest_importance], color="#315d49"); axis.set(title="Selected Extra Trees feature importance", xlabel="mean decrease in impurity"); figure.tight_layout(); figure.savefig(run_dir / "selected-feature-importance.png", dpi=180); plt.close(figure)
 
 
-def train(raw: Path, artifact: Path, metadata_path: Path, runs: Path, samples_per_crop: int, seed: int, rounds: int):
+def train(
+    raw: Path,
+    artifact: Path,
+    metadata_path: Path,
+    runs: Path,
+    samples_per_crop: int,
+    evaluation_samples_per_crop: int,
+    seed: int,
+    rounds: int,
+):
     profiles = load_profiles(raw)
     if len(profiles) < 100:
         raise RuntimeError(f"Only {len(profiles)} usable crop profiles found")
-    x, y, groups = generate_examples(profiles, samples_per_crop, seed)
+    # Keep validation and held-out rows frozen while increasing fitting density.
+    x, y, groups = generate_examples(profiles, evaluation_samples_per_crop, seed)
     train_validation_indices, test_indices = next(GroupShuffleSplit(n_splits=1, test_size=.2, random_state=seed).split(x, y, groups))
     inner_groups = groups[train_validation_indices]
     inner_train, inner_validation = next(GroupShuffleSplit(n_splits=1, test_size=.15, random_state=seed + 1).split(x[train_validation_indices], y[train_validation_indices], inner_groups))
     train_indices = train_validation_indices[inner_train]
     validation_indices = train_validation_indices[inner_validation]
+    training_x, training_y, training_groups = generate_examples(profiles, samples_per_crop, seed)
+    fitting_groups = np.unique(groups[train_indices])
+    fitting_indices = np.flatnonzero(np.isin(training_groups, fitting_groups))
     model = ExtraTreesRegressor(
-        n_estimators=120,
+        n_estimators=70,
         min_samples_leaf=1,
         max_features=1.0,
         n_jobs=-1,
         random_state=seed,
     )
-    model.fit(x[train_indices], y[train_indices])
-    booster, history, learning_rates, device = train_booster(x[train_indices], y[train_indices], x[validation_indices], y[validation_indices], rounds, seed)
+    model.fit(training_x[fitting_indices], training_y[fitting_indices])
+    booster, history, learning_rates, device = train_booster(training_x[fitting_indices], training_y[fitting_indices], x[validation_indices], y[validation_indices], rounds, seed)
     boosted_predictions = booster.predict(xgb.DMatrix(x[test_indices], feature_names=FEATURE_NAMES))
     baseline_predictions = model.predict(x[test_indices])
     validation_predictions = model.predict(x[validation_indices])
@@ -171,6 +193,10 @@ def train(raw: Path, artifact: Path, metadata_path: Path, runs: Path, samples_pe
     normalized_validation_errors = validation_residuals / (validation_tree_std + TREE_STD_FLOOR)
     normalized_error_p80 = conformal_quantile(normalized_validation_errors, .8)
     normalized_error_p90 = conformal_quantile(normalized_validation_errors, .9)
+    active_validation = y[validation_indices] > 0
+    active_normalized_validation_errors = normalized_validation_errors[active_validation]
+    active_normalized_error_p80 = conformal_quantile(active_normalized_validation_errors, .8)
+    active_normalized_error_p90 = conformal_quantile(active_normalized_validation_errors, .9)
     residuals = np.abs(baseline_predictions - y[test_indices])
     boosted_residuals = np.abs(boosted_predictions - y[test_indices])
     test_tree_predictions = np.asarray([tree.predict(x[test_indices]) for tree in model.estimators_])
@@ -179,6 +205,11 @@ def train(raw: Path, artifact: Path, metadata_path: Path, runs: Path, samples_pe
     test_p90 = normalized_error_p90 * (test_tree_std + TREE_STD_FLOOR)
     held_out_p80_coverage = float(np.mean(residuals <= test_p80))
     held_out_p90_coverage = float(np.mean(residuals <= test_p90))
+    active_test = y[test_indices] > 0
+    active_test_p80 = active_normalized_error_p80 * (test_tree_std[active_test] + TREE_STD_FLOOR)
+    active_test_p90 = active_normalized_error_p90 * (test_tree_std[active_test] + TREE_STD_FLOOR)
+    active_held_out_p80_coverage = float(np.mean(residuals[active_test] <= active_test_p80))
+    active_held_out_p90_coverage = float(np.mean(residuals[active_test] <= active_test_p90))
     created = datetime.now(timezone.utc)
     run_id = created.strftime("%Y%m%dT%H%M%SZ")
     metrics = {
@@ -187,9 +218,12 @@ def train(raw: Path, artifact: Path, metadata_path: Path, runs: Path, samples_pe
         "p90AbsoluteError": round(float(np.quantile(residuals, .9)), 4),
     }
     held_out_profiles = int(len(set(groups[test_indices].tolist())))
-    promotion = production_gate(metrics, held_out_profiles, held_out_p80_coverage, held_out_p90_coverage)
+    promotion = production_gate(
+        metrics, held_out_profiles, held_out_p80_coverage, held_out_p90_coverage,
+        active_held_out_p80_coverage, active_held_out_p90_coverage,
+    )
     metadata = {
-        "model": "CropFit EcoCrop surrogate v0.6",
+        "model": "CropFit EcoCrop surrogate v0.9.1",
         "selectedModel": "extraTrees",
         "createdAt": created.isoformat(),
         "runId": run_id,
@@ -197,7 +231,9 @@ def train(raw: Path, artifact: Path, metadata_path: Path, runs: Path, samples_pe
         "trainingSource": "FAO EcoCrop environmental requirement profiles via OpenCLIM",
         "labelType": "mechanistic screening teacher; not observed farm yield",
         "profiles": len(profiles),
-        "examples": int(len(x)),
+        "examples": int(len(training_x)),
+        "trainingExamples": int(len(fitting_indices)),
+        "evaluationExamples": int(len(x)),
         "heldOutProfiles": held_out_profiles,
         "boostingRounds": len(learning_rates),
         "metrics": metrics,
@@ -207,7 +243,7 @@ def train(raw: Path, artifact: Path, metadata_path: Path, runs: Path, samples_pe
         },
         "modelParameters": {
             "estimator": "ExtraTreesRegressor",
-            "nEstimators": 120,
+            "nEstimators": 70,
             "minSamplesLeaf": 1,
             "maxFeatures": 1.0,
         },
@@ -233,7 +269,30 @@ def train(raw: Path, artifact: Path, metadata_path: Path, runs: Path, samples_pe
                 "rule": "Held-out crop-profile coverage must be within 2 percentage points of both nominal levels.",
             },
         },
-        "selectionEvidence": "Extra Trees improved MAE and p90 error on all seven locked confirmation/final crop-profile seeds while preserving calibrated coverage and API latency; see evaluation/estimator-validation-v0.6.json.",
+        "conditionalUncertaintyCalibration": {
+            "condition": "deterministic seasonal and establishment suitability are both greater than zero",
+            "activeMethod": "tree-disagreement-normalized split conformal on active validation examples",
+            "inactivePolicy": "zero radius because the deterministic ceiling fixes the deployed score at zero",
+            "activeValidationExamples": int(np.sum(active_validation)),
+            "activeHeldOutExamples": int(np.sum(active_test)),
+            "activeNormalizedErrorQuantiles": {
+                "p80": round(active_normalized_error_p80, 6),
+                "p90": round(active_normalized_error_p90, 6),
+            },
+            "activeHeldOutCoverage": {
+                "p80": round(active_held_out_p80_coverage, 4),
+                "p90": round(active_held_out_p90_coverage, 4),
+            },
+            "activeHeldOutMeanRadius": {
+                "p80": round(float(np.mean(active_test_p80)), 4),
+                "p90": round(float(np.mean(active_test_p90)), 4),
+            },
+            "gate": {
+                "passed": abs(active_held_out_p80_coverage - .8) <= .02 and abs(active_held_out_p90_coverage - .9) <= .02,
+                "rule": "Active held-out coverage must be within 2 percentage points of both nominal levels.",
+            },
+        },
+        "selectionEvidence": "Fitting 120 scenarios per training crop with 70 Extra Trees improved MAE and p90 error on all seven locked confirmation/final crop-profile splits while retaining the exact v0.8 validation/test rows and reducing artifact size; see evaluation/training-density-validation-v0.9.json.",
         "boostedCandidate": {
             "mae": round(float(mean_absolute_error(y[test_indices], boosted_predictions)), 4),
             "r2": round(float(r2_score(y[test_indices], boosted_predictions)), 4),
@@ -245,7 +304,15 @@ def train(raw: Path, artifact: Path, metadata_path: Path, runs: Path, samples_pe
         "seed": seed,
         "promotionGate": promotion,
     }
-    config = {"samplesPerCrop": samples_per_crop, "seed": seed, "requestedBoostingRounds": rounds, "learningRate": "cosine 0.08 to 0.005", "split": "68% train / 12% validation / 20% held-out crop profiles (approximate)"}
+    config = {
+        "trainingSamplesPerCrop": samples_per_crop,
+        "evaluationSamplesPerCrop": evaluation_samples_per_crop,
+        "seed": seed,
+        "requestedBoostingRounds": rounds,
+        "learningRate": "cosine 0.08 to 0.005",
+        "split": "68% train / 12% validation / 20% held-out crop profiles (approximate)",
+        "densityPolicy": "Denser generated scenarios are fitting-only; validation and held-out rows remain frozen.",
+    }
     if not promotion["passed"]:
         failed = ", ".join(name for name, passed in promotion["checks"].items() if not passed)
         raise RuntimeError(f"Production promotion gate failed: {failed}. Existing artifact was not modified.")
@@ -263,11 +330,15 @@ def main():
     parser.add_argument("--artifact", type=Path, default=root / "artifacts/cropfit.joblib")
     parser.add_argument("--metadata", type=Path, default=root / "artifacts/cropfit.metadata.json")
     parser.add_argument("--runs", type=Path, default=root / "runs")
-    parser.add_argument("--samples-per-crop", type=int, default=72)
+    parser.add_argument("--samples-per-crop", type=int, default=120)
+    parser.add_argument("--evaluation-samples-per-crop", type=int, default=72)
     parser.add_argument("--rounds", type=int, default=500)
     parser.add_argument("--seed", type=int, default=20261114)
     args = parser.parse_args()
-    print(json.dumps(train(args.raw, args.artifact, args.metadata, args.runs, args.samples_per_crop, args.seed, args.rounds), indent=2))
+    print(json.dumps(train(
+        args.raw, args.artifact, args.metadata, args.runs,
+        args.samples_per_crop, args.evaluation_samples_per_crop, args.seed, args.rounds,
+    ), indent=2))
 
 
 if __name__ == "__main__":

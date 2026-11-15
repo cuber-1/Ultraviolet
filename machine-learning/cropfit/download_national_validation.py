@@ -23,8 +23,13 @@ ATLAS_YEARS = tuple(range(2010, 2026))
 ATLAS_CANDIDATES = {
     ("BEANS", "DRY EDIBLE, INCL CHICKPEAS", "ALL UTILIZATION PRACTICES", "LB / ACRE"),
     ("BEANS", "DRY EDIBLE, (EXCL CHICKPEAS)", "ALL UTILIZATION PRACTICES", "LB / ACRE"),
+    ("CORN", "ALL CLASSES", "SILAGE", "TONS / ACRE"),
+    ("PEAS", "DRY EDIBLE", "ALL UTILIZATION PRACTICES", "LB / ACRE"),
     ("SUNFLOWER", "OIL TYPE", "ALL UTILIZATION PRACTICES", "LB / ACRE"),
+    ("SUNFLOWER", "NON-OIL TYPE", "ALL UTILIZATION PRACTICES", "LB / ACRE"),
     ("POTATOES", "ALL CLASSES", "ALL UTILIZATION PRACTICES", "CWT / ACRE"),
+    ("WHEAT", "SPRING, (EXCL DURUM)", "ALL UTILIZATION PRACTICES", "BU / ACRE"),
+    ("WHEAT", "SPRING, DURUM", "ALL UTILIZATION PRACTICES", "BU / ACRE"),
 }
 LATITUDE_BANDS = ((24, 34), (34, 44), (44, 50))
 LONGITUDE_BANDS = ((-125, -115), (-115, -105), (-105, -95), (-95, -85), (-85, -75), (-75, -66))
@@ -129,7 +134,7 @@ def main() -> None:
         download(session, crops_url, bulk)
     atlas_filtered = args.output / "quickstats-county-yield-2010-2025.tsv"
     atlas_rows = extract(bulk, atlas_filtered, ATLAS_YEARS)
-    expanded_filtered = args.output / "quickstats-county-yield-2010-2025-expanded-v3.tsv"
+    expanded_filtered = args.output / "quickstats-county-yield-2010-2025-expanded-v4.tsv"
     expanded_rows = extract(bulk, expanded_filtered, ATLAS_YEARS, include_atlas_candidates=True)
     tasks = []
     for year in YEARS:

@@ -7,19 +7,19 @@ from pathlib import Path
 from typing import Annotated
 
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, StrictBool
 
-from .inference import CLIMATE_HISTORY_END_YEAR, CLIMATE_HISTORY_START_YEAR, CLIMATE_HISTORY_YEARS, CropFitPredictor
+from .inference import CLIMATE_HISTORY_END_YEAR, CLIMATE_HISTORY_START_YEAR, CLIMATE_HISTORY_YEARS, MAX_CLIMATE_HISTORY_YEARS, CropFitPredictor
 from .yield_atlas import load_atlas, nearest_evidence
 
 
 ROOT = Path(__file__).resolve().parents[1]
-YIELD_ATLAS = ROOT / "evaluation/yield-atlas-v2.json"
-app = FastAPI(title="Ultraviolet CropFit", version="0.6.1")
+YIELD_ATLAS = ROOT / "evaluation/yield-atlas-v9.json"
+app = FastAPI(title="Ultraviolet CropFit", version="0.9.2")
 
 ClimateSeries = Annotated[list[dict], Field(min_length=12, max_length=24)]
 ClimateYear = Annotated[list[dict], Field(min_length=12, max_length=12)]
-ClimateHistory = Annotated[list[ClimateYear], Field(max_length=20)]
+ClimateHistory = Annotated[list[ClimateYear], Field(max_length=MAX_CLIMATE_HISTORY_YEARS)]
 
 
 class PredictionRequest(BaseModel):
@@ -27,7 +27,7 @@ class PredictionRequest(BaseModel):
     latitude: float = Field(ge=-90, le=90)
     longitude: float = Field(ge=-180, le=180)
     soilPh: float = Field(default=6.5, ge=2.5, le=10.5)
-    irrigated: bool = False
+    irrigated: StrictBool = False
     climate: ClimateSeries | None = None
     climateHistory: ClimateHistory | None = None
 
@@ -65,10 +65,12 @@ def observed_evidence() -> dict:
     if YIELD_ATLAS.exists():
         atlas = load_atlas(str(YIELD_ATLAS.resolve()))
         evidence["historicalYieldAtlas"] = {
-            "available": True, "records": len(atlas["records"]), "crops": atlas["crops"],
+            "available": True, "name": atlas["name"], "records": len(atlas["records"]), "crops": atlas["crops"],
             "years": atlas["years"], "validation": atlas["validation"],
+            "predictionMethod": atlas.get("predictionMethod"),
             "historyWindowComparison": atlas.get("historyWindowComparison"),
             "uncertaintyValidation": atlas.get("uncertaintyValidation"),
+            "spatialTransferValidation": atlas.get("spatialTransferValidation"),
         }
     return evidence
 
@@ -78,8 +80,10 @@ def health():
     model = predictor()
     return {
         "status": "ok", "mode": "trained", "apiVersion": app.version,
+        "revision": f'{app.version}:{model.metadata.get("runId", "unknown")}:{model.artifact_sha256[:12]}',
+        "artifactSha256": model.artifact_sha256,
         "model": model.metadata["model"], "metrics": model.metadata["metrics"],
-        "requestLimits": {"climateMonths": [12, 24], "historyYearsMax": 20},
+        "requestLimits": {"climateMonths": [12, 24], "historyYearsMax": MAX_CLIMATE_HISTORY_YEARS},
         "climateHistory": {
             "source": "NASA POWER Agroclimatology",
             "startYear": CLIMATE_HISTORY_START_YEAR,

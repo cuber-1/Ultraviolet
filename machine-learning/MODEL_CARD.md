@@ -1,49 +1,65 @@
-# CropFit EcoCrop surrogate v0.6
+# CropFit EcoCrop surrogate v0.9.1
 
-- Trained: 2026-11-14
+- Trained: 2026-11-15
 - Source: FAO EcoCrop environmental requirement profiles via OpenCLIM
 - Usable crop profiles: 1,862
-- Generated training scenarios: 134,064
+- Generated fitting scenarios: 223,440 (151,800 from training profiles)
+- Frozen validation/test scenarios: 134,064 before profile splitting
 - Evaluation: entire crop profiles held out (373 profiles)
 - Selected production estimator: Extra Trees
-- Raw estimator MAE: 0.0894 suitability points
-- Deployed score MAE after deterministic seasonal ceiling: 0.0362 points
-- R²: 0.9998
-- Raw estimator 90th percentile absolute error: 0.2289 points
-- Deployed score 90th percentile absolute error: 0.0361 points
+- Raw estimator MAE: 0.0145 suitability points
+- Deployed score MAE after deterministic seasonal ceiling: 0.00625 points
+- R²: 1.0000
+- Raw estimator 90th percentile absolute error: 0.0407 points
+- Deployed score 90th percentile absolute error: 0.00137 points
 
-Version 0.6 replaces the 120-tree Random Forest with a 120-tree Extra Trees
-estimator while preserving the same 23 inputs and Mac-compatible scikit-learn
-runtime. Across two confirmation and five final grouped crop-profile seeds, it
-won 7/7 gates. Final-seed mean MAE fell 43.2% and p90 error fell 47.6%; mean
-API-sized batch latency was 1.05× the Random Forest. On the production split,
-MAE fell from 0.1519 to 0.0894. See
-`evaluation/estimator-validation-v0.6.md`.
+Version 0.9 increases generated fitting coverage from 72 to 120 scenarios per
+training crop while preserving the exact v0.8 validation and held-out rows. The
+denser fitting data lets the ensemble shrink from 120 to 70 trees. Across two
+confirmation and five final grouped crop-profile seeds, it cleared all 7/7
+gates: locked mean MAE fell 12.53% and p90 error fell 14.02%. On the production
+split, MAE fell from 0.0175 to 0.0145 and p90 fell from 0.0491 to 0.0407. See
+`evaluation/training-density-validation-v0.9.md`.
 
-The compressed artifact is 73 MB versus 43 MB for v0.5.1. On the development
-host, clean-load peak RSS was 754 MiB versus 531 MiB and full reliability
-prediction median latency was 5.30 ms versus 5.18 ms. Timings and RSS are
-machine-dependent; Apple Silicon installation and loopback inference remain CI
-requirements.
+Version 0.9.1 corrects uncertainty reporting for active growing conditions.
+The previous marginal calibration was dominated by deterministic hard-zero
+cases: on an independent Latin-hypercube test, its active-case 90% coverage was
+only 55.1%. Calibration now uses active validation examples separately and
+returns zero radius only where the deterministic ceiling fixes the deployed
+score at zero. Active coverage is 80.6%/90.9% on the frozen-random test and
+81.4%/91.4% under independent scenario shift. The same shift test confirms
+v0.9's raw and deployed error gains remain between 12.7% and 77.5%. See
+`evaluation/scenario-shift-validation-v0.9.1.md`.
+
+The compressed artifact is 70.5 MB versus 73.2 MB for v0.8. On the development
+host, clean-process peak RSS fell from 773,168 KiB to 756,376 KiB and full
+11-scenario reliability prediction median latency fell from 4.58 ms to 3.25 ms.
+The locked 132-row batch latency ratio was 0.99× because parallel-dispatch
+overhead dominates tiny batches. Timings and RSS are machine-dependent; Apple
+Silicon installation and loopback inference remain CI requirements.
 
 An 80-tree compact candidate reduced serialized estimator size to about 67% of
 the champion, but failed the frozen accuracy tolerance on all seven fresh
 seeds: mean MAE regressed 4.1% and mean p90 error regressed 5.9%. It was
-rejected; v0.6 retains 120 trees. See `evaluation/compact-validation-v1.md`.
+rejected; that experiment did not replace the 120-tree v0.6 champion. See
+`evaluation/compact-validation-v1.md`.
 
 ## Out-of-distribution ceiling
 
-API v0.6.1 caps the ML score by the exact seasonal and establishment EcoCrop
-suitability already computed for limiting-factor explanations. This is a
-one-sided safety constraint: the ensemble still determines underprediction but
-cannot claim suitability above the mechanistic target it approximates.
+API v0.9.2 retains the v0.6.1 safety ceiling that caps the ML score by the exact
+seasonal and establishment EcoCrop suitability already computed for
+limiting-factor explanations. This is a one-sided safety constraint: the
+ensemble still determines underprediction but cannot claim suitability above
+the mechanistic target it approximates.
 
-On the production held-out split, the ceiling reduced MAE from 0.0894 to 0.0362
-and p90 error from 0.2289 to 0.0361 without increasing any example's error.
-Existing intervals remained conservative at 88.2%/93.7% coverage. It also
-eliminated raw errors as high as 64.6 points at exact hard solar boundaries,
+On the production held-out split, the ceiling reduced MAE from 0.0145 to
+0.00625 and p90 error from 0.0407 to 0.00137 without increasing any example's
+error. The ceiling MAE and maximum error improve from v0.8; its already tiny
+p90 moves from 0.00125 to 0.00137. Existing intervals remain conservative at
+89.9%/95.0% coverage. It also
+eliminates errors at the tested exact hard solar and temperature boundaries,
 where continuous random training samples do not land. See
-`evaluation/ood-validation-v0.6.1.md`.
+`evaluation/ood-validation-v0.9.1.md`.
 
 Version 0.5 adds four crop-relative features: temperature, water, pH, and solar
 membership within each crop's absolute and optimum ranges. The 120-tree Random
@@ -53,19 +69,20 @@ feature design, it improved held-out MAE on all five robustness seeds from
 reproducible protocol and per-seed results are in
 `evaluation/feature-validation-v0.5.md`.
 
-Version 0.6 refits the v0.5.1 tree-disagreement-normalized split-conformal
-calibrator using only 224 validation crop profiles. On 26,856 held-out examples
-from 373 crop profiles, nominal 80% and 90% bands covered 80.06% and 90.10%; the
-mean 90% radius was 0.068 suitability points. Across the seven locked estimator
-validation seeds, mean coverage was 79.95% and 90.08%. These are marginal
-EcoCrop-teacher fidelity bands, not per-species or observed-yield guarantees.
+Version 0.9.1 fits its active-case tree-disagreement-normalized split-conformal
+calibrator using 3,395 active examples from 224 validation crop profiles. On
+5,628 active held-out examples from the 373 test profiles, nominal 80% and 90%
+bands cover 80.6% and 90.9%; mean radii are 0.105 and 0.139 suitability points.
+Hard-zero deployed scores receive zero radius because the deterministic ceiling
+fixes their value. These are conditional EcoCrop-teacher fidelity bands, not
+per-species or observed-yield guarantees.
 
 The CUDA XGBoost candidate completed 500 rounds with a cosine learning-rate
 schedule from 0.08 to 0.005. It was not promoted because held-out-profile MAE
-was worse (0.6395). The committed diagnostics are
-`evaluation/training-curves-v0.5.png`,
-`evaluation/selected-feature-importance-v0.5.png`, and
-`evaluation/training-history-v0.5.csv`.
+was worse (0.0872). The committed diagnostics are
+`evaluation/training-curves-v0.9.1.png`,
+`evaluation/selected-feature-importance-v0.9.1.png`, and
+`evaluation/training-history-v0.9.1.csv`.
 
 ## Intended use
 
@@ -99,19 +116,20 @@ below the predeclared 0.30 threshold. Corn and 2019 were negative. See
 
 ## Historical county evidence
 
-CropFit also returns a separate USDA observed county prior for corn, soybeans,
-and wheat when a published county centroid is within 100 km. This evidence does
-not alter CropFit suitability or ranking. Atlas v2 contains 5,562 county-crop
-records from 2010–2025 and adds crop/history-count conditional conformal
-uncertainty bands.
+CropFit also returns a separate USDA observed local-plus-regional prior for corn, soybeans,
+and wheat when published county centroids are within 100 km. This evidence does
+not alter CropFit suitability. Atlas v9 contains 5,562 county-crop
+records from 2010–2025, uses a validated shrunken-recency prior, and includes
+crop/history-count conditional conformal uncertainty bands. Location-facing
+bands are separately calibrated for regional spatial transfer.
 
 On the same 21,908 2019–2025 county-year rows, extending the available history
-from 2018 back to 2010 improved pooled Spearman from 0.819 to 0.841 and reduced
-percentile MAE from 0.127 to 0.120. Coverage increased from 21,908 to 23,311
+from 2018 back to 2010 improved pooled Spearman from 0.819 to 0.847 and reduced
+percentile MAE from 0.126 to 0.117. Coverage increased from 21,908 to 23,311
 rows. Uncertainty was calibrated on 2011–2017 only; across 26,589 later
-2018–2025 outcomes, nominal 80% and 90% intervals covered 83.5% and 92.3%.
+2018–2025 outcomes, nominal 80% and 90% intervals covered 84.1% and 92.5%.
 This measures persistence of county yield ranks, not parcel yield forecasting.
-See `evaluation/yield-atlas-validation-v2.md`.
+See `evaluation/yield-atlas-validation-v9.md`.
 
 ## Rural regional ranking
 
@@ -128,38 +146,64 @@ soybean regressed despite a small positive pooled result. Urban rooftop ranking
 is unchanged because county farm yields are not roof-specific. See
 `evaluation/ranking-validation-v1.md`.
 
-## Crop-coverage expansion gate
-
-Three additional USDA county series were tested before expanding the observed
-prior: dry edible beans, potatoes, and oil-type sunflowers. None passed the
-predeclared forward-year gate (at least 100 predictions, Spearman at least
-0.50, county-bootstrap lower bound above 0.30, and at least 50% coverage).
-
-The current bean definition produced 81 forward predictions with Spearman
-0.3184 (95% interval 0.0036–0.5446). The apparently stronger legacy bean series
-was not joined to it: USDA NASS states that dry edible beans began excluding
-chickpeas in 2019. Potatoes had only four predictions, while sunflower reached
-135 but only 0.2724 Spearman. Production coverage therefore remains corn,
-soybeans, and wheat. See `evaluation/crop-expansion-validation-v1.md`.
-
 ## Recency experiment
 
-A three-year exponential half-life was selected on 2018–2020. It improved the
-locked 2023–2025 pooled county-rank Spearman from 0.8269 to 0.8346 (delta
-+0.0077; grouped-bootstrap 95% interval +0.0052 to +0.0102) and reduced
-percentile MAE by 0.0041. It was not promoted because confirmation Spearman
-regressed by 0.0003 and 2024 regressed by 0.0019, violating the predeclared
-no-regression gate. The production atlas retains the unweighted historical
-mean. See `evaluation/recency-validation-v1.md`.
+Atlas v9 shrinks an exponential recency estimate toward the stable long-history
+mean. The half-life and shrinkage weight were selected on 2018–2020 only: 80%
+three-year-half-life recency and 20% long-history mean. Confirmation Spearman
+improved from 0.8497 to 0.8513 while MAE fell from 0.1167 to 0.1150. On the
+locked 2023–2025 test, Spearman improved from 0.8269 to 0.8352 (delta +0.0083;
+grouped-bootstrap 95% interval +0.0061 to +0.0104) and MAE fell by 0.0040.
+Every supported crop and every final-test year improved both rank and MAE, so
+the predeclared production gate passed. See
+`evaluation/recency-validation-v2.md`.
+
+Rebuilding the full forward-year atlas with the promoted prior improved pooled
+Spearman from 0.7871 to 0.7914. On identical 2019–2025 rows, 16-year-history
+Spearman improved from 0.8405 to 0.8465 and MAE from 0.1199 to 0.1168. Fresh
+split-conformal calibration covered 84.1% and 92.5% at the nominal 80% and 90%
+levels. See `evaluation/yield-atlas-validation-v9.md`.
+
+The production API transfers nearby reporting-county priors to an arbitrary
+location, so atlas v9 validates that operation directly. A leave-one-county-out
+test excludes each target county. Development years selected up to eight
+neighbors with inverse-square distance weighting. On locked 2023–2025 outcomes,
+regional Spearman reached 0.8060 versus 0.7580 for one nearest county (delta
++0.0480; paired grouped-bootstrap 95% interval +0.0409 to +0.0551), while
+percentile MAE fell from 0.1453 to 0.1330. Every supported crop and final-test
+year improved both metrics. Regional bands calibrated on 2011–2017 covered
+83.4% and 92.4% on 2018–2025 and narrowed mean 90% width from 0.595 to 0.545.
+API responses expose all contributing counties and label bands
+`spatial-neighborhood-conformal`.
+
+For production queries, development MAE selected an 85% nearest-county / 15%
+regional-neighborhood blend. It passed confirmation and improved locked
+2023–2025 Spearman from 0.8352 to 0.8380 (grouped-bootstrap delta interval
++0.0021 to +0.0034), while MAE fell from 0.1208 to 0.1204. Every crop and year
+improved rank with non-worse MAE; re-centered interval coverage was 85.9% and
+93.5%.
 
 Atlas lookup now uses a cached exact haversine spatial index instead of scanning
 all 5,562 records per request. The reproducible benchmark and exact-identity
 check are in `evaluation/atlas-lookup-benchmark-v1.md`; timing ratios are
 machine-dependent.
 
+## Observed subtype expansion gate
+
+Crop-expansion v2 evaluates nine exact USDA class/practice/unit definitions
+without pooling definition breaks. Every candidate must pass both 2018–2025
+forward evaluation and a locked 2023–2025 block with at least 100 observations,
+Spearman at least 0.50, a grouped-bootstrap lower bound above 0.30, and at least
+50% published-row coverage. Spring wheat passes the recent block with 257
+observations and Spearman 0.762 (95% interval 0.670–0.830); silage corn passes
+with 576 observations and 0.551 (0.469–0.617). Dry peas and durum wheat fail the
+recent sample floor despite positive rank signal. The accepted subtypes remain
+outside atlas v9 until subtype lookup, calibration, and uncertainty receive a
+separate promotion test. See `evaluation/crop-expansion-validation-v2.md`.
+
 ## Inference request safety
 
-API v0.5.6 bounds caller-supplied climate to 12 or 24 ordered months and at
+API v0.9.2 bounds caller-supplied climate to 12 or 24 ordered months and at
 most 20 complete history years. Temperature, precipitation, and solar inputs
 must be finite and remain within documented physical limits. Invalid caller
 data returns HTTP 422 instead of being mislabeled as a model/upstream failure;
@@ -187,10 +231,36 @@ checks the complete ID-to-profile mapping on every push.
 ## Client cache correctness
 
 The web server's one-hour CropFit cache is content-addressed over the complete
-request and model URL. Climate, soil pH, irrigation, coordinate, crop, or
-primary/backup changes cannot reuse a stale prediction. The cache is a bounded
-2,048-entry LRU, and CI checks key sensitivity, model isolation, expiry, and
+request, model URL, API version, and training run. Climate, soil pH, irrigation,
+coordinate, crop, primary/backup, deployment, or retraining changes cannot
+reuse a stale prediction. The cache is a bounded 2,048-entry LRU, and CI checks
+key sensitivity, revision invalidation, model isolation, expiry, and
 least-recently-used eviction.
+
+API v0.9.2 exposes its API+training-run+artifact-hash revision and the full
+artifact SHA-256 through `/health`. The browser proxy reads the revision once
+per prediction request. Startup rejects artifacts missing the fitted ensemble,
+model identity, or a consistent feature contract. Direct and HTTP inference
+share finite coordinate, geographic, soil-pH, boolean irrigation, climate, and
+history-size checks. If revision health is unavailable, model predictions
+continue but bypass the cache until provenance is verified.
+
+## Local-plus-regional yield evidence
+
+Atlas v9 adds the development-selected 15% regional neighborhood only in the
+Midwest and South, where the same fixed blend improved both development rank
+and MAE. The Northeast and West use the local county prior. It passes 2021–2022
+confirmation and improves locked 2023–2025 Spearman from 0.8352 to 0.8376 while
+reducing percentile MAE from 0.1208 to 0.1204 across 8,881 county-years. Every
+crop and final year improves rank without worse MAE, no region regresses, and
+the grouped-bootstrap rank-delta interval is +0.0018–+0.0030. A
+production-specific conformal calibrator fitted on 27,034 pre-2018 errors uses
+the smallest regional safety scales that satisfy nominal coverage in both
+2018–2020 and 2021–2022. It retains 84.4% / 92.9% coverage across 2018–2025
+while reducing mean 90% width from 0.535 to 0.511 (4.3%). Western 90% coverage
+is 90.0% on the 2021–2022 stability block and 95.7% on final 2023–2025 outcomes.
+This remains county-level evidence,
+not a parcel yield or property-return forecast.
 
 Transient health failures are not cached as an API type. A recovered Spark is
 reprobed on the next request and immediately resumes as the CropFit primary;

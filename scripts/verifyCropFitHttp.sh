@@ -57,18 +57,45 @@ climate = [{"month": month, "temperatureC": 22, "precipitationMmDay": 3, "solarM
 payload = {"crop": "corn", "latitude": 29.76, "longitude": -95.37, "soilPh": 6.5, "irrigated": True, "climate": climate, "climateHistory": [climate] * 10}
 health = requests.get(f"{base}/health", timeout=10).json()
 assert health["status"] == "ok" and health["requestLimits"]["historyYearsMax"] == 20
-assert health["model"] == "CropFit EcoCrop surrogate v0.6"
-assert health["metrics"]["mae"] == .0894
+assert health["apiVersion"] == "0.9.2"
+assert health["revision"].startswith(f'{health["apiVersion"]}:')
+assert health["model"] == "CropFit EcoCrop surrogate v0.9.1"
+assert len(health["artifactSha256"]) == 64
+assert health["revision"].endswith(health["artifactSha256"][:12])
+assert health["metrics"]["mae"] == .0145
+atlas = health["evidence"]["historicalYieldAtlas"]
+assert atlas["name"] == "USDA county yield atlas v9"
+assert atlas["predictionMethod"]["halfLifeYears"] == 3.0 and atlas["predictionMethod"]["recencyWeight"] == .8
+assert atlas["validation"]["spearman"] == .7914 and atlas["uncertaintyValidation"]["gate"]["passed"]
+assert atlas["spatialTransferValidation"]["gate"]["passed"]
+assert atlas["spatialTransferValidation"]["selectedNeighborhood"] == {"maxNeighbors": 8, "distancePower": 2.0, "distanceOffsetKm": 5.0}
+assert atlas["spatialTransferValidation"]["finalSignal"]["regionalNeighborhood"]["spearman"] == .806
+production_blend = atlas["spatialTransferValidation"]["productionBlend"]
+assert production_blend["selectedWeights"] == {"regionalNeighborhoodByRegion": {
+    "Northeast": 0.0, "Midwest": .15, "South": .15, "West": 0.0,
+}}
+assert all(
+    item["spearmanDelta"] >= 0 and item["maeDelta"] <= 0
+    for item in (*production_blend["perRegionConfirmation"], *production_blend["perRegionFinalSignal"])
+)
+assert atlas["spatialTransferValidation"]["productionBlend"]["gate"]["passed"]
+assert atlas["spatialTransferValidation"]["productionBlend"]["intervalCalibration"]["meanWidth90Reduction"] >= .04
+assert atlas["spatialTransferValidation"]["productionBlend"]["intervalCalibration"]["selectedRegionalScales"]["West"] == {"scale80": 1.45, "scale90": 1.45}
 assert health["climateHistory"] == {"source": "NASA POWER Agroclimatology", "startYear": 2016, "endYear": 2025, "years": 10}
 prediction = requests.post(f"{base}/predict", json=payload, timeout=30)
 prediction.raise_for_status()
 prediction_body = prediction.json()
 assert prediction_body["observedYieldEvidence"]["county"] == "Fort Bend County"
+assert prediction_body["observedYieldEvidence"]["observedYieldPrior"]["intervalMethod"] == "local-regional-blend-conformal"
+assert prediction_body["observedYieldEvidence"]["observedYieldPrior"]["distanceBucket"] == "25-50"
+assert 1 <= prediction_body["observedYieldEvidence"]["observedYieldPrior"]["neighborCount"] <= 9
+assert len(prediction_body["observedYieldEvidence"]["regionalNeighbors"]) == prediction_body["observedYieldEvidence"]["observedYieldPrior"]["neighborCount"] == 6
 assert prediction_body["confidence"] == .8
 assert prediction_body["expectedAbsoluteError"]["p80"] <= prediction_body["expectedAbsoluteError"]["p90"]
 boundary = requests.post(f"{base}/predict", json={**payload, "climate": [{**item, "solarMjM2Day": 34} for item in climate]}, timeout=30)
 boundary.raise_for_status()
 assert boundary.json()["score"] == 0, "hard EcoCrop solar boundary was not enforced"
+assert boundary.json()["expectedAbsoluteError"] == {"p80": 0.0, "p90": 0.0}
 representatives = {
     "basil": "Ocimum basilicum",
     "kale": "Brassica oleracea var. acephala",
@@ -83,5 +110,5 @@ for crop, scientific_name in representatives.items():
     assert response.json()["profile"]["scientific_name"] == scientific_name
 invalid = requests.post(f"{base}/predict", json={**payload, "climate": climate[:11]}, timeout=10)
 assert invalid.status_code == 422
-print(f'CropFit HTTP verified: API {health["apiVersion"]}, model v0.6, seasonal boundary ceiling, 2016-2025 climate window, 16-choice coverage, USDA evidence, input bounds')
+print(f'CropFit HTTP verified: API {health["apiVersion"]}, model v0.9.1, artifact identity, active-case calibration, atlas v9 geographically stable uncertainty, seasonal boundary ceiling, 2016-2025 climate window, 16-choice coverage, USDA evidence, input bounds')
 PY

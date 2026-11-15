@@ -1,0 +1,135 @@
+{
+  "model": "CropFit EcoCrop surrogate v0.9.1",
+  "selectedModel": "extraTrees",
+  "createdAt": "2026-11-15T06:46:31.780675+00:00",
+  "runId": "20261115T064631Z",
+  "device": "cuda",
+  "trainingSource": "FAO EcoCrop environmental requirement profiles via OpenCLIM",
+  "labelType": "mechanistic screening teacher; not observed farm yield",
+  "profiles": 1862,
+  "examples": 223440,
+  "trainingExamples": 151800,
+  "evaluationExamples": 134064,
+  "heldOutProfiles": 373,
+  "boostingRounds": 500,
+  "metrics": {
+    "mae": 0.0145,
+    "r2": 1.0,
+    "p90AbsoluteError": 0.0407
+  },
+  "validationMetrics": {
+    "mae": 0.0143,
+    "r2": 1.0
+  },
+  "modelParameters": {
+    "estimator": "ExtraTreesRegressor",
+    "nEstimators": 70,
+    "minSamplesLeaf": 1,
+    "maxFeatures": 1.0
+  },
+  "uncertaintyCalibration": {
+    "source": "validation crop profiles only",
+    "method": "tree-disagreement-normalized split conformal",
+    "treeStdFloor": 0.01,
+    "normalizedErrorQuantiles": {
+      "p80": 0.00153,
+      "p90": 0.105584
+    },
+    "nominalCoverage": {
+      "p80": 0.8,
+      "p90": 0.9
+    },
+    "heldOutCoverage": {
+      "p80": 0.8,
+      "p90": 0.9021
+    },
+    "heldOutMeanRadius": {
+      "p80": 0.0002,
+      "p90": 0.0129
+    },
+    "gate": {
+      "passed": true,
+      "rule": "Held-out crop-profile coverage must be within 2 percentage points of both nominal levels."
+    }
+  },
+  "conditionalUncertaintyCalibration": {
+    "condition": "deterministic seasonal and establishment suitability are both greater than zero",
+    "activeMethod": "tree-disagreement-normalized split conformal on active validation examples",
+    "inactivePolicy": "zero radius because the deterministic ceiling fixes the deployed score at zero",
+    "activeValidationExamples": 3395,
+    "activeHeldOutExamples": 5628,
+    "activeNormalizedErrorQuantiles": {
+      "p80": 0.192337,
+      "p90": 0.254543
+    },
+    "activeHeldOutCoverage": {
+      "p80": 0.806,
+      "p90": 0.9087
+    },
+    "activeHeldOutMeanRadius": {
+      "p80": 0.105,
+      "p90": 0.139
+    },
+    "gate": {
+      "passed": true,
+      "rule": "Active held-out coverage must be within 2 percentage points of both nominal levels."
+    }
+  },
+  "selectionEvidence": "Fitting 120 scenarios per training crop with 70 Extra Trees improved MAE and p90 error on all seven locked confirmation/final crop-profile splits while retaining the exact v0.8 validation/test rows and reducing artifact size; see evaluation/training-density-validation-v0.9.json.",
+  "boostedCandidate": {
+    "mae": 0.0872,
+    "r2": 0.9999,
+    "p90AbsoluteError": 0.2798,
+    "promoted": false,
+    "reason": "Held-out crop-profile MAE was worse than the selected Extra Trees estimator."
+  },
+  "featureNames": [
+    "temperature_c",
+    "annual_precipitation_mm",
+    "soil_ph",
+    "solar_mj_m2_day",
+    "irrigated",
+    "temp_opt_min",
+    "temp_opt_max",
+    "temp_abs_min",
+    "temp_abs_max",
+    "rain_opt_min",
+    "rain_opt_max",
+    "rain_abs_min",
+    "rain_abs_max",
+    "ph_opt_min",
+    "ph_opt_max",
+    "ph_abs_min",
+    "ph_abs_max",
+    "growing_days_min",
+    "growing_days_max",
+    "temperature_range_fit",
+    "water_range_fit",
+    "ph_range_fit",
+    "solar_range_fit",
+    "temperature_water_interaction",
+    "ph_solar_interaction"
+  ],
+  "seed": 20261114,
+  "promotionGate": {
+    "passed": true,
+    "checks": {
+      "mae": true,
+      "p90AbsoluteError": true,
+      "r2": true,
+      "heldOutProfiles": true,
+      "coverage80": true,
+      "coverage90": true,
+      "activeCoverage80": true,
+      "activeCoverage90": true
+    },
+    "thresholds": {
+      "maximumMae": 0.1,
+      "maximumP90AbsoluteError": 0.27,
+      "minimumR2": 0.9997,
+      "minimumHeldOutProfiles": 350,
+      "maximumCoverageDeviation": 0.02
+    },
+    "rule": "Refuse artifact promotion unless held-out fidelity and conformal coverage meet every frozen production threshold."
+  }
+}

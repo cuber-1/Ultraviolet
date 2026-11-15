@@ -7,7 +7,7 @@ revenue, or a buy/sell recommendation.
 
 ## Run the trained model
 
-On macOS or Linux, install the released v0.6 artifact, EcoCrop profiles, and
+On macOS or Linux, install the released v0.9.1 artifact, EcoCrop profiles, and
 inference dependencies without access to the Spark:
 
 ```bash
@@ -22,12 +22,22 @@ automatic backup, set the Spark URL as `ML_MODEL_URL` and the local URL as
 `ML_MODEL_FALLBACK_URL`.
 
 The installer requires Python 3.10+, checksum-verifies the release bundle,
-installs pinned inference dependencies, and runs offline inference verification
-before reporting success. Override its interpreter with
+rejects unexpected archive members, installs pinned inference dependencies, and
+runs offline inference verification against a staging copy before promoting the
+artifact, metadata, and EcoCrop profiles with atomic file replacements. It
+verifies the promoted files again before reporting success. Override its
+interpreter with
 `CROPFIT_PYTHON=/path/to/python3.12` when needed. To train a fresh
 artifact instead, use the full setup below. Because the repository is private,
 the installer uses an authenticated GitHub CLI session (`gh auth login`) or a
 `GITHUB_TOKEN`.
+
+Runtime API v0.9.2 keeps the validated v0.9.1 estimator and hardens every direct
+and HTTP prediction path with the same finite coordinate, soil-pH, boolean,
+climate-shape, and 20-year history limits. Startup validates the artifact's
+internal model/metadata contract. `GET /health` returns the artifact SHA-256 and
+includes its first 12 characters in `revision`, so the web cache and operators
+can identify the exact model binary serving a result.
 
 Every push to `main` repeats the release installation and loopback HTTP test on
 a GitHub-hosted Apple Silicon (`macos-15`, arm64) runner with Python 3.12.
@@ -82,12 +92,21 @@ learning-rate schedule, error distribution, and feature importance to
 `machine-learning/runs/<run-id>/`. A candidate is only promoted when it improves held-out
 crop-profile error.
 
-CropFit v0.6 uses 120 Extra Trees. Its promotion report compares the candidate
-with the previous 120-tree Random Forest on identical grouped splits, including
-locked confirmation/final seeds, conformal coverage, and API-sized latency:
+CropFit v0.9.1 fits 120 scenarios per training crop with 70 Extra Trees while
+retaining the exact v0.8 validation and test rows. Its promotion report compares
+the candidate with v0.8 on identical grouped splits, including locked
+confirmation/final seeds, conformal coverage, artifact size, and API-sized latency:
 
 ```bash
-npm run ml:evaluate:estimator
+npm run ml:evaluate:training-density
+```
+
+Its independent scenario-shift report uses a separately seeded Latin-hypercube
+generator and verifies active-case conditional coverage rather than allowing
+hard-zero cases to dominate the aggregate:
+
+```bash
+npm run ml:evaluate:scenario-shift
 ```
 
 Training refuses to replace the production artifact unless frozen MAE, p90,
@@ -95,7 +114,7 @@ R², held-out-profile-count, and conformal-coverage thresholds all pass. The
 artifact and metadata are written atomically, so interruption cannot leave a
 partially serialized model.
 
-The smaller 80-tree experiment is reproducible with
+The historical 80-tree compact experiment is reproducible with
 `npm run ml:evaluate:compact`; it remains rejected because all seven fresh
 accuracy gates failed despite the smaller artifact.
 
@@ -130,8 +149,19 @@ sweep, their machine-readable report, and two presentation charts under
 For corn, soybeans, and wheat, the response may also include
 `observedYieldEvidence`: the nearest USDA reporting county within 100 km, its
 2010–2025 within-crop/year percentile history, and an observed county prior
-with calibrated 80% and 90% uncertainty intervals. This is displayed as
-separate observed evidence and never changes the EcoCrop suitability score.
+with calibrated 80% and 90% uncertainty intervals. Atlas v9 uses the globally
+selected 15% regional share only in Census regions where it improves both
+2018–2020 development rank and MAE: the Midwest and South. The Northeast and
+West fall back to the local county prior. On locked 2023–2025 outcomes, rank
+Spearman improves from 0.8352 to 0.8376 (grouped-bootstrap delta 0.0018–0.0030)
+and percentile MAE falls from 0.1208 to 0.1204. Every crop and final year
+improves or holds MAE, with no confirmation or final-region regression. This
+remains separate observed evidence and never changes
+the EcoCrop suitability score. A production-specific conformal calibrator uses
+27,034 pre-2018 errors, then selects regional safety scales on two later
+pre-final blocks. Across 2018–2025 it preserves 84.4% / 92.9% coverage while
+reducing mean 90% band width from 0.535 to 0.511 (4.3%). Western 90% coverage
+is 90.0% on 2021–2022 and 95.7% on final 2023–2025 outcomes.
 
 ## Next evidence gate
 
@@ -173,10 +203,15 @@ npm run ml:build:yield-atlas
 ```
 
 The builder uses the filtered USDA Quick Stats and Census county files from the
-national observed-validation download. It writes atlas v2, a forward-year
-validation report, and a presentation PNG under `evaluation/`. The report
-compares the 16-year and legacy 8-year histories on identical future rows and
-tests conformal intervals calibrated on 2011–2017 against 2018–2025 outcomes.
+national observed-validation download. It writes atlas v9, a forward-year
+validation report, and a presentation PNG under `evaluation/`. Atlas v9 uses
+the development-selected 80% three-year-half-life recency / 20% long-history
+prior. The report compares the 16-year and legacy 8-year histories on identical
+future rows and tests conformal intervals calibrated on 2011–2017 against
+2018–2025 outcomes. It also runs a leave-one-county-out nearest-neighbor test,
+selects a regional neighborhood on development years, validates a region-gated
+85% local / 15% regional production blend, and separately calibrates its sharper
+location-facing intervals by crop and effective source-history depth.
 
 ## Validate rural ranking evidence
 
@@ -195,10 +230,19 @@ blend and validates using the observed prior for supported rural crops only.
 npm run ml:evaluate:crop-expansion
 ```
 
-This evaluates candidate USDA county series as forward-year rank priors without
-changing production coverage. The committed v1 report rejects beans, potatoes,
-and sunflowers. It also keeps the pre-2019 bean definition separate because
-that series includes chickpeas, unlike the current USDA category.
+Crop-expansion v2 keeps nine USDA class/practice/unit definitions separate and
+requires each to pass both the full 2018–2025 forward test and a locked
+2023–2025 block. Each block needs at least 100 observations, Spearman at least
+0.50, a county-bootstrap lower bound above 0.30, and at least 50% coverage.
+
+Spring wheat passes with 257 final observations, Spearman 0.762, and a
+0.670–0.830 interval. Silage corn passes with 576 observations, Spearman 0.551,
+and a 0.469–0.617 interval. Dry peas and durum wheat have promising rank signal
+but fail the final sample floor; beans, potatoes, and both sunflower definitions
+also remain rejected. Grain/silage corn and winter/spring/durum wheat are never
+pooled. This screen does not add the passing subtypes to atlas v9: production
+coverage remains grain corn, soybeans, and winter wheat pending a separately
+validated subtype lookup. See `evaluation/crop-expansion-validation-v2.md`.
 
 ## Test recency weighting and atlas lookup
 
@@ -208,7 +252,8 @@ npm run ml:benchmark:atlas
 npm run ml:benchmark:inference
 ```
 
-The recency command tests exponential history weighting under fixed temporal
-splits and does not alter the production atlas unless every gate passes. The
+The recency command tests shrinkage toward exponential history weighting under
+fixed temporal splits. The v2 gate passes on confirmation and locked final
+years, and its selected prior is used by atlas v9. The
 benchmark compares the cached haversine spatial index with exact brute force
 and verifies identical nearest counties for each supported crop.

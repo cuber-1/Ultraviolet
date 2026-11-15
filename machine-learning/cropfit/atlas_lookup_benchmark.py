@@ -73,7 +73,7 @@ def markdown(report: dict) -> str:
 def main() -> None:
     root = Path(__file__).resolve().parents[1]
     parser = argparse.ArgumentParser()
-    parser.add_argument("--atlas", type=Path, default=root / "evaluation/yield-atlas-v2.json")
+    parser.add_argument("--atlas", type=Path, default=root / "evaluation/yield-atlas-v9.json")
     parser.add_argument("--output", type=Path, default=root / "evaluation/atlas-lookup-benchmark-v1.json")
     parser.add_argument("--iterations", type=int, default=1000)
     args = parser.parse_args()

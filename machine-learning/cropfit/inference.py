@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import calendar
+import hashlib
 from functools import lru_cache
 from pathlib import Path
 
@@ -17,17 +18,60 @@ MONTHS = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", 
 CLIMATE_HISTORY_START_YEAR = 2016
 CLIMATE_HISTORY_END_YEAR = 2025
 CLIMATE_HISTORY_YEARS = tuple(range(CLIMATE_HISTORY_START_YEAR, CLIMATE_HISTORY_END_YEAR + 1))
+MAX_CLIMATE_HISTORY_YEARS = 20
+
+
+def sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as source:
+        for chunk in iter(lambda: source.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def align_model_features(row: list[float], expected: int) -> list[float]:
+    if len(row) == expected:
+        return row
+    if len(row) == expected + 2:
+        return row[:-2]
+    raise RuntimeError(f"Artifact expects {expected} features but inference produced {len(row)}")
 
 
 class CropFitPredictor:
     def __init__(self, artifact: Path, profiles_path: Path):
         bundle = joblib.load(artifact)
+        if not isinstance(bundle, dict) or not {"model", "metadata"}.issubset(bundle):
+            raise RuntimeError("CropFit artifact must contain model and metadata entries.")
         self.model = bundle["model"]
         self.booster = bundle.get("booster")
         self.metadata = bundle["metadata"]
+        if not isinstance(self.metadata, dict) or not isinstance(self.metadata.get("model"), str):
+            raise RuntimeError("CropFit artifact metadata is missing its model identity.")
+        if not hasattr(self.model, "predict") or not hasattr(self.model, "n_features_in_"):
+            raise RuntimeError("CropFit artifact model does not satisfy the inference contract.")
+        expected_features = int(self.model.n_features_in_)
+        metadata_features = self.metadata.get("featureNames")
+        if metadata_features and len(metadata_features) not in (expected_features, expected_features + 2):
+            raise RuntimeError(
+                f"CropFit artifact feature contract is inconsistent: model={expected_features}, metadata={len(metadata_features)}."
+            )
+        if not getattr(self.model, "estimators_", None):
+            raise RuntimeError("CropFit artifact does not contain fitted ensemble estimators.")
+        self.artifact_sha256 = sha256_file(artifact)
         self.profiles = load_profiles(profiles_path)
 
-    def calibrated_error(self, tree_std: float) -> tuple[float, float]:
+    def model_features(self, row: list[float]) -> list[float]:
+        """Keep inference usable while an older 23-feature artifact is upgraded."""
+        return align_model_features(row, int(self.model.n_features_in_))
+
+    def calibrated_error(self, tree_std: float, active: bool = True) -> tuple[float, float]:
+        conditional = self.metadata.get("conditionalUncertaintyCalibration", {})
+        conditional_quantiles = conditional.get("activeNormalizedErrorQuantiles")
+        if conditional_quantiles:
+            if not active:
+                return 0.0, 0.0
+            scale = tree_std + float(self.metadata.get("uncertaintyCalibration", {}).get("treeStdFloor", 0.01))
+            return float(conditional_quantiles["p80"]) * scale, float(conditional_quantiles["p90"]) * scale
         calibration = self.metadata.get("uncertaintyCalibration", {})
         quantiles = calibration.get("normalizedErrorQuantiles")
         if quantiles:
@@ -91,6 +135,30 @@ class CropFitPredictor:
             if not 0 <= solar <= 100:
                 raise ValueError(f"Climate record {MONTHS[index % 12]} has solar resource outside 0 to 100 MJ/m2/day.")
 
+    @staticmethod
+    def validate_request(
+        crop: str, latitude: float, longitude: float, soil_ph: float,
+        irrigated: bool, climate_history: list[list[dict]] | None,
+    ) -> None:
+        if not isinstance(crop, str) or not 2 <= len(crop.strip()) <= 100:
+            raise ValueError("Crop name must contain 2 to 100 characters.")
+        scalar_values = (latitude, longitude, soil_ph)
+        if not all(isinstance(value, (int, float)) and np.isfinite(value) for value in scalar_values):
+            raise ValueError("Latitude, longitude, and soil pH must be finite numbers.")
+        if not -90 <= latitude <= 90 or not -180 <= longitude <= 180:
+            raise ValueError("Latitude or longitude is outside the valid geographic range.")
+        if not 2.5 <= soil_ph <= 10.5:
+            raise ValueError("Soil pH must be between 2.5 and 10.5.")
+        if not isinstance(irrigated, bool):
+            raise ValueError("Irrigated must be a boolean.")
+        if climate_history is None:
+            return
+        if not isinstance(climate_history, list) or len(climate_history) > MAX_CLIMATE_HISTORY_YEARS:
+            raise ValueError(f"Climate history may contain at most {MAX_CLIMATE_HISTORY_YEARS} years.")
+        for year in climate_history:
+            if not isinstance(year, list) or len(year) != 12:
+                raise ValueError("Each climate-history year must contain exactly 12 months.")
+
     def curve_inputs(self, profile, climate_values: list[dict], soil_ph: float, irrigated: bool) -> tuple[list, list, list, list]:
         self.validate_climate(climate_values)
         cycle_days = min(365, max(30, round((profile.growing_days_min + profile.growing_days_max) / 2)))
@@ -115,7 +183,7 @@ class CropFitPredictor:
             precipitation_mm_day = precipitation_total / cycle_days
             annualized_precipitation = precipitation_mm_day * 365.25
             seasonal_climate.append((temperature, precipitation_mm_day, solar))
-            row = feature_row(profile, temperature, annualized_precipitation, soil_ph, solar, irrigated)
+            row = self.model_features(feature_row(profile, temperature, annualized_precipitation, soil_ph, solar, irrigated))
             rows.append(row)
             teacher.append(teacher_scores(profile, temperature, annualized_precipitation, soil_ph, solar, irrigated))
             start_precipitation = float(month["precipitationMmDay"]) * 365.25
@@ -143,7 +211,8 @@ class CropFitPredictor:
                 # The surrogate may not extrapolate a hard zero at exact/out-of-domain
                 # EcoCrop boundaries. Never let it exceed either deterministic ceiling.
                 score = min(float(predictions[position]), teacher[index]["suitability"], establishment[index]["suitability"])
-                error_p80, error_p90 = self.calibrated_error(float(uncertainty[position]))
+                active = teacher[index]["suitability"] > 0 and establishment[index]["suitability"] > 0
+                error_p80, error_p90 = self.calibrated_error(float(uncertainty[position]), active)
                 curve.append({
                     "month": str(month["month"]),
                     "monthIndex": index + 1,
@@ -166,6 +235,7 @@ class CropFitPredictor:
 
     def predict(self, crop: str, latitude: float, longitude: float, soil_ph: float = 6.5, irrigated: bool = False,
                 climate: list[dict] | None = None, climate_history: list[list[dict]] | None = None):
+        self.validate_request(crop, latitude, longitude, soil_ph, irrigated, climate_history)
         profile = resolve_profile(crop, self.profiles)
         if climate is None:
             climate_values, fetched_history = self.climate_bundle(latitude, longitude)

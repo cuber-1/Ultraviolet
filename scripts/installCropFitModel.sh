@@ -1,11 +1,18 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-release_url="https://github.com/cuber-1/Ultraviolet/releases/download/cropfit-v0.6/ultraviolet-cropfit-v0.6.tar.gz"
-expected_sha256="3b0f0561e3cd13beffa61825aa46a1ebef546045655c73ee6cc9fb4ebc7f23bd"
+release_url="https://github.com/cuber-1/Ultraviolet/releases/download/cropfit-v0.9.1/ultraviolet-cropfit-v0.9.1.tar.gz"
+expected_sha256="31bbd8142cd1cf809d707e5b12d5deb1c3545a86fc6c81a35cc2eb5008bea67f"
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 bundle_tmp="$(mktemp -d)"
-trap 'rm -rf "${bundle_tmp}"' EXIT
+artifact_next="${repo_root}/machine-learning/artifacts/.cropfit.joblib.next.$$"
+metadata_next="${repo_root}/machine-learning/artifacts/.cropfit.metadata.json.next.$$"
+profiles_next="${repo_root}/machine-learning/data/raw/.ecocrop.csv.next.$$"
+cleanup() {
+  rm -rf "${bundle_tmp}"
+  rm -f "${artifact_next}" "${metadata_next}" "${profiles_next}"
+}
+trap cleanup EXIT
 python_bin="${CROPFIT_PYTHON:-python3}"
 
 if ! command -v "${python_bin}" >/dev/null 2>&1; then
@@ -17,9 +24,9 @@ if ! "${python_bin}" -c 'import sys; raise SystemExit(0 if sys.version_info >= (
   exit 1
 fi
 
-echo "Downloading CropFit v0.6 model bundle..."
+echo "Downloading CropFit v0.9.1 model bundle..."
 if command -v gh >/dev/null 2>&1; then
-  gh release download cropfit-v0.6 --repo cuber-1/Ultraviolet --pattern ultraviolet-cropfit-v0.6.tar.gz --output "${bundle_tmp}/cropfit.tar.gz"
+  gh release download cropfit-v0.9.1 --repo cuber-1/Ultraviolet --pattern ultraviolet-cropfit-v0.9.1.tar.gz --output "${bundle_tmp}/cropfit.tar.gz"
 elif [[ -n "${GITHUB_TOKEN:-}" ]]; then
   curl --fail --location --retry 3 --header "Authorization: Bearer ${GITHUB_TOKEN}" --output "${bundle_tmp}/cropfit.tar.gz" "${release_url}"
 else
@@ -44,12 +51,29 @@ if [[ "${actual_sha256}" != "${expected_sha256}" ]]; then
   exit 1
 fi
 
-tar -xzf "${bundle_tmp}/cropfit.tar.gz" -C "${repo_root}"
+staging_root="${bundle_tmp}/staging"
+mkdir -p "${staging_root}"
+PYTHONPATH="${repo_root}/machine-learning" "${python_bin}" -m cropfit.bundle_validation "${bundle_tmp}/cropfit.tar.gz"
+tar -xzf "${bundle_tmp}/cropfit.tar.gz" -C "${staging_root}"
 "${python_bin}" -m venv "${repo_root}/machine-learning/.venv"
 "${repo_root}/machine-learning/.venv/bin/python" -m pip install --upgrade pip
 "${repo_root}/machine-learning/.venv/bin/python" -m pip install -r "${repo_root}/machine-learning/requirements-inference.txt"
+
+echo "Verifying staged CropFit model before installation..."
+PYTHONPATH="${repo_root}/machine-learning" "${repo_root}/machine-learning/.venv/bin/python" -m cropfit.verify_inference \
+  --artifact "${staging_root}/machine-learning/artifacts/cropfit.joblib" \
+  --profiles "${staging_root}/machine-learning/data/raw/ecocrop.csv"
+
+mkdir -p "${repo_root}/machine-learning/artifacts" "${repo_root}/machine-learning/data/raw"
+install -m 0644 "${staging_root}/machine-learning/artifacts/cropfit.joblib" "${artifact_next}"
+install -m 0644 "${staging_root}/machine-learning/artifacts/cropfit.metadata.json" "${metadata_next}"
+install -m 0644 "${staging_root}/machine-learning/data/raw/ecocrop.csv" "${profiles_next}"
+mv -f "${metadata_next}" "${repo_root}/machine-learning/artifacts/cropfit.metadata.json"
+mv -f "${profiles_next}" "${repo_root}/machine-learning/data/raw/ecocrop.csv"
+mv -f "${artifact_next}" "${repo_root}/machine-learning/artifacts/cropfit.joblib"
+
 PYTHONPATH="${repo_root}/machine-learning" "${repo_root}/machine-learning/.venv/bin/python" -m cropfit.verify_inference
 
-echo "CropFit v0.6 is installed and verified."
+echo "CropFit v0.9.1 is installed and verified."
 echo "Local Mac fallback: npm run ml:serve:local"
 echo "Tailscale/LAN service: npm run ml:serve"

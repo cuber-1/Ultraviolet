@@ -1,17 +1,22 @@
 from __future__ import annotations
 
 import argparse
+import io
 import json
+import math
+import tarfile
+import tempfile
 from pathlib import Path
 from unittest.mock import patch
 
 from fastapi import HTTPException
 from pydantic import ValidationError
 
-from .features import FEATURE_NAMES
-from .inference import CLIMATE_HISTORY_END_YEAR, CLIMATE_HISTORY_START_YEAR, CLIMATE_HISTORY_YEARS, MONTHS, CropFitPredictor
+from .features import FEATURE_NAMES, feature_row, teacher_scores
+from .bundle_validation import EXPECTED_MEMBERS, validate_bundle
+from .inference import CLIMATE_HISTORY_END_YEAR, CLIMATE_HISTORY_START_YEAR, CLIMATE_HISTORY_YEARS, MAX_CLIMATE_HISTORY_YEARS, MONTHS, CropFitPredictor, align_model_features, sha256_file
 from .profiles import resolve_profile
-from .yield_atlas import haversine_km, load_atlas, nearest_evidence
+from .yield_atlas import haversine_km, load_atlas, metric_summary, nearest_evidence
 
 
 def climate(temperature: float) -> list[dict]:
@@ -24,11 +29,60 @@ def climate(temperature: float) -> list[dict]:
 
 
 def verify(artifact: Path, profiles: Path) -> None:
+    with tempfile.TemporaryDirectory() as bundle_directory:
+        bundle_root = Path(bundle_directory)
+
+        def archive(name: str, members: list[tuple[str, str]]) -> Path:
+            path = bundle_root / name
+            with tarfile.open(path, "w:gz") as bundle:
+                for member_name, kind in members:
+                    member = tarfile.TarInfo(member_name)
+                    if kind == "file":
+                        payload = b"test"
+                        member.size = len(payload)
+                        bundle.addfile(member, io.BytesIO(payload))
+                    else:
+                        member.type = tarfile.SYMTYPE
+                        member.linkname = "cropfit.joblib"
+                        bundle.addfile(member)
+            return path
+
+        valid_members = [(name, "file") for name in sorted(EXPECTED_MEMBERS)]
+        validate_bundle(archive("valid.tar.gz", valid_members))
+        invalid_archives = (
+            archive("duplicate.tar.gz", valid_members + [valid_members[0]]),
+            archive("symlink.tar.gz", [(name, "link" if index == 0 else "file") for index, (name, _) in enumerate(valid_members)]),
+            archive("traversal.tar.gz", valid_members[:-1] + [("../ecocrop.csv", "file")]),
+        )
+        for invalid_archive in invalid_archives:
+            try:
+                validate_bundle(invalid_archive)
+            except ValueError:
+                pass
+            else:
+                raise AssertionError(f"unsafe CropFit bundle was accepted: {invalid_archive.name}")
+
+    actual = [0.0, 1.0]
+    candidate_a = [0.10004, 0.89996]
+    candidate_b = [0.10003, 0.89997]
+    assert metric_summary(actual, candidate_a) == metric_summary(actual, candidate_b)
+    assert metric_summary(actual, candidate_b, rounded=False)["maePercentile"] < metric_summary(
+        actual, candidate_a, rounded=False,
+    )["maePercentile"]
+
     assert (CLIMATE_HISTORY_START_YEAR, CLIMATE_HISTORY_END_YEAR, len(CLIMATE_HISTORY_YEARS)) == (2016, 2025, 10)
     predictor = CropFitPredictor(artifact, profiles)
+    assert predictor.artifact_sha256 == sha256_file(artifact)
+    assert len(predictor.artifact_sha256) == 64
     assert predictor.model.n_features_in_ == len(FEATURE_NAMES), "artifact and feature code disagree"
-    if predictor.metadata["model"].endswith("v0.6"):
+    assert predictor.model_features(list(range(len(FEATURE_NAMES)))) == list(range(len(FEATURE_NAMES)))
+    assert align_model_features(list(range(len(FEATURE_NAMES))), len(FEATURE_NAMES) - 2) == list(range(len(FEATURE_NAMES) - 2))
+    if predictor.metadata["model"].endswith(("v0.6", "v0.7", "v0.8", "v0.9", "v0.9.1")):
         assert predictor.metadata["selectedModel"] == "extraTrees"
+    if predictor.metadata["model"].endswith(("v0.9", "v0.9.1")):
+        assert predictor.metadata["modelParameters"]["nEstimators"] == 70
+        assert predictor.metadata["trainingExamples"] == 151_800
+        assert predictor.metadata["evaluationExamples"] == 134_064
     if predictor.metadata.get("promotionGate"):
         assert predictor.metadata["promotionGate"]["passed"]
         assert all(predictor.metadata["promotionGate"]["checks"].values())
@@ -41,6 +95,11 @@ def verify(artifact: Path, profiles: Path) -> None:
         assert calibration["gate"]["passed"]
         assert result["confidence"] == calibration["nominalCoverage"]["p80"] == .8
         assert result["expectedAbsoluteError"]["p80"] <= result["expectedAbsoluteError"]["p90"]
+    conditional = predictor.metadata.get("conditionalUncertaintyCalibration")
+    if conditional:
+        assert conditional["gate"]["passed"]
+        assert .78 <= conditional["activeHeldOutCoverage"]["p80"] <= .82
+        assert .88 <= conditional["activeHeldOutCoverage"]["p90"] <= .92
     assert result["bestReliablePlantingMonth"] in MONTHS
     assert len(result["monthlyCurve"]) == 12
     for month in result["monthlyCurve"]:
@@ -48,6 +107,9 @@ def verify(artifact: Path, profiles: Path) -> None:
         assert 0 <= month["reliability"] <= 1
 
     profile = resolve_profile("tomato", predictor.profiles)
+    interaction_row = feature_row(profile, 22, 900, 6.5, 18, True)
+    interaction_target = teacher_scores(profile, 22, 900, 6.5, 18, True)["suitability"]
+    assert abs(100 * interaction_row[-2] * interaction_row[-1] - interaction_target) < 1e-10
     ordinary = predictor.curve(profile, climate(20.0) + climate(20.0), 6.5, True)
     hot_next_year = predictor.curve(profile, climate(20.0) + climate(45.0), 6.5, True)
     assert ordinary[-1]["score"] != hot_next_year[-1]["score"], "late planting did not use following-year climate"
@@ -61,6 +123,7 @@ def verify(artifact: Path, profiles: Path) -> None:
     stress_curve = predictor.curve(profile, stress, 6.5, False)
     assert all(item["score"] <= target["suitability"] for item, target in zip(stress_curve, stress_teacher, strict=True))
     assert all(item["score"] == 0 for item in stress_curve), "seasonal EcoCrop ceiling did not stop boundary extrapolation"
+    assert all(item["expectedAbsoluteErrorP80"] == item["expectedAbsoluteErrorP90"] == 0 for item in stress_curve)
     onboarding_profiles = {
         "basil": "Ocimum basilicum",
         "kale": "Brassica oleracea var. acephala",
@@ -81,18 +144,75 @@ def verify(artifact: Path, profiles: Path) -> None:
     else:
         raise AssertionError("invalid second-year climate was accepted")
 
-    atlas = artifact.parents[1] / "evaluation/yield-atlas-v2.json"
+    for invalid_arguments in (
+        {"crop": "x", "latitude": 29.76, "longitude": -95.37},
+        {"crop": "corn", "latitude": math.nan, "longitude": -95.37},
+        {"crop": "corn", "latitude": 91, "longitude": -95.37},
+        {"crop": "corn", "latitude": 29.76, "longitude": -181},
+        {"crop": "corn", "latitude": 29.76, "longitude": -95.37, "soil_ph": 11},
+        {"crop": "corn", "latitude": 29.76, "longitude": -95.37, "irrigated": 1},
+        {"crop": "corn", "latitude": 29.76, "longitude": -95.37, "climate_history": [climate(20.0)] * (MAX_CLIMATE_HISTORY_YEARS + 1)},
+        {"crop": "corn", "latitude": 29.76, "longitude": -95.37, "climate_history": [climate(20.0)[:11]]},
+    ):
+        try:
+            predictor.predict(climate=climate(20.0), **invalid_arguments)
+        except ValueError:
+            pass
+        else:
+            raise AssertionError(f"invalid direct predictor request was accepted: {invalid_arguments}")
+
+    with patch("cropfit.inference.joblib.load", return_value={"unexpected": True}):
+        try:
+            CropFitPredictor(artifact, profiles)
+        except RuntimeError as error:
+            assert "model and metadata" in str(error)
+        else:
+            raise AssertionError("malformed artifact contract was accepted")
+
+    atlas = artifact.parents[1] / "evaluation/yield-atlas-v9.json"
     if atlas.exists():
         atlas_report = load_atlas(str(atlas.resolve()))
         assert atlas_report["years"] == list(range(2010, 2026))
         assert atlas_report["historyWindowComparison"]["gate"]["passed"]
         assert atlas_report["uncertaintyValidation"]["gate"]["passed"]
+        assert atlas_report["spatialTransferValidation"]["gate"]["passed"]
+        assert atlas_report["spatialTransferValidation"]["productionBlend"]["gate"]["passed"]
+        production_blend = atlas_report["spatialTransferValidation"]["productionBlend"]
+        assert production_blend["selectedWeights"] == {"regionalNeighborhoodByRegion": {
+            "Northeast": 0.0, "Midwest": .15, "South": .15, "West": 0.0,
+        }}
+        assert all(
+            item["spearmanDelta"] >= 0 and item["maeDelta"] <= 0
+            for item in (*production_blend["perRegionConfirmation"], *production_blend["perRegionFinalSignal"])
+        )
         evidence = nearest_evidence("corn", 29.7604, -95.3698, atlas)
         assert evidence and evidence["county"] == "Fort Bend County" and evidence["observations"] == 14
         assert evidence["latest"]["year"] == 2025
         assert [item["year"] for item in evidence["history"]][-3:] == [2023, 2024, 2025]
-        assert evidence["observedYieldPrior"]["interval80"][0] <= evidence["meanPercentile"] <= evidence["observedYieldPrior"]["interval80"][1]
-        assert evidence["observedYieldPrior"]["expectedPercentile"] == evidence["meanPercentile"], "failed recency candidate entered production"
+        expected = evidence["observedYieldPrior"]["expectedPercentile"]
+        assert evidence["observedYieldPrior"]["interval80"][0] <= expected <= evidence["observedYieldPrior"]["interval80"][1]
+        assert evidence["observedYieldPrior"]["intervalMethod"] == "local-regional-blend-conformal"
+        calibration = atlas_report["spatialTransferValidation"]["productionBlend"]["intervalCalibration"]
+        assert calibration["meanWidth90Reduction"] >= .04
+        assert .88 <= calibration["productionBlendRadii"]["coverage90"] <= .94
+        assert calibration["selectedRegionalScales"] == {
+            "Northeast": {"scale80": 1.05, "scale90": 1.0},
+            "Midwest": {"scale80": 1.0, "scale90": 1.0},
+            "South": {"scale80": 1.0, "scale90": 1.0},
+            "West": {"scale80": 1.45, "scale90": 1.45},
+        }
+        assert all(.85 <= item["coverage90"] <= .98 for item in calibration["perRegionFinal"])
+        assert evidence["observedYieldPrior"]["distanceBucket"] == "25-50"
+        assert 1 <= evidence["observedYieldPrior"]["neighborCount"] <= 9
+        assert len(evidence["regionalNeighbors"]) == evidence["observedYieldPrior"]["neighborCount"] == 6
+        assert evidence["observedYieldPrior"]["expectedPercentile"] != evidence["regionalNeighbors"][0]["expectedPercentile"]
+        assert abs(sum(item["weight"] for item in evidence["regionalNeighbors"]) - 1) < .0001
+        western_evidence = nearest_evidence("wheat", 39.7392, -104.9903, atlas)
+        assert western_evidence and western_evidence["state"] == "CO"
+        assert western_evidence["observedYieldPrior"]["neighborCount"] == 1
+        assert western_evidence["observedYieldPrior"]["intervalMethod"] == "region-gated-local-conformal"
+        assert western_evidence["regionalNeighbors"][0]["weight"] == 1.0
+        assert atlas_report["predictionMethod"] == {"name": "shrunken exponential recency prior", "forecastYear": 2026, "halfLifeYears": 3.0, "recencyWeight": .8, "longHistoryWeight": .2}
         assert evidence["observedYieldPrior"]["interval90"][0] <= evidence["observedYieldPrior"]["interval80"][0]
         assert evidence["observedYieldPrior"]["interval90"][1] >= evidence["observedYieldPrior"]["interval80"][1]
         assert nearest_evidence("tomato", 29.7604, -95.3698, atlas) is None
@@ -111,13 +231,14 @@ def verify(artifact: Path, profiles: Path) -> None:
         assert ranking_report["productionGate"]["passed"]
         assert ranking_report["priorVsClimateFinalTest"]["priorAdvantageBootstrap95"][0] > 0
 
-    recency_validation = artifact.parents[1] / "evaluation/recency-validation-v1.json"
+    recency_validation = artifact.parents[1] / "evaluation/recency-validation-v2.json"
     if recency_validation.exists():
         recency_report = json.loads(recency_validation.read_text())
         assert recency_report["selectedHalfLifeYears"] == 3
-        assert not recency_report["gate"]["passed"]
+        assert recency_report["selectedRecencyWeight"] == .8
+        assert recency_report["gate"]["passed"]
         assert recency_report["finalTest"]["spearmanDeltaBootstrap95"][0] > 0
-        assert any(item["spearmanDelta"] < 0 for item in recency_report["perYearFinalTest"])
+        assert all(item["spearmanDelta"] >= 0 and item["maeDelta"] <= 0 for item in recency_report["perYearFinalTest"])
 
     uncertainty_validation = artifact.parents[1] / "evaluation/uncertainty-validation-v0.5.1.json"
     if uncertainty_validation.exists():
@@ -133,6 +254,43 @@ def verify(artifact: Path, profiles: Path) -> None:
         assert estimator_report["summary"]["lockedSeedWins"] == estimator_report["summary"]["lockedSeeds"] == 7
         assert estimator_report["summary"]["finalMeanMaeImprovementPercent"] >= 30
 
+    capacity_validation = artifact.parents[1] / "evaluation/capacity-validation-v0.7.json"
+    if capacity_validation.exists():
+        capacity_report = json.loads(capacity_validation.read_text())
+        assert capacity_report["gate"]["passed"]
+        assert capacity_report["summary"]["lockedSeedWins"] == capacity_report["summary"]["lockedSeeds"] == 7
+        assert capacity_report["summary"]["lockedMeanMaeImprovementPercent"] >= 2
+        assert capacity_report["summary"]["lockedMeanP90ImprovementPercent"] >= 1
+        assert capacity_report["summary"]["candidateSerializedSizeBytes"] <= 130_000_000
+
+    interaction_validation = artifact.parents[1] / "evaluation/interaction-validation-v0.8.json"
+    if interaction_validation.exists():
+        interaction_report = json.loads(interaction_validation.read_text())
+        assert interaction_report["gate"]["passed"]
+        assert interaction_report["summary"]["lockedSeedWins"] == interaction_report["summary"]["lockedSeeds"] == 7
+        assert interaction_report["summary"]["lockedMeanMaeImprovementPercent"] >= 70
+        assert interaction_report["summary"]["lockedMeanP90ImprovementPercent"] >= 70
+        assert interaction_report["summary"]["candidateSerializedSizeBytes"] <= 80_000_000
+
+    density_validation = artifact.parents[1] / "evaluation/training-density-validation-v0.9.json"
+    if density_validation.exists():
+        density_report = json.loads(density_validation.read_text())
+        assert density_report["gate"]["passed"]
+        assert density_report["summary"]["lockedSeedWins"] == density_report["summary"]["lockedSeeds"] == 7
+        assert density_report["summary"]["lockedMeanMaeImprovementPercent"] >= 10
+        assert density_report["summary"]["lockedMeanP90ImprovementPercent"] >= 10
+        assert density_report["summary"]["candidateSerializedSizeBytes"] <= 72_000_000
+        assert density_report["protocol"]["fixedEvaluation"].startswith("Both models use identical")
+
+    shift_validation = artifact.parents[1] / "evaluation/scenario-shift-validation-v0.9.1.json"
+    if shift_validation.exists():
+        shift_report = json.loads(shift_validation.read_text())
+        assert shift_report["gate"]["passed"]
+        assert min(shift_report["gains"].values()) >= 10
+        assert .78 <= shift_report["activeCoverage"]["conditionalMethodOnShifted"]["p80"] <= .82
+        assert .88 <= shift_report["activeCoverage"]["conditionalMethodOnShifted"]["p90"] <= .92
+        assert shift_report["activeCoverage"]["oldGlobalMethodOnShifted"]["p90"] < .7
+
     compact_validation = artifact.parents[1] / "evaluation/compact-validation-v1.json"
     if compact_validation.exists():
         compact_report = json.loads(compact_validation.read_text())
@@ -140,7 +298,7 @@ def verify(artifact: Path, profiles: Path) -> None:
         assert compact_report["summary"]["seedWins"] == 0
         assert compact_report["summary"]["decision"].startswith("reject")
 
-    ood_validation = artifact.parents[1] / "evaluation/ood-validation-v0.6.1.json"
+    ood_validation = artifact.parents[1] / "evaluation/ood-validation-v0.9.1.json"
     if ood_validation.exists():
         ood_report = json.loads(ood_validation.read_text())
         assert ood_report["gate"]["passed"]
@@ -155,6 +313,7 @@ def verify(artifact: Path, profiles: Path) -> None:
         {"climate": valid_climate[:11]},
         {"climateHistory": [valid_climate] * 21},
         {"climateHistory": [valid_climate[:11]]},
+        {"irrigated": 1},
     ):
         try:
             PredictionRequest(crop="corn", latitude=29.76, longitude=-95.37, **invalid)

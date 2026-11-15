@@ -32,8 +32,17 @@ def held_out(model, metadata: dict, profiles: list, samples_per_crop: int, seed:
     tree_std = trees.std(axis=0)
     calibration = metadata["uncertaintyCalibration"]
     scale = tree_std + float(calibration["treeStdFloor"])
-    radius80 = np.ceil(float(calibration["normalizedErrorQuantiles"]["p80"]) * scale * 1000) / 1000
-    radius90 = np.ceil(float(calibration["normalizedErrorQuantiles"]["p90"]) * scale * 1000) / 1000
+    conditional = metadata.get("conditionalUncertaintyCalibration")
+    if conditional:
+        active = y[test] > 0
+        radius80 = np.zeros(len(test))
+        radius90 = np.zeros(len(test))
+        quantiles = conditional["activeNormalizedErrorQuantiles"]
+        radius80[active] = np.ceil(float(quantiles["p80"]) * scale[active] * 1000) / 1000
+        radius90[active] = np.ceil(float(quantiles["p90"]) * scale[active] * 1000) / 1000
+    else:
+        radius80 = np.ceil(float(calibration["normalizedErrorQuantiles"]["p80"]) * scale * 1000) / 1000
+        radius90 = np.ceil(float(calibration["normalizedErrorQuantiles"]["p90"]) * scale * 1000) / 1000
     return {
         "examples": len(test), "profiles": len(np.unique(groups[test])),
         "rawSurrogate": metrics(raw_errors),
@@ -102,7 +111,7 @@ def markdown(report: dict) -> str:
         "# CropFit seasonal-ceiling validation", "",
         "The ML score is capped by the exact seasonal and establishment EcoCrop suitability already computed for limiting-factor explanations. The clamp only removes surrogate overestimation; it does not replace ML underestimation.", "",
         "| Held-out path | MAE | p90 error | Maximum error |", "|---|---:|---:|---:|",
-        f'| Raw v0.6 surrogate | {heldout["rawSurrogate"]["mae"]:.4f} | {heldout["rawSurrogate"]["p90AbsoluteError"]:.4f} | {heldout["rawSurrogate"]["maximumAbsoluteError"]:.3f} |',
+        f'| Raw {report["model"]} | {heldout["rawSurrogate"]["mae"]:.4f} | {heldout["rawSurrogate"]["p90AbsoluteError"]:.4f} | {heldout["rawSurrogate"]["maximumAbsoluteError"]:.3f} |',
         f'| Deployed seasonal ceiling | {heldout["seasonalCeiling"]["mae"]:.4f} | {heldout["seasonalCeiling"]["p90AbsoluteError"]:.4f} | {heldout["seasonalCeiling"]["maximumAbsoluteError"]:.3f} |', "",
         f'Existing p80/p90 radii remain conservative at **{heldout["existingIntervalCoverageAfterCeiling"]["p80"]:.1%} / {heldout["existingIntervalCoverageAfterCeiling"]["p90"]:.1%}** coverage.', "",
         "At exact solar and temperature absolute boundaries, the teacher score is zero. The raw ensemble can extrapolate nonzero values because continuous training samples almost never land exactly on a boundary; the ceiling reduces all tested boundary errors to zero.", "",
@@ -126,7 +135,7 @@ def plot(report: dict, output: Path) -> None:
     axes[1].bar(np.arange(len(names)) - width / 2, [report["boundaryStress"][name]["rawSurrogate"]["maximumAbsoluteError"] for name in names], width, color="#8f2f14", label="raw maximum")
     axes[1].bar(np.arange(len(names)) + width / 2, [report["boundaryStress"][name]["seasonalCeiling"]["maximumAbsoluteError"] for name in names], width, color="#315d49", label="ceiling maximum")
     axes[1].set(xticks=np.arange(len(names)), xticklabels=["solar min", "solar max", "temp min", "temp max"], ylabel="Maximum error", title="Exact hard-boundary stress"); axes[1].legend(); axes[1].grid(axis="y", alpha=.18)
-    figure.suptitle("CropFit v0.6.1 · prevent out-of-domain overestimation", fontweight="bold")
+    figure.suptitle(f'{report["model"]} · prevent out-of-domain overestimation', fontweight="bold")
     figure.tight_layout(); figure.savefig(output, dpi=180); plt.close(figure)
 
 
@@ -135,8 +144,8 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--artifact", type=Path, default=root / "artifacts/cropfit.joblib")
     parser.add_argument("--profiles", type=Path, default=root / "data/raw/ecocrop.csv")
-    parser.add_argument("--output", type=Path, default=root / "evaluation/ood-validation-v0.6.1.json")
-    parser.add_argument("--plot", type=Path, default=root / "evaluation/ood-validation-v0.6.1.png")
+    parser.add_argument("--output", type=Path, default=root / "evaluation/ood-validation-v0.9.1.json")
+    parser.add_argument("--plot", type=Path, default=root / "evaluation/ood-validation-v0.9.1.png")
     parser.add_argument("--samples-per-crop", type=int, default=72)
     parser.add_argument("--seed", type=int, default=20261114)
     args = parser.parse_args()

@@ -12,6 +12,7 @@ FEATURE_NAMES = [
     "ph_opt_min", "ph_opt_max", "ph_abs_min", "ph_abs_max",
     "growing_days_min", "growing_days_max",
     "temperature_range_fit", "water_range_fit", "ph_range_fit", "solar_range_fit",
+    "temperature_water_interaction", "ph_solar_interaction",
 ]
 
 
@@ -34,9 +35,24 @@ def range_memberships(profile: CropProfile, temperature_c: float, annual_precipi
     return temperature, water, ph, solar
 
 
-def feature_row(profile: CropProfile, temperature_c: float, annual_precipitation_mm: float, soil_ph: float, solar_mj_m2_day: float, irrigated: bool) -> list[float]:
+def interaction_features(memberships: tuple[float, float, float, float]) -> tuple[float, float]:
+    """Factor the mechanistic fit into two transparent, non-target interactions."""
+    temperature, water, ph, solar = memberships
+    return temperature ** .42 * water ** .26, ph ** .18 * solar ** .14
+
+
+def feature_row(
+    profile: CropProfile,
+    temperature_c: float,
+    annual_precipitation_mm: float,
+    soil_ph: float,
+    solar_mj_m2_day: float,
+    irrigated: bool,
+    include_interactions: bool = True,
+) -> list[float]:
     memberships = range_memberships(profile, temperature_c, annual_precipitation_mm, soil_ph, solar_mj_m2_day, irrigated)
-    return [temperature_c, annual_precipitation_mm, soil_ph, solar_mj_m2_day, float(irrigated), *profile.model_values(), *memberships]
+    interactions = interaction_features(memberships) if include_interactions else ()
+    return [temperature_c, annual_precipitation_mm, soil_ph, solar_mj_m2_day, float(irrigated), *profile.model_values(), *memberships, *interactions]
 
 
 def teacher_scores(profile: CropProfile, temperature_c: float, annual_precipitation_mm: float, soil_ph: float, solar_mj_m2_day: float, irrigated: bool) -> dict[str, float]:
