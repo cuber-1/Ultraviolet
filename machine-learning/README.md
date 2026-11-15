@@ -130,7 +130,7 @@ sweep, their machine-readable report, and two presentation charts under
 For corn, soybeans, and wheat, the response may also include
 `observedYieldEvidence`: the nearest USDA reporting county within 100 km, its
 2010–2025 within-crop/year percentile history, and an observed county prior
-with calibrated 80% and 90% uncertainty intervals. Atlas v8 uses the globally
+with calibrated 80% and 90% uncertainty intervals. Atlas v9 uses the globally
 selected 15% regional share only in Census regions where it improves both
 2018–2020 development rank and MAE: the Midwest and South. The Northeast and
 West fall back to the local county prior. On locked 2023–2025 outcomes, rank
@@ -139,8 +139,10 @@ and percentile MAE falls from 0.1208 to 0.1204. Every crop and final year
 improves or holds MAE, with no confirmation or final-region regression. This
 remains separate observed evidence and never changes
 the EcoCrop suitability score. A production-specific conformal calibrator uses
-27,034 pre-2018 errors; across 2018–2025 it preserves 84.0% / 92.7% coverage
-while reducing mean 90% band width from 0.535 to 0.507 (5.1%).
+27,034 pre-2018 errors, then selects regional safety scales on two later
+pre-final blocks. Across 2018–2025 it preserves 84.4% / 92.9% coverage while
+reducing mean 90% band width from 0.535 to 0.511 (4.3%). Western 90% coverage
+is 90.0% on 2021–2022 and 95.7% on final 2023–2025 outcomes.
 
 ## Next evidence gate
 
@@ -182,8 +184,8 @@ npm run ml:build:yield-atlas
 ```
 
 The builder uses the filtered USDA Quick Stats and Census county files from the
-national observed-validation download. It writes atlas v8, a forward-year
-validation report, and a presentation PNG under `evaluation/`. Atlas v8 uses
+national observed-validation download. It writes atlas v9, a forward-year
+validation report, and a presentation PNG under `evaluation/`. Atlas v9 uses
 the development-selected 80% three-year-half-life recency / 20% long-history
 prior. The report compares the 16-year and legacy 8-year histories on identical
 future rows and tests conformal intervals calibrated on 2011–2017 against
@@ -224,6 +226,6 @@ npm run ml:benchmark:inference
 
 The recency command tests shrinkage toward exponential history weighting under
 fixed temporal splits. The v2 gate passes on confirmation and locked final
-years, and its selected prior is used by atlas v8. The
+years, and its selected prior is used by atlas v9. The
 benchmark compares the cached haversine spatial index with exact brute force
 and verifies identical nearest counties for each supported crop.

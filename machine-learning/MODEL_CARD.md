@@ -101,7 +101,7 @@ below the predeclared 0.30 threshold. Corn and 2019 were negative. See
 
 CropFit also returns a separate USDA observed local-plus-regional prior for corn, soybeans,
 and wheat when published county centroids are within 100 km. This evidence does
-not alter CropFit suitability. Atlas v8 contains 5,562 county-crop
+not alter CropFit suitability. Atlas v9 contains 5,562 county-crop
 records from 2010–2025, uses a validated shrunken-recency prior, and includes
 crop/history-count conditional conformal uncertainty bands. Location-facing
 bands are separately calibrated for regional spatial transfer.
@@ -112,7 +112,7 @@ percentile MAE from 0.126 to 0.117. Coverage increased from 21,908 to 23,311
 rows. Uncertainty was calibrated on 2011–2017 only; across 26,589 later
 2018–2025 outcomes, nominal 80% and 90% intervals covered 84.1% and 92.5%.
 This measures persistence of county yield ranks, not parcel yield forecasting.
-See `evaluation/yield-atlas-validation-v8.md`.
+See `evaluation/yield-atlas-validation-v9.md`.
 
 ## Rural regional ranking
 
@@ -145,7 +145,7 @@ soybeans, and wheat. See `evaluation/crop-expansion-validation-v1.md`.
 
 ## Recency experiment
 
-Atlas v8 shrinks an exponential recency estimate toward the stable long-history
+Atlas v9 shrinks an exponential recency estimate toward the stable long-history
 mean. The half-life and shrinkage weight were selected on 2018–2020 only: 80%
 three-year-half-life recency and 20% long-history mean. Confirmation Spearman
 improved from 0.8497 to 0.8513 while MAE fell from 0.1167 to 0.1150. On the
@@ -159,10 +159,10 @@ Rebuilding the full forward-year atlas with the promoted prior improved pooled
 Spearman from 0.7871 to 0.7914. On identical 2019–2025 rows, 16-year-history
 Spearman improved from 0.8405 to 0.8465 and MAE from 0.1199 to 0.1168. Fresh
 split-conformal calibration covered 84.1% and 92.5% at the nominal 80% and 90%
-levels. See `evaluation/yield-atlas-validation-v8.md`.
+levels. See `evaluation/yield-atlas-validation-v9.md`.
 
 The production API transfers nearby reporting-county priors to an arbitrary
-location, so atlas v8 validates that operation directly. A leave-one-county-out
+location, so atlas v9 validates that operation directly. A leave-one-county-out
 test excludes each target county. Development years selected up to eight
 neighbors with inverse-square distance weighting. On locked 2023–2025 outcomes,
 regional Spearman reached 0.8060 versus 0.7580 for one nearest county (delta
@@ -221,22 +221,25 @@ reuse a stale prediction. The cache is a bounded 2,048-entry LRU, and CI checks
 key sensitivity, revision invalidation, model isolation, expiry, and
 least-recently-used eviction.
 
-API v0.6.8 exposes its API+training-run revision through `/health`. The browser
+API v0.6.9 exposes its API+training-run revision through `/health`. The browser
 proxy reads it once per prediction request. If revision health is unavailable,
 model predictions continue but bypass the cache until provenance is verified.
 
 ## Local-plus-regional yield evidence
 
-Atlas v8 adds the development-selected 15% regional neighborhood only in the
+Atlas v9 adds the development-selected 15% regional neighborhood only in the
 Midwest and South, where the same fixed blend improved both development rank
 and MAE. The Northeast and West use the local county prior. It passes 2021–2022
 confirmation and improves locked 2023–2025 Spearman from 0.8352 to 0.8376 while
 reducing percentile MAE from 0.1208 to 0.1204 across 8,881 county-years. Every
 crop and final year improves rank without worse MAE, no region regresses, and
 the grouped-bootstrap rank-delta interval is +0.0018–+0.0030. A
-production-specific conformal calibrator fitted on 27,034 pre-2018 errors
-retains 84.0% / 92.7% coverage across 2018–2025 while reducing
-mean 90% width from 0.535 to 0.507 (5.1%). This remains county-level evidence,
+production-specific conformal calibrator fitted on 27,034 pre-2018 errors uses
+the smallest regional safety scales that satisfy nominal coverage in both
+2018–2020 and 2021–2022. It retains 84.4% / 92.9% coverage across 2018–2025
+while reducing mean 90% width from 0.535 to 0.511 (4.3%). Western 90% coverage
+is 90.0% on the 2021–2022 stability block and 95.7% on final 2023–2025 outcomes.
+This remains county-level evidence,
 not a parcel yield or property-return forecast.
 
 Transient health failures are not cached as an API type. A recovered Spark is

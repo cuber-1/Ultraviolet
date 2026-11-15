@@ -81,7 +81,7 @@ def verify(artifact: Path, profiles: Path) -> None:
     else:
         raise AssertionError("invalid second-year climate was accepted")
 
-    atlas = artifact.parents[1] / "evaluation/yield-atlas-v8.json"
+    atlas = artifact.parents[1] / "evaluation/yield-atlas-v9.json"
     if atlas.exists():
         atlas_report = load_atlas(str(atlas.resolve()))
         assert atlas_report["years"] == list(range(2010, 2026))
@@ -107,6 +107,13 @@ def verify(artifact: Path, profiles: Path) -> None:
         calibration = atlas_report["spatialTransferValidation"]["productionBlend"]["intervalCalibration"]
         assert calibration["meanWidth90Reduction"] >= .04
         assert .88 <= calibration["productionBlendRadii"]["coverage90"] <= .94
+        assert calibration["selectedRegionalScales"] == {
+            "Northeast": {"scale80": 1.05, "scale90": 1.0},
+            "Midwest": {"scale80": 1.0, "scale90": 1.0},
+            "South": {"scale80": 1.0, "scale90": 1.0},
+            "West": {"scale80": 1.45, "scale90": 1.45},
+        }
+        assert all(.85 <= item["coverage90"] <= .98 for item in calibration["perRegionFinal"])
         assert evidence["observedYieldPrior"]["distanceBucket"] == "25-50"
         assert 1 <= evidence["observedYieldPrior"]["neighborCount"] <= 9
         assert len(evidence["regionalNeighbors"]) == evidence["observedYieldPrior"]["neighborCount"] == 6
