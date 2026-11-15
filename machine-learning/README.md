@@ -32,7 +32,7 @@ artifact instead, use the full setup below. Because the repository is private,
 the installer uses an authenticated GitHub CLI session (`gh auth login`) or a
 `GITHUB_TOKEN`.
 
-Runtime API v0.20.1 serves the validated v0.11.0 estimator and hardens every direct
+Runtime API v0.21.0 serves the validated v0.11.0 estimator and hardens every direct
 and HTTP prediction path with the same finite coordinate, soil-pH, boolean,
 climate-shape, and 20-year history limits. Startup validates the artifact's
 internal model/metadata contract. `GET /health` returns the artifact SHA-256 and
@@ -186,7 +186,7 @@ the response may also include
 `observedYieldEvidence`: nearby USDA reporting counties within 100 km, the
 nearest county's
 2010–2025 within-crop/year percentile history, and an observed county prior
-with calibrated 80% and 90% uncertainty intervals. Atlas v10 uses a 15%
+with calibrated 80% and 90% uncertainty intervals. Atlas v11 retains v10's 15%
 regional share for corn and soybean and a separately validated 20% share for
 wheat in the Midwest and South; the Northeast and West fall back to the local
 county prior. Against atlas v9 on 8,881 locked 2023–2025 outcomes, Spearman
@@ -195,9 +195,12 @@ and percentile MAE falls from 0.12039 to 0.12034. No crop, final year, or Census
 region regresses. This remains separate observed evidence and never changes the
 EcoCrop suitability score. A production-specific conformal calibrator uses
 27,034 pre-2018 errors, then selects regional safety scales on two later
-pre-final blocks. Across 2018–2025 it preserves 84.5% / 93.0% coverage with
-mean 90% band width 0.5113. Western 90% coverage is 90.0% on 2021–2022 and
-95.7% on final 2023–2025 outcomes.
+pre-final blocks. Atlas v11 then forms crop-region sharpening targets, never
+widens a v10 scale, and selects the largest global shrinkage preserving pooled,
+crop, and region coverage on both blocks. The selected 40% shrinkage reduces
+mean 90% width from 0.5113 to 0.4969 (2.8%) with 83.0% / 92.3% coverage across
+2018–2025. On the untouched 8,881-outcome 2023–2025 block it achieves 82.0% /
+91.2%, and every crop retains at least 88% 90%-interval coverage.
 
 ## Next evidence gate
 
@@ -239,17 +242,16 @@ npm run ml:build:yield-atlas
 ```
 
 The builder uses the filtered USDA Quick Stats and Census county files from the
-national observed-validation download. It writes atlas v10, a forward-year
-validation report, and a presentation PNG under `evaluation/`. Atlas v10 uses
+national observed-validation download. It writes atlas v11, a forward-year
+validation report, and a presentation PNG under `evaluation/`. Atlas v11 uses
 the development-selected 80% three-year-half-life recency / 20% long-history
-prior. The report compares the 16-year and legacy 8-year histories on identical
-future rows and tests conformal intervals calibrated on 2011–2017 against
-2018–2025 outcomes. It also runs a leave-one-county-out nearest-neighbor test,
-selects a regional neighborhood on development years, and tests crop-specific
-regional shares against the v9 85% local / 15% regional champion. A separate
-stability veto advances only wheat's 20% regional share; corn and soybean keep
-their v9 weights. Location-facing intervals are freshly calibrated by crop,
-region, and effective source-history depth.
+prior and v10's crop-specific regional point blend. The report compares the
+16-year and legacy 8-year histories on identical future rows, tests conformal
+intervals calibrated on 2011–2017 against 2018–2025 outcomes, and applies the
+bounded crop-region sharpening policy selected entirely before the final block
+is opened. It also runs a leave-one-county-out nearest-neighbor test and checks
+the retained regional point policy. Location-facing intervals are calibrated
+by crop, region, and effective source-history depth.
 
 The promotion comparison is independently reproducible with:
 
@@ -257,11 +259,13 @@ The promotion comparison is independently reproducible with:
 npm run ml:evaluate:production-blend-v2
 ```
 
-A crop-region-specific interval-scaling follow-up is retained as a rejected
+A crop-region-specific full interval-scaling follow-up is retained as a rejected
 candidate. It narrowed pooled 90% bands by 4.2%, but the scale required to meet
 wheat-West stability coverage pushed locked West coverage to 100%, above the
-predeclared 98% calibration ceiling. Atlas v10 therefore keeps its regional
-scales. Reproduce the rejection with `npm run ml:evaluate:interval-scaling`.
+predeclared 98% calibration ceiling. Atlas v11 instead promotes the bounded
+40% shrinkage described above. Reproduce the promoted policy with
+`npm run ml:evaluate:interval-shrinkage` and the full-scaling rejection with
+`npm run ml:evaluate:interval-scaling`.
 
 ## Validate rural ranking evidence
 
@@ -334,7 +338,7 @@ floor. Its final intervals achieve 80.3% / 89.2% coverage with mean 90% width 0.
 The 690-record artifact keeps
 `bu/acre` and `tons/acre` explicit and publishes only crop-region pairs with at
 least 50 examples in development, stability, and final blocks. Generic
-grain-corn and winter-wheat queries remain on atlas v10. See
+grain-corn and winter-wheat queries remain on atlas v11. See
 `evaluation/yield-atlas-subtypes-validation-v1.md`.
 
 ## Test recency weighting and atlas lookup
@@ -347,6 +351,6 @@ npm run ml:benchmark:inference
 
 The recency command tests shrinkage toward exponential history weighting under
 fixed temporal splits. The v2 gate passes on confirmation and locked final
-years, and its selected prior is used by atlas v10. The
+years, and its selected prior is used by atlas v11. The
 benchmark compares the cached haversine spatial index with exact brute force
 and verifies identical nearest counties for each supported crop.

@@ -44,7 +44,7 @@ if (!report.dataNotes.some((note) => note.includes('excludes chickpeas'))
 }
 
 const atlas = JSON.parse(readFileSync(
-  new URL('../machine-learning/evaluation/yield-atlas-v10.json', import.meta.url),
+  new URL('../machine-learning/evaluation/yield-atlas-v11.json', import.meta.url),
   'utf8',
 )) as { crops: string[]; records: { crop: string }[] };
 if (JSON.stringify(atlas.crops) !== JSON.stringify(['corn', 'soybean', 'wheat'])

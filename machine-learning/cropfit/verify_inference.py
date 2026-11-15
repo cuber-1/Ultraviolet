@@ -187,10 +187,10 @@ def verify(artifact: Path, profiles: Path) -> None:
         else:
             raise AssertionError("malformed artifact contract was accepted")
 
-    atlas = artifact.parents[1] / "evaluation/yield-atlas-v10.json"
+    atlas = artifact.parents[1] / "evaluation/yield-atlas-v11.json"
     if atlas.exists():
         atlas_report = load_atlas(str(atlas.resolve()))
-        assert atlas_report["name"] == "USDA county yield atlas v10"
+        assert atlas_report["name"] == "USDA county yield atlas v11"
         assert atlas_report["years"] == list(range(2010, 2026))
         assert atlas_report["historyWindowComparison"]["gate"]["passed"]
         assert atlas_report["uncertaintyValidation"]["gate"]["passed"]
@@ -217,7 +217,16 @@ def verify(artifact: Path, profiles: Path) -> None:
         assert evidence["observedYieldPrior"]["interval80"][0] <= expected <= evidence["observedYieldPrior"]["interval80"][1]
         assert evidence["observedYieldPrior"]["intervalMethod"] == "local-regional-blend-conformal"
         calibration = atlas_report["spatialTransferValidation"]["productionBlend"]["intervalCalibration"]
-        assert calibration["meanWidth90Reduction"] >= .04
+        assert calibration["meanWidth90Reduction"] >= .06
+        assert calibration["selectedShrinkage"] == .4
+        assert calibration["championV10MeanWidth90Reduction"] >= .025
+        assert calibration["productionBlendRadii"] == {
+            "observations": 26563, "coverage80": .8304, "coverage90": .9226,
+            "meanWidth80": .3821, "meanWidth90": .4969,
+        }
+        assert calibration["selectedCropRegionalScales"]["corn"]["South"] == {
+            "scale80": .96, "scale90": .98,
+        }
         assert .88 <= calibration["productionBlendRadii"]["coverage90"] <= .94
         assert calibration["selectedRegionalScales"] == {
             "Northeast": {"scale80": 1.05, "scale90": 1.0},
@@ -230,6 +239,15 @@ def verify(artifact: Path, profiles: Path) -> None:
         assert 1 <= evidence["observedYieldPrior"]["neighborCount"] <= 9
         assert len(evidence["regionalNeighbors"]) == evidence["observedYieldPrior"]["neighborCount"] == 6
         assert evidence["regionalNeighbors"][0]["weight"] == .85
+        corn_calibration = next(item for item in calibration["groups"] if (
+            item["crop"] == "corn"
+            and item["historyBucket"] == evidence["observedYieldPrior"]["effectiveHistoryBucket"]
+        ))
+        reported_expected = evidence["observedYieldPrior"]["expectedPercentile"]
+        assert evidence["observedYieldPrior"]["interval90"] == [
+            round(max(0.0, reported_expected - corn_calibration["absoluteErrorP90"] * .98), 4),
+            round(min(1.0, reported_expected + corn_calibration["absoluteErrorP90"] * .98), 4),
+        ]
         wheat_evidence = nearest_evidence("wheat", 46.8, -100.8, atlas)
         assert wheat_evidence and wheat_evidence["state"] == "ND"
         assert wheat_evidence["observedYieldPrior"]["intervalMethod"] == "local-regional-blend-conformal"
@@ -258,6 +276,15 @@ def verify(artifact: Path, profiles: Path) -> None:
         western_final = next(item for item in interval_report["perRegionFinal"] if item["region"] == "West")
         assert western_final["coverage90"] > .98
         assert interval_report["decision"] == "reject; retain atlas v10 regional interval scales"
+
+    interval_shrinkage_validation = artifact.parents[1] / "evaluation/interval-shrinkage-validation-v11.json"
+    if interval_shrinkage_validation.exists():
+        shrinkage_report = json.loads(interval_shrinkage_validation.read_text())
+        assert shrinkage_report["gate"]["passed"]
+        assert shrinkage_report["selectedShrinkage"] == .4
+        assert shrinkage_report["meanWidth90Reduction"] >= .025
+        assert shrinkage_report["selectedCropRegionalScales"] == calibration["selectedCropRegionalScales"]
+        assert shrinkage_report["candidate"] == calibration["productionBlendRadii"]
 
     if atlas.exists():
         assert evidence["observedYieldPrior"]["expectedPercentile"] != evidence["regionalNeighbors"][0]["expectedPercentile"]

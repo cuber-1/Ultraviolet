@@ -14,19 +14,21 @@
 > Optional: `ML_SOIL_PH` (default 6.5), `ML_IRRIGATED` (default true).
 
 For grain corn, soybean, winter wheat, silage corn, and non-durum spring wheat,
-CropFit API v0.20.1 also returns optional
+CropFit API v0.21.0 also returns optional
 `observedYieldEvidence` from nearby USDA reporting counties within 100 km.
-Atlas v10 includes 2010–2025 history plus a calibrated observed-yield percentile
+Atlas v11 includes 2010–2025 history plus a calibrated observed-yield percentile
 prior with 80% and 90% uncertainty intervals. The prior blends 80% exponential
 recency weighting (three-year half-life) with 20% of the stable long-history
 mean. For regional ranking it adds 15% from up to eight surrounding counties
 in the Midwest and South, where both development rank and MAE improved; the
 Northeast and West retain 100% of the local prior. Returned intervals use
 production-blend errors from 2011–2017, conditional on crop and effective
-history depth, then selects the smallest regional safety scales that meet
-nominal coverage in both 2018–2020 and 2021–2022. This preserves 84.4% / 92.9%
-later coverage while narrowing the mean 90% band 4.3% relative to transfer
-radii. It does not modify the underlying
+history depth. After choosing regional safety scales, it uses crop-region
+targets only to sharpen intervals and selects the largest global shrinkage
+that preserves pooled, crop, and region coverage in both 2018–2020 and
+2021–2022. The selected 40% shrinkage narrows mean 90% width from 0.5113 to
+0.4969 (2.8%) with 83.0% / 92.3% coverage across 2018–2025; the untouched
+2023–2025 final block achieves 82.0% / 91.2%. It does not modify the underlying
 EcoCrop suitability and is not a parcel yield forecast. Exact `spring wheat`
 and `silage corn` requests use a separate 690-record subtype atlas. A
 development-only search selected five inverse-distance neighbors, then passed
@@ -103,7 +105,7 @@ results "Crop calendar · model offline". The UI and Deep Agent keep working.
 Failed health probes are not cached, so a recovered primary is redetected as
 CropFit on the next request rather than receiving the generic API payload.
 
-CropFit API v0.20.1 with the v0.11.0 production model artifact is the supported
+CropFit API v0.21.0 with the v0.11.0 production model artifact is the supported
 runtime; the generic contract below is for any other model you want to plug in.
 
 ## `GET /health`

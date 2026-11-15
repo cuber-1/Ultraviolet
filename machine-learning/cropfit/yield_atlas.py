@@ -26,6 +26,9 @@ SPATIAL_NEIGHBOR_CANDIDATES = tuple((neighbors, power) for neighbors in (2, 3, 5
 SPATIAL_DISTANCE_OFFSET_KM = 5.0
 PRODUCTION_REGIONAL_WEIGHT_CANDIDATES = (0.0, 0.05, 0.1, 0.15, 0.2, 0.25, 0.33, 0.5)
 PRODUCTION_INTERVAL_SCALE_CANDIDATES = (1.0, 1.05, 1.1, 1.15, 1.2, 1.25, 1.33, 1.4, 1.45, 1.5)
+CROP_REGION_INTERVAL_SCALE_CANDIDATES = (.7, .75, .8, .85, .9, .95, 1.0, 1.05, 1.1, 1.15, 1.2, 1.25, 1.33, 1.4, 1.45, 1.5)
+INTERVAL_SHRINKAGE_CANDIDATES = (.25, .4, .5, .6, .7, .75, .8, 1.0)
+CROP_REGION_INTERVAL_MIN_EXAMPLES = 100
 STATE_TO_CENSUS_REGION = {
     **{state: "Northeast" for state in ("CT", "ME", "MA", "NH", "RI", "VT", "NJ", "NY", "PA")},
     **{state: "Midwest" for state in ("IN", "IL", "MI", "OH", "WI", "IA", "KS", "MN", "MO", "NE", "ND", "SD")},
@@ -335,7 +338,7 @@ def spatial_transfer_examples(rows: list[dict]) -> tuple[list[dict], int]:
 
 def spatial_transfer_validation(
     rows: list[dict], prepared_examples: tuple[list[dict], int] | None = None,
-    production_blend_version: int = 10,
+    production_blend_version: int = 11,
 ) -> tuple[dict, dict[tuple[str, str], dict]]:
     examples, eligible = prepared_examples or spatial_transfer_examples(rows)
 
@@ -613,14 +616,17 @@ def spatial_transfer_validation(
         calibration_table: dict[tuple[str, str], dict] = table,
         history_key: str = "effectiveHistoryCount",
         regional_interval_scales: dict[str, dict[str, float]] | None = None,
+        crop_regional_interval_scales: dict[str, dict[str, dict[str, float]]] | None = None,
     ) -> dict:
         hits80, hits90, widths80, widths90 = [], [], [], []
         for item in items:
             calibration_item = calibration_table[(item["crop"], history_bucket(item[history_key]))]
             prediction = item[prediction_key]; actual = item["yieldPercentileWithinCropYear"]
             intervals = []
-            region_scales = (regional_interval_scales or {}).get(
-                STATE_TO_CENSUS_REGION[item["state"]], {"scale80": 1.0, "scale90": 1.0},
+            region = STATE_TO_CENSUS_REGION[item["state"]]
+            region_scales = (crop_regional_interval_scales or {}).get(item["crop"], {}).get(
+                region,
+                (regional_interval_scales or {}).get(region, {"scale80": 1.0, "scale90": 1.0}),
             )
             for key, scale_key in (("absoluteErrorP80", "scale80"), ("absoluteErrorP90", "scale90")):
                 radius = calibration_item[key] * region_scales[scale_key]
@@ -684,34 +690,179 @@ def spatial_transfer_validation(
         )), candidates[-1]["scale"])
         production_interval_scale_candidates.append({"region": region, "candidates": candidates})
         production_interval_scales[region] = {"scale80": scale80, "scale90": scale90}
+
+    crop_names = sorted(CROP_NAMES.values())
+    crop_region_scale_selection = []
+    interval_shrinkage_selection = []
+    selected_interval_shrinkage = 0.0
+    production_crop_region_interval_scales = {
+        crop: {region: dict(production_interval_scales[region]) for region in CENSUS_REGIONS}
+        for crop in crop_names
+    }
+
+    def interval_block(items: list[dict], crop_scales: dict[str, dict[str, dict[str, float]]]) -> dict:
+        return {
+            "pooled": scored(
+                items, "productionPrediction", production_table, "productionEffectiveHistoryCount",
+                production_interval_scales, crop_scales,
+            ),
+            "perCrop": [{
+                "crop": crop,
+                **scored(
+                    [item for item in items if item["crop"] == crop], "productionPrediction",
+                    production_table, "productionEffectiveHistoryCount", production_interval_scales, crop_scales,
+                ),
+            } for crop in crop_names],
+            "perRegion": [{
+                "region": region,
+                **scored(
+                    [item for item in items if STATE_TO_CENSUS_REGION[item["state"]] == region],
+                    "productionPrediction", production_table, "productionEffectiveHistoryCount",
+                    production_interval_scales, crop_scales,
+                ),
+            } for region in CENSUS_REGIONS],
+        }
+
+    if production_blend_version >= 11:
+        sharpening_targets = {
+            crop: {region: dict(production_interval_scales[region]) for region in CENSUS_REGIONS}
+            for crop in crop_names
+        }
+        for crop in crop_names:
+            for region in CENSUS_REGIONS:
+                crop_development = [
+                    item for item in production_development
+                    if item["crop"] == crop and STATE_TO_CENSUS_REGION[item["state"]] == region
+                ]
+                crop_stability = [
+                    item for item in production_confirmation
+                    if item["crop"] == crop and STATE_TO_CENSUS_REGION[item["state"]] == region
+                ]
+                enough_examples = min(len(crop_development), len(crop_stability)) >= CROP_REGION_INTERVAL_MIN_EXAMPLES
+                champion_scales = production_interval_scales[region]
+                if not enough_examples:
+                    crop_region_scale_selection.append({
+                        "crop": crop, "region": region,
+                        "developmentObservations": len(crop_development),
+                        "stabilityObservations": len(crop_stability),
+                        "fallback": "v10 regional scale", "required": None,
+                        "sharpeningTarget": dict(champion_scales),
+                    })
+                    continue
+                candidates = []
+                for scale in CROP_REGION_INTERVAL_SCALE_CANDIDATES:
+                    scale_map = {region: {"scale80": scale, "scale90": scale}}
+                    candidates.append({
+                        "scale": scale,
+                        "development": scored(
+                            crop_development, "productionPrediction", production_table,
+                            "productionEffectiveHistoryCount", scale_map,
+                        ),
+                        "stability": scored(
+                            crop_stability, "productionPrediction", production_table,
+                            "productionEffectiveHistoryCount", scale_map,
+                        ),
+                    })
+                required80 = next((item["scale"] for item in candidates if (
+                    item["development"]["coverage80"] >= .80 and item["stability"]["coverage80"] >= .80
+                )), None)
+                required90 = next((item["scale"] for item in candidates if (
+                    item["development"]["coverage90"] >= .90 and item["stability"]["coverage90"] >= .90
+                )), None)
+                target = {
+                    "scale80": required80 if required80 is not None and required80 < champion_scales["scale80"] else champion_scales["scale80"],
+                    "scale90": required90 if required90 is not None and required90 < champion_scales["scale90"] else champion_scales["scale90"],
+                }
+                sharpening_targets[crop][region] = target
+                crop_region_scale_selection.append({
+                    "crop": crop, "region": region,
+                    "developmentObservations": len(crop_development),
+                    "stabilityObservations": len(crop_stability), "fallback": None,
+                    "required": {"scale80": required80, "scale90": required90},
+                    "sharpeningTarget": target, "candidates": candidates,
+                })
+
+        scale_options = {}
+        for shrinkage in INTERVAL_SHRINKAGE_CANDIDATES:
+            scales = {
+                crop: {
+                    region: {
+                        key: production_interval_scales[region][key] + shrinkage * (
+                            sharpening_targets[crop][region][key] - production_interval_scales[region][key]
+                        )
+                        for key in ("scale80", "scale90")
+                    }
+                    for region in CENSUS_REGIONS
+                }
+                for crop in crop_names
+            }
+            scale_options[shrinkage] = scales
+            development_block = interval_block(production_development, scales)
+            stability_block = interval_block(production_confirmation, scales)
+            passed_selection = (
+                .80 <= development_block["pooled"]["coverage80"] <= .87
+                and .90 <= development_block["pooled"]["coverage90"] <= .95
+                and .80 <= stability_block["pooled"]["coverage80"] <= .87
+                and .90 <= stability_block["pooled"]["coverage90"] <= .95
+                and all(item["coverage90"] >= .88 for item in (*development_block["perCrop"], *stability_block["perCrop"]))
+                and all(item["coverage90"] >= .90 for item in (*development_block["perRegion"], *stability_block["perRegion"]))
+            )
+            interval_shrinkage_selection.append({
+                "shrinkage": shrinkage, "development": development_block,
+                "stability": stability_block, "passed": passed_selection,
+            })
+        selected_interval_shrinkage = max(
+            item["shrinkage"] for item in interval_shrinkage_selection if item["passed"]
+        )
+        production_crop_region_interval_scales = scale_options[selected_interval_shrinkage]
+
+    active_crop_region_scales = production_crop_region_interval_scales if production_blend_version >= 11 else None
     production_baseline_intervals = scored(production_test, "productionPrediction")
-    production_intervals = scored(production_test, "productionPrediction", production_table, "productionEffectiveHistoryCount", production_interval_scales)
-    production_confirmation_intervals = scored(production_confirmation, "productionPrediction", production_table, "productionEffectiveHistoryCount", production_interval_scales)
-    production_final_intervals = scored(production_final, "productionPrediction", production_table, "productionEffectiveHistoryCount", production_interval_scales)
+    champion_v10_intervals = scored(production_test, "productionPrediction", production_table, "productionEffectiveHistoryCount", production_interval_scales)
+    production_intervals = scored(production_test, "productionPrediction", production_table, "productionEffectiveHistoryCount", production_interval_scales, active_crop_region_scales)
+    production_confirmation_intervals = scored(production_confirmation, "productionPrediction", production_table, "productionEffectiveHistoryCount", production_interval_scales, active_crop_region_scales)
+    production_final_intervals = scored(production_final, "productionPrediction", production_table, "productionEffectiveHistoryCount", production_interval_scales, active_crop_region_scales)
     production_per_crop_intervals = [{
         "crop": crop,
-        **scored([item for item in production_test if item["crop"] == crop], "productionPrediction", production_table, "productionEffectiveHistoryCount", production_interval_scales),
+        **scored([item for item in production_test if item["crop"] == crop], "productionPrediction", production_table, "productionEffectiveHistoryCount", production_interval_scales, active_crop_region_scales),
     } for crop in sorted(CROP_NAMES.values())]
+    production_final_per_crop_intervals = [{
+        "crop": crop,
+        **scored([item for item in production_final if item["crop"] == crop], "productionPrediction", production_table, "productionEffectiveHistoryCount", production_interval_scales, active_crop_region_scales),
+    } for crop in crop_names]
     production_per_region_intervals = [{
         "region": region,
         **scored([
             item for item in production_test if STATE_TO_CENSUS_REGION[item["state"]] == region
-        ], "productionPrediction", production_table, "productionEffectiveHistoryCount", production_interval_scales),
+        ], "productionPrediction", production_table, "productionEffectiveHistoryCount", production_interval_scales, active_crop_region_scales),
     } for region in CENSUS_REGIONS]
     production_confirmation_per_region_intervals = [{
         "region": region,
         **scored([
             item for item in production_confirmation if STATE_TO_CENSUS_REGION[item["state"]] == region
-        ], "productionPrediction", production_table, "productionEffectiveHistoryCount", production_interval_scales),
+        ], "productionPrediction", production_table, "productionEffectiveHistoryCount", production_interval_scales, active_crop_region_scales),
     } for region in CENSUS_REGIONS]
     production_final_per_region_intervals = [{
         "region": region,
         **scored([
             item for item in production_final if STATE_TO_CENSUS_REGION[item["state"]] == region
-        ], "productionPrediction", production_table, "productionEffectiveHistoryCount", production_interval_scales),
+        ], "productionPrediction", production_table, "productionEffectiveHistoryCount", production_interval_scales, active_crop_region_scales),
     } for region in CENSUS_REGIONS]
+    production_final_per_crop_region_intervals = [{
+        "crop": crop, "region": region,
+        **scored([
+            item for item in production_final
+            if item["crop"] == crop and STATE_TO_CENSUS_REGION[item["state"]] == region
+        ], "productionPrediction", production_table, "productionEffectiveHistoryCount", production_interval_scales, active_crop_region_scales),
+    } for crop in crop_names for region in CENSUS_REGIONS if any(
+        item["crop"] == crop and STATE_TO_CENSUS_REGION[item["state"]] == region
+        for item in production_final
+    )]
     production_width_reduction90 = round(
         1 - production_intervals["meanWidth90"] / production_baseline_intervals["meanWidth90"], 4,
+    )
+    champion_v10_width_reduction90 = round(
+        1 - production_intervals["meanWidth90"] / champion_v10_intervals["meanWidth90"], 4,
     )
     production_passed = (
         production_confirmation_comparison["spearmanDelta"] > 0 and production_confirmation_comparison["maeDelta"] < 0
@@ -729,6 +880,25 @@ def spatial_transfer_validation(
         )
         and .80 <= production_confirmation_intervals["coverage80"] <= .87 and .88 <= production_confirmation_intervals["coverage90"] <= .95
         and .80 <= production_final_intervals["coverage80"] <= .87 and .88 <= production_final_intervals["coverage90"] <= .95
+        and (
+            production_blend_version < 11
+            or (
+                champion_v10_width_reduction90 >= .025
+                and selected_interval_shrinkage == max(
+                    item["shrinkage"] for item in interval_shrinkage_selection if item["passed"]
+                )
+                and .90 <= production_final_intervals["coverage90"] <= .95
+                and all(item["coverage90"] >= .88 for item in production_final_per_crop_intervals)
+                and all(
+                    item["observations"] < CROP_REGION_INTERVAL_MIN_EXAMPLES or item["coverage90"] >= .85
+                    for item in production_final_per_crop_region_intervals
+                )
+                and all(
+                    production_crop_region_interval_scales[crop][region][key] <= production_interval_scales[region][key]
+                    for crop in crop_names for region in CENSUS_REGIONS for key in ("scale80", "scale90")
+                )
+            )
+        )
     )
     pooled_uncertainty = scored(test)
     per_crop_uncertainty = [{"crop": crop, **scored([item for item in test if item["crop"] == crop])} for crop in sorted(CROP_NAMES.values())]
@@ -780,28 +950,40 @@ def spatial_transfer_validation(
             "perRegionConfirmation": production_confirmation_per_region,
             "perRegionFinalSignal": production_final_per_region,
             "intervalCalibration": {
-                "method": "Crop/history split-conformal base radii fitted before 2018, with the smallest Census-region safety scales that meet nominal coverage in both 2018-2020 and 2021-2022.",
+                "method": (
+                    "Crop/history split-conformal base radii fitted before 2018; crop-region targets may only sharpen v10 scales, and the largest global shrinkage preserving development/stability pooled, crop, and region coverage is selected before final evaluation."
+                    if production_blend_version >= 11 else
+                    "Crop/history split-conformal base radii fitted before 2018, with the smallest Census-region safety scales that meet nominal coverage in both 2018-2020 and 2021-2022."
+                ),
                 "calibrationYears": list(range(YEARS[1], CALIBRATION_END_YEAR + 1)),
                 "calibrationExamples": sum(len(errors) for errors in production_grouped.values()),
                 "developmentYears": [2018, 2019, 2020],
                 "stabilityYears": [2021, 2022],
                 "regionalScaleCandidateSelection": production_interval_scale_candidates,
                 "selectedRegionalScales": production_interval_scales,
+                "cropRegionSharpeningSelection": crop_region_scale_selection,
+                "shrinkageCandidateSelection": interval_shrinkage_selection,
+                "selectedShrinkage": selected_interval_shrinkage if production_blend_version >= 11 else None,
+                "selectedCropRegionalScales": production_crop_region_interval_scales if production_blend_version >= 11 else None,
                 "groups": [production_table[key] for key in sorted(production_table)],
                 "testYears": list(UNCERTAINTY_TEST_YEARS),
                 "regionalTransferRadii": production_baseline_intervals,
+                "championV10Radii": champion_v10_intervals,
                 "productionBlendRadii": production_intervals,
                 "meanWidth90Reduction": production_width_reduction90,
+                "championV10MeanWidth90Reduction": champion_v10_width_reduction90,
                 "confirmation": production_confirmation_intervals,
                 "final": production_final_intervals,
                 "perCrop": production_per_crop_intervals,
+                "perCropFinal": production_final_per_crop_intervals,
                 "perRegion": production_per_region_intervals,
                 "perRegionConfirmation": production_confirmation_per_region_intervals,
                 "perRegionFinal": production_final_per_region_intervals,
+                "perCropRegionFinal": production_final_per_crop_region_intervals,
             },
             "gate": {
                 "passed": production_passed,
-                "rule": "Point-estimate gates pass by crop/year and no Census region regresses rank or MAE; production-specific test coverage remains 80-87%/88-94%; mean 90% width shrinks >=4%; every crop has >=88% 90%-coverage; pooled stability/final coverage remains in bounds; every region has >=90% 90%-coverage in the stability block, then final 80% coverage >=75%, 90% coverage 85-98%, and mean 90% width <=0.70.",
+                "rule": "Point-estimate gates pass by crop/year and no Census region regresses rank or MAE; production-specific intervals remain calibrated by pooled, crop, and region slices. Atlas v11 additionally selects the largest pre-final shrinkage that preserves development/stability coverage, narrows pooled 90% bands by at least 2.5% versus v10 without widening any scale, and requires calibrated locked pooled, crop, region, and sufficiently sampled crop-region coverage.",
             },
         },
         "calibrationYears": list(range(YEARS[1], CALIBRATION_END_YEAR + 1)), "testYears": list(UNCERTAINTY_TEST_YEARS),
@@ -853,7 +1035,7 @@ def build_atlas(rows: list[dict], validation: dict, comparison: dict, uncertaint
             "latest": {"year": last["year"], "yieldBushelsPerAcre": last["yieldBushelsPerAcre"]},
         })
     return {
-        "name": "USDA county yield atlas v10", "evidenceGrade": "observed-crop-region-gated-calibrated-blend",
+        "name": "USDA county yield atlas v11", "evidenceGrade": "observed-crop-region-gated-shrunk-calibrated-blend",
         "scope": "contiguous U.S. counties excluding California; corn, soybean, and wheat; 2010–2025",
         "source": "USDA NASS Quick Stats published county yields",
         "predictionMethod": {
@@ -874,7 +1056,7 @@ def build_atlas(rows: list[dict], validation: dict, comparison: dict, uncertaint
 
 def markdown(validation: dict, comparison: dict, uncertainty: dict, spatial_transfer: dict, atlas: dict) -> str:
     lines = [
-        "# USDA county yield atlas v10 validation", "",
+        "# USDA county yield atlas v11 validation", "",
         "The atlas stores each county's historical percentile within crop and year. Its production prior blends 80% three-year-half-life recency weighting with 20% of the stable long-history mean. The retrospective forward-year test predicts each year using only earlier years for that county.", "",
         "| Test year | Covered / published | Coverage | Spearman | Grouped 95% interval | Percentile MAE |",
         "|---:|---:|---:|---:|---:|---:|",
@@ -883,6 +1065,15 @@ def markdown(validation: dict, comparison: dict, uncertainty: dict, spatial_tran
         lines.append(f'| {item["year"]} | {item["covered"]:,} / {item["observations"]:,} | {item["coverage"]:.1%} | {item["spearman"]:.3f} | {item["bootstrap95"][0]:.3f} to {item["bootstrap95"][1]:.3f} | {item["maePercentile"]:.3f} |')
     pooled = validation["pooled"]
     extended = comparison["extendedHistory"]; legacy = comparison["legacyHistory"]; intervals = uncertainty["pooled"]
+    production_calibration = spatial_transfer["productionBlend"]["intervalCalibration"]
+
+    def scale_label(region: str, scale_key: str) -> str:
+        crop_scales = production_calibration.get("selectedCropRegionalScales")
+        if crop_scales:
+            values = sorted({crop_scales[crop][region][scale_key] for crop in crop_scales})
+            return f'{values[0]:.2f}×' if len(values) == 1 else f'{values[0]:.2f}–{values[-1]:.2f}×'
+        return f'{production_calibration["selectedRegionalScales"][region][scale_key]:.2f}×'
+
     lines += [
         "", f'Pooled forward-year Spearman: **{pooled["spearman"]:.3f}** over {pooled["observations"]:,} covered observations (95% interval {pooled["bootstrap95"][0]:.3f} to {pooled["bootstrap95"][1]:.3f}).',
         "", "## Fixed-window comparison", "",
@@ -892,12 +1083,12 @@ def markdown(validation: dict, comparison: dict, uncertainty: dict, spatial_tran
         "", "## Spatial transfer", "",
         f'In the leave-one-county-out test, {spatial_transfer["coveredExamples"]:,} of {spatial_transfer["eligibleExamples"]:,} target county-years had reporting neighbors within 100 km ({spatial_transfer["coverage"]:.1%}). Development selection chose up to {spatial_transfer["selectedNeighborhood"]["maxNeighbors"]} counties with inverse-distance power {spatial_transfer["selectedNeighborhood"]["distancePower"]:.0f}. On locked 2023–2025 outcomes, regional aggregation reached Spearman **{spatial_transfer["finalSignal"]["regionalNeighborhood"]["spearman"]:.3f}** versus {spatial_transfer["finalSignal"]["nearestCounty"]["spearman"]:.3f} for one nearest county (delta {spatial_transfer["finalSignal"]["spearmanDelta"]:+.3f}; paired 95% interval {spatial_transfer["finalSignal"]["spearmanDeltaBootstrap95"][0]:+.3f} to {spatial_transfer["finalSignal"]["spearmanDeltaBootstrap95"][1]:+.3f}).',
         "", f'For production queries, crop-specific regional shares must pass development region checks and a crop-level stability veto: {spatial_transfer["productionBlend"]["selectedWeights"]["regionalNeighborhoodByCropRegion"]}. On locked outcomes, Spearman changed from {spatial_transfer["productionBlend"]["finalSignal"]["ownCountyPrior"]["spearman"]:.4f} to **{spatial_transfer["productionBlend"]["finalSignal"]["blendedPrior"]["spearman"]:.4f}** (delta {spatial_transfer["productionBlend"]["finalSignal"]["spearmanDelta"]:+.4f}; grouped-bootstrap 95% interval {spatial_transfer["productionBlend"]["finalSignal"]["spearmanDeltaBootstrap95"][0]:+.4f} to {spatial_transfer["productionBlend"]["finalSignal"]["spearmanDeltaBootstrap95"][1]:+.4f}).',
-        f'The production-specific conformal calibrator uses {spatial_transfer["productionBlend"]["intervalCalibration"]["calibrationExamples"]:,} pre-2018 errors, then selects the smallest regional safety scales that meet nominal coverage in both 2018–2020 and 2021–2022. Across 2018–2025, coverage is **{spatial_transfer["productionBlend"]["intervalCalibration"]["productionBlendRadii"]["coverage80"]:.1%}** / **{spatial_transfer["productionBlend"]["intervalCalibration"]["productionBlendRadii"]["coverage90"]:.1%}**, while mean 90% width falls from {spatial_transfer["productionBlend"]["intervalCalibration"]["regionalTransferRadii"]["meanWidth90"]:.3f} to **{spatial_transfer["productionBlend"]["intervalCalibration"]["productionBlendRadii"]["meanWidth90"]:.3f}** ({spatial_transfer["productionBlend"]["intervalCalibration"]["meanWidth90Reduction"]:.1%} narrower).',
+        f'The production-specific conformal calibrator uses {production_calibration["calibrationExamples"]:,} pre-2018 errors. Development/stability selection applies {production_calibration["selectedShrinkage"]:.0%} of each safe crop-region sharpening target. Across 2018–2025, coverage is **{production_calibration["productionBlendRadii"]["coverage80"]:.1%}** / **{production_calibration["productionBlendRadii"]["coverage90"]:.1%}**. Mean 90% width falls from v10\'s {production_calibration["championV10Radii"]["meanWidth90"]:.3f} to **{production_calibration["productionBlendRadii"]["meanWidth90"]:.3f}** ({production_calibration["championV10MeanWidth90Reduction"]:.1%} narrower).',
         "", "### Regional interval reliability", "",
-        "| Census region | 80% scale | 90% scale | 2021–2022 90% coverage | 2023–2025 90% coverage | Final mean 90% width |",
+        "| Census region | Crop 80% scale range | Crop 90% scale range | 2021–2022 90% coverage | 2023–2025 90% coverage | Final mean 90% width |",
         "|---|---:|---:|---:|---:|---:|",
         *[
-            f'| {stability["region"]} | {spatial_transfer["productionBlend"]["intervalCalibration"]["selectedRegionalScales"][stability["region"]]["scale80"]:.2f}× | {spatial_transfer["productionBlend"]["intervalCalibration"]["selectedRegionalScales"][stability["region"]]["scale90"]:.2f}× | {stability["coverage90"]:.1%} | {final["coverage90"]:.1%} | {final["meanWidth90"]:.3f} |'
+            f'| {stability["region"]} | {scale_label(stability["region"], "scale80")} | {scale_label(stability["region"], "scale90")} | {stability["coverage90"]:.1%} | {final["coverage90"]:.1%} | {final["meanWidth90"]:.3f} |'
             for stability, final in zip(
                 spatial_transfer["productionBlend"]["intervalCalibration"]["perRegionConfirmation"],
                 spatial_transfer["productionBlend"]["intervalCalibration"]["perRegionFinal"], strict=True,
@@ -946,17 +1137,19 @@ def plot(comparison: dict, uncertainty: dict, spatial_transfer: dict, output: Pa
     axes[2].set(xticks=region_positions, xticklabels=regions, ylim=(70, 100), ylabel="90% interval coverage (%)", title="Regional reliability across time blocks")
     axes[2].grid(axis="y", alpha=.18); axes[2].legend(loc="lower left")
     for position, region, value in zip(region_positions, regions, final_coverage, strict=True):
-        scale = interval_calibration["selectedRegionalScales"][region]["scale90"]
-        axes[2].text(position + region_width / 2, value + .6, f'×{scale:g}', ha="center", fontsize=8.5, color="#315d49")
-    axes[2].text(.02, .97, "Scale selected before final block\nDotted line = nominal 90%", transform=axes[2].transAxes, va="top", fontsize=9, color="#315d49", bbox={"facecolor": "white", "edgecolor": "#d8dfda", "alpha": .9, "pad": 5})
+        crop_scales = interval_calibration.get("selectedCropRegionalScales")
+        values = sorted({crop_scales[crop][region]["scale90"] for crop in crop_scales}) if crop_scales else [interval_calibration["selectedRegionalScales"][region]["scale90"]]
+        scale_text = f'×{values[0]:g}' if len(values) == 1 else f'×{values[0]:g}–{values[-1]:g}'
+        axes[2].text(position + region_width / 2, value + .6, scale_text, ha="center", fontsize=8.5, color="#315d49")
+    axes[2].text(.02, .97, "Crop scale range selected before final block\nDotted line = nominal 90%", transform=axes[2].transAxes, va="top", fontsize=9, color="#315d49", bbox={"facecolor": "white", "edgecolor": "#d8dfda", "alpha": .9, "pad": 5})
     positions = np.arange(2); width = .34
     axes[3].bar(positions - width / 2, [baseline_intervals["meanWidth80"] * 100, baseline_intervals["meanWidth90"] * 100], width, color="#d98352", label="transfer radii")
     axes[3].bar(positions + width / 2, [production_intervals["meanWidth80"] * 100, production_intervals["meanWidth90"] * 100], width, color="#315d49", label="production radii")
     axes[3].set(xticks=positions, xticklabels=["80% band", "90% band"], ylim=(0, 65), ylabel="mean width (percentile points)", title="Sharper bands, coverage preserved")
     axes[3].grid(axis="y", alpha=.18); axes[3].legend(loc="lower right")
-    axes[3].text(.02, .96, f'2018–2025 production coverage\n80%: {production_intervals["coverage80"]:.1%} · 90%: {production_intervals["coverage90"]:.1%}\n90% width: {interval_calibration["meanWidth90Reduction"]:.1%} narrower', transform=axes[3].transAxes, va="top", fontsize=9, color="#315d49", bbox={"facecolor": "white", "edgecolor": "#d8dfda", "alpha": .9, "pad": 5})
+    axes[3].text(.02, .96, f'2018–2025 production coverage\n80%: {production_intervals["coverage80"]:.1%} · 90%: {production_intervals["coverage90"]:.1%}\n90% width: {interval_calibration["championV10MeanWidth90Reduction"]:.1%} narrower than v10', transform=axes[3].transAxes, va="top", fontsize=9, color="#315d49", bbox={"facecolor": "white", "edgecolor": "#d8dfda", "alpha": .9, "pad": 5})
     axes[3].text(.02, .04, f'Production ρ {production["finalSignal"]["ownCountyPrior"]["spearman"]:.4f} → {production["finalSignal"]["blendedPrior"]["spearman"]:.4f}\nΔ CI {production["finalSignal"]["spearmanDeltaBootstrap95"][0]:+.4f} to {production["finalSignal"]["spearmanDeltaBootstrap95"][1]:+.4f} · gate {"PASS" if production["gate"]["passed"] else "NOT PASSED"}', transform=axes[3].transAxes, fontsize=8.5, color="#315d49", bbox={"facecolor": "white", "edgecolor": "#d8dfda", "alpha": .9, "pad": 5})
-    figure.suptitle("USDA observed-yield prior v10 · crop-specific stable blend", fontweight="bold")
+    figure.suptitle("USDA observed-yield prior v11 · stability-selected interval shrinkage", fontweight="bold")
     figure.text(.5, .01, "County-level corn, soybean, wheat · not a parcel yield forecast", ha="center", color="#555555")
     figure.tight_layout(rect=(0, .04, 1, .97)); figure.savefig(output, dpi=180); plt.close(figure)
 
@@ -1059,12 +1252,16 @@ def nearest_evidence(crop: str, latitude: float, longitude: float, path: Path, m
         next((item for item in matching_calibrations if item.get("region", "all") == "all"), None),
     )
     if calibration and prior:
-        interval_scales = production_calibration.get("selectedRegionalScales", {}).get(
-            evidence_region,
-            transfer.get("selectedRegionalScalesByCrop", {}).get(crop_key, {}).get(
-                evidence_region, {"scale80": 1.0, "scale90": 1.0},
-            ),
-        )
+        interval_scales = production_calibration.get("selectedCropRegionalScales", {}).get(
+            crop_key, {},
+        ).get(evidence_region)
+        if interval_scales is None:
+            interval_scales = production_calibration.get("selectedRegionalScales", {}).get(
+                evidence_region,
+                transfer.get("selectedRegionalScalesByCrop", {}).get(crop_key, {}).get(
+                    evidence_region, {"scale80": 1.0, "scale90": 1.0},
+                ),
+            )
         normalized = "normalizedErrorP80" in calibration
         base80 = calibration["normalizedErrorP80"] if normalized else calibration["absoluteErrorP80"]
         base90 = calibration["normalizedErrorP90"] if normalized else calibration["absoluteErrorP90"]
@@ -1134,9 +1331,9 @@ def main() -> None:
     root = Path(__file__).resolve().parents[1]
     parser = argparse.ArgumentParser()
     parser.add_argument("--data", type=Path, default=root / "data/raw/observed-validation/national")
-    parser.add_argument("--atlas", type=Path, default=root / "evaluation/yield-atlas-v10.json")
-    parser.add_argument("--validation", type=Path, default=root / "evaluation/yield-atlas-validation-v10.json")
-    parser.add_argument("--plot", type=Path, default=root / "evaluation/yield-atlas-validation-v10.png")
+    parser.add_argument("--atlas", type=Path, default=root / "evaluation/yield-atlas-v11.json")
+    parser.add_argument("--validation", type=Path, default=root / "evaluation/yield-atlas-validation-v11.json")
+    parser.add_argument("--plot", type=Path, default=root / "evaluation/yield-atlas-validation-v11.png")
     args = parser.parse_args()
     rows = rows_from_quickstats(args.data)
     validation = temporal_validation(rows)

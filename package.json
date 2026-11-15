@@ -26,6 +26,7 @@
     "ml:develop:density-capacity": "PYTHONPATH=machine-learning machine-learning/.venv/bin/python -m cropfit.density_capacity_development",
     "ml:evaluate:production-blend-v2": "PYTHONPATH=machine-learning machine-learning/.venv/bin/python -m cropfit.production_blend_v2_validation",
     "ml:evaluate:interval-scaling": "PYTHONPATH=machine-learning machine-learning/.venv/bin/python -m cropfit.interval_scaling_validation",
+    "ml:evaluate:interval-shrinkage": "PYTHONPATH=machine-learning machine-learning/.venv/bin/python -m cropfit.interval_shrinkage_validation",
     "ml:evaluate:scenario-shift": "PYTHONPATH=machine-learning machine-learning/.venv/bin/python -m cropfit.scenario_shift_validation",
     "ml:evaluate:density-shift": "PYTHONPATH=machine-learning machine-learning/.venv/bin/python -m cropfit.density_shift_validation",
     "ml:evaluate:compact": "PYTHONPATH=machine-learning machine-learning/.venv/bin/python -m cropfit.compact_validation",

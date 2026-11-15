@@ -58,7 +58,7 @@ climate = [{"month": month, "temperatureC": 22, "precipitationMmDay": 3, "solarM
 payload = {"crop": "corn", "latitude": 29.76, "longitude": -95.37, "soilPh": 6.5, "irrigated": True, "climate": climate, "climateHistory": [climate] * 10}
 health = requests.get(f"{base}/health", timeout=10).json()
 assert health["status"] == "ok" and health["requestLimits"]["historyYearsMax"] == 20
-assert health["apiVersion"] == "0.20.1"
+assert health["apiVersion"] == "0.21.0"
 assert health["revision"].startswith(f'{health["apiVersion"]}:')
 assert health["model"] == "CropFit EcoCrop surrogate v0.11.0"
 assert len(health["artifactSha256"]) == 64
@@ -75,7 +75,7 @@ assert contract["selectedFeatureNames"] == [
 assert sum(len(items) for items in contract["featureGroups"].values()) == 25
 assert contract["usesCropIdentity"] is False and contract["usesCoordinatesDirectly"] is False
 atlas = health["evidence"]["historicalYieldAtlas"]
-assert atlas["name"] == "USDA county yield atlas v10"
+assert atlas["name"] == "USDA county yield atlas v11"
 assert atlas["predictionMethod"]["halfLifeYears"] == 3.0 and atlas["predictionMethod"]["recencyWeight"] == .8
 assert atlas["validation"]["spearman"] == .7914 and atlas["uncertaintyValidation"]["gate"]["passed"]
 assert atlas["spatialTransferValidation"]["gate"]["passed"]
@@ -95,8 +95,21 @@ assert all(
     for item in (*production_blend["perRegionConfirmation"], *production_blend["perRegionFinalSignal"])
 )
 assert atlas["spatialTransferValidation"]["productionBlend"]["gate"]["passed"]
-assert atlas["spatialTransferValidation"]["productionBlend"]["intervalCalibration"]["meanWidth90Reduction"] >= .04
-assert atlas["spatialTransferValidation"]["productionBlend"]["intervalCalibration"]["selectedRegionalScales"]["West"] == {"scale80": 1.45, "scale90": 1.45}
+calibration = atlas["spatialTransferValidation"]["productionBlend"]["intervalCalibration"]
+assert calibration["meanWidth90Reduction"] >= .06
+assert calibration["championV10MeanWidth90Reduction"] == .0282
+assert calibration["selectedShrinkage"] == .4
+assert calibration["selectedRegionalScales"]["West"] == {"scale80": 1.45, "scale90": 1.45}
+assert calibration["selectedCropRegionalScales"]["corn"]["South"] == {"scale80": .96, "scale90": .98}
+assert calibration["productionBlendRadii"] == {
+    "observations": 26563, "coverage80": .8304, "coverage90": .9226,
+    "meanWidth80": .3821, "meanWidth90": .4969,
+}
+assert calibration["final"] == {
+    "observations": 8881, "coverage80": .8195, "coverage90": .9115,
+    "meanWidth80": .3829, "meanWidth90": .4973,
+}
+assert min(item["coverage90"] for item in calibration["perCropFinal"]) >= .88
 subtype_atlas = health["evidence"]["cropSubtypeYieldAtlas"]
 assert subtype_atlas["name"] == "USDA crop-subtype yield atlas v1"
 assert subtype_atlas["records"] == 690 and subtype_atlas["crops"] == ["silage corn", "spring wheat"]
@@ -188,5 +201,5 @@ unsupported_silage.raise_for_status()
 assert unsupported_silage.json()["observedYieldEvidence"] is None
 invalid = requests.post(f"{base}/predict", json={**payload, "climate": climate[:11]}, timeout=10)
 assert invalid.status_code == 422
-print(f'CropFit HTTP verified: API {health["apiVersion"]}, model v0.11.0, six-feature artifact identity, atlas v10 plus unit-safe subtype atlas, seasonal boundary ceiling, 2016-2025 climate window, USDA evidence, input bounds')
+print(f'CropFit HTTP verified: API {health["apiVersion"]}, model v0.11.0, six-feature artifact identity, atlas v11 crop-region intervals plus unit-safe subtype atlas, seasonal boundary ceiling, 2016-2025 climate window, USDA evidence, input bounds')
 PY

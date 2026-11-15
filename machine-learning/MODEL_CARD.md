@@ -115,7 +115,7 @@ rejected; that experiment did not replace the 120-tree v0.6 champion. See
 
 ## Out-of-distribution ceiling
 
-API v0.20.1 retains the v0.6.1 safety ceiling that caps the ML score by the exact
+API v0.21.0 retains the v0.6.1 safety ceiling that caps the ML score by the exact
 seasonal and establishment EcoCrop suitability already computed for
 limiting-factor explanations. This is a one-sided safety constraint: the
 ensemble still determines underprediction but cannot claim suitability above
@@ -186,7 +186,7 @@ below the predeclared 0.30 threshold. Corn and 2019 were negative. See
 
 CropFit also returns a separate USDA observed local-plus-regional prior for corn, soybeans,
 and wheat when published county centroids are within 100 km. This evidence does
-not alter CropFit suitability. Atlas v10 contains 5,562 county-crop
+not alter CropFit suitability. Atlas v11 contains 5,562 county-crop
 records from 2010–2025, uses a validated shrunken-recency prior, and includes
 crop/history-count conditional conformal uncertainty bands. Location-facing
 bands are separately calibrated for regional spatial transfer.
@@ -197,7 +197,7 @@ percentile MAE from 0.126 to 0.117. Coverage increased from 21,908 to 23,311
 rows. Uncertainty was calibrated on 2011–2017 only; across 26,589 later
 2018–2025 outcomes, nominal 80% and 90% intervals covered 84.1% and 92.5%.
 This measures persistence of county yield ranks, not parcel yield forecasting.
-See `evaluation/yield-atlas-validation-v10.md`.
+See `evaluation/yield-atlas-validation-v11.md`.
 
 ## Rural regional ranking
 
@@ -233,7 +233,7 @@ split-conformal calibration covered 84.1% and 92.5% at the nominal 80% and 90%
 levels. See `evaluation/yield-atlas-validation-v10.md`.
 
 The production API transfers nearby reporting-county priors to an arbitrary
-location, so atlas v10 validates that operation directly. A leave-one-county-out
+location, so atlas v11 validates that operation directly. A leave-one-county-out
 test excludes each target county. Development years selected up to eight
 neighbors with inverse-square distance weighting. On locked 2023–2025 outcomes,
 regional Spearman reached 0.8060 versus 0.7580 for one nearest county (delta
@@ -265,8 +265,16 @@ A subsequent crop-region interval-scaling candidate reduced pooled mean 90%
 width from 0.5113 to 0.4899 (4.2%) with pooled 81.6%/91.6% coverage. It was not
 promoted: meeting nominal wheat-West stability coverage required a 2.25× scale,
 which produced 100% locked West coverage and violated the predeclared 98%
-upper bound. Atlas v10 retains the region-level interval policy. See
+upper bound. It was not promoted. See
 `evaluation/interval-scaling-validation-v11-candidate.md`.
+
+Atlas v11 instead permits crop-region targets only to sharpen v10 scales and
+selects the largest global shrinkage that preserves pooled, crop, and region
+coverage on both pre-final blocks. The selected 40% shrinkage narrows pooled
+mean 90% width from 0.5113 to 0.4969 (2.8%) with 83.0%/92.3% coverage across
+2018–2025. The untouched 2023–2025 block achieves 82.0%/91.2%, and every crop
+retains at least 88% 90%-interval coverage. Point predictions are unchanged.
+See `evaluation/interval-shrinkage-validation-v11.md`.
 
 Atlas lookup now uses a cached exact haversine spatial index instead of scanning
 all 5,562 records per request. The reproducible benchmark and exact-identity
@@ -283,7 +291,7 @@ Spearman at least 0.50, a grouped-bootstrap lower bound above 0.30, and at least
 observations and Spearman 0.762 (95% interval 0.670–0.830); silage corn passes
 with 576 observations and 0.551 (0.469–0.617). Dry peas and durum wheat fail the
 recent sample floor despite positive rank signal. The accepted subtypes remain
-outside atlas v10. A development-selected five-county aggregation passes the
+outside atlas v11. A development-selected five-county aggregation passes the
 leave-one-county-out transfer gate for both. On locked 2023–2025 outcomes,
 spring-wheat Spearman improves from 0.594 to 0.710 and silage from 0.444 to
 0.522, while both reduce MAE. Silage weights neighbors by history count because
@@ -317,7 +325,7 @@ crop-region pairs without at least 50 examples in every validation block. See
 
 ## Inference request safety
 
-API v0.20.1 bounds caller-supplied climate to 12 or 24 ordered months and at
+API v0.21.0 bounds caller-supplied climate to 12 or 24 ordered months and at
 most 20 complete history years. Temperature, precipitation, and solar inputs
 must be finite and remain within documented physical limits. Invalid caller
 data returns HTTP 422 instead of being mislabeled as a model/upstream failure;
@@ -351,7 +359,7 @@ reuse a stale prediction. The cache is a bounded 2,048-entry LRU, and CI checks
 key sensitivity, revision invalidation, model isolation, expiry, and
 least-recently-used eviction.
 
-API v0.20.1 exposes its API+training-run+artifact-hash revision and the full
+API v0.21.0 exposes its API+training-run+artifact-hash revision and the full
 artifact SHA-256 through `/health`. The browser proxy reads the revision once
 per prediction request. Startup rejects artifacts missing the fitted ensemble,
 model identity, or a consistent feature contract. Direct and HTTP inference
