@@ -7,7 +7,7 @@ revenue, or a buy/sell recommendation.
 
 ## Run the trained model
 
-On macOS or Linux, install the released v0.6 artifact, EcoCrop profiles, and
+On macOS or Linux, install the released v0.7 artifact, EcoCrop profiles, and
 inference dependencies without access to the Spark:
 
 ```bash
@@ -82,12 +82,12 @@ learning-rate schedule, error distribution, and feature importance to
 `machine-learning/runs/<run-id>/`. A candidate is only promoted when it improves held-out
 crop-profile error.
 
-CropFit v0.6 uses 120 Extra Trees. Its promotion report compares the candidate
-with the previous 120-tree Random Forest on identical grouped splits, including
-locked confirmation/final seeds, conformal coverage, and API-sized latency:
+CropFit v0.7 uses 200 Extra Trees. Its promotion report compares the candidate
+with the 120-tree v0.6 champion on identical grouped splits, including locked
+confirmation/final seeds, conformal coverage, artifact size, and API-sized latency:
 
 ```bash
-npm run ml:evaluate:estimator
+npm run ml:evaluate:capacity
 ```
 
 Training refuses to replace the production artifact unless frozen MAE, p90,
@@ -95,7 +95,7 @@ R², held-out-profile-count, and conformal-coverage thresholds all pass. The
 artifact and metadata are written atomically, so interruption cannot leave a
 partially serialized model.
 
-The smaller 80-tree experiment is reproducible with
+The historical 80-tree compact experiment is reproducible with
 `npm run ml:evaluate:compact`; it remains rejected because all seven fresh
 accuracy gates failed despite the smaller artifact.
 

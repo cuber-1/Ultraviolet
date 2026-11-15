@@ -15,7 +15,7 @@ from .yield_atlas import load_atlas, nearest_evidence
 
 ROOT = Path(__file__).resolve().parents[1]
 YIELD_ATLAS = ROOT / "evaluation/yield-atlas-v9.json"
-app = FastAPI(title="Ultraviolet CropFit", version="0.6.9")
+app = FastAPI(title="Ultraviolet CropFit", version="0.7.0")
 
 ClimateSeries = Annotated[list[dict], Field(min_length=12, max_length=24)]
 ClimateYear = Annotated[list[dict], Field(min_length=12, max_length=12)]

@@ -154,7 +154,7 @@ def train(raw: Path, artifact: Path, metadata_path: Path, runs: Path, samples_pe
     train_indices = train_validation_indices[inner_train]
     validation_indices = train_validation_indices[inner_validation]
     model = ExtraTreesRegressor(
-        n_estimators=120,
+        n_estimators=200,
         min_samples_leaf=1,
         max_features=1.0,
         n_jobs=-1,
@@ -189,7 +189,7 @@ def train(raw: Path, artifact: Path, metadata_path: Path, runs: Path, samples_pe
     held_out_profiles = int(len(set(groups[test_indices].tolist())))
     promotion = production_gate(metrics, held_out_profiles, held_out_p80_coverage, held_out_p90_coverage)
     metadata = {
-        "model": "CropFit EcoCrop surrogate v0.6",
+        "model": "CropFit EcoCrop surrogate v0.7",
         "selectedModel": "extraTrees",
         "createdAt": created.isoformat(),
         "runId": run_id,
@@ -207,7 +207,7 @@ def train(raw: Path, artifact: Path, metadata_path: Path, runs: Path, samples_pe
         },
         "modelParameters": {
             "estimator": "ExtraTreesRegressor",
-            "nEstimators": 120,
+            "nEstimators": 200,
             "minSamplesLeaf": 1,
             "maxFeatures": 1.0,
         },
@@ -233,7 +233,7 @@ def train(raw: Path, artifact: Path, metadata_path: Path, runs: Path, samples_pe
                 "rule": "Held-out crop-profile coverage must be within 2 percentage points of both nominal levels.",
             },
         },
-        "selectionEvidence": "Extra Trees improved MAE and p90 error on all seven locked confirmation/final crop-profile seeds while preserving calibrated coverage and API latency; see evaluation/estimator-validation-v0.6.json.",
+        "selectionEvidence": "The 200-tree Extra Trees candidate improved MAE and p90 error on all seven locked confirmation/final crop-profile seeds while preserving calibrated coverage and Mac-compatible latency; see evaluation/capacity-validation-v0.7.json.",
         "boostedCandidate": {
             "mae": round(float(mean_absolute_error(y[test_indices], boosted_predictions)), 4),
             "r2": round(float(r2_score(y[test_indices], boosted_predictions)), 4),

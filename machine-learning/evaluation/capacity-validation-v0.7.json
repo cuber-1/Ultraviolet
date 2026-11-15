@@ -1,0 +1,315 @@
+{
+  "protocol": {
+    "target": "EcoCrop mechanistic screening teacher; not observed yield",
+    "champion": "ExtraTreesRegressor, 120 trees",
+    "candidate": "ExtraTreesRegressor, 200 trees",
+    "selection": "Tree count and feature-subsampling options were compared only on development seeds; 200 full-feature trees had the best development MAE within the declared Mac size ceiling.",
+    "split": "Identical grouped crop-profile train/validation/test split per estimator and seed",
+    "samplesPerCrop": 72,
+    "developmentSeeds": [
+      20261210,
+      20261211,
+      20261212
+    ],
+    "confirmationSeeds": [
+      20261213,
+      20261214
+    ],
+    "finalSeeds": [
+      20261215,
+      20261216,
+      20261217,
+      20261218,
+      20261219
+    ],
+    "declaredGate": "Every confirmation/final seed must improve MAE and p90 with calibrated coverage within 3 points of nominal; locked mean gains must be >=2% MAE and >=1% p90; mean API-batch latency <=2x; compressed artifact <=130 MB."
+  },
+  "results": [
+    {
+      "seed": 20261210,
+      "phase": "development",
+      "testProfiles": 373,
+      "champion120": {
+        "mae": 0.0877,
+        "p90AbsoluteError": 0.22878,
+        "fitSeconds": 1.578,
+        "apiBatchLatencyMs": 14.751
+      },
+      "candidate200": {
+        "mae": 0.08399,
+        "p90AbsoluteError": 0.22069,
+        "fitSeconds": 2.41,
+        "apiBatchLatencyMs": 24.111,
+        "calibration": {
+          "coverage80": 0.8082,
+          "coverage90": 0.9048,
+          "meanRadius80": 0.0094,
+          "meanRadius90": 0.069
+        }
+      },
+      "maeImprovementPercent": 4.23,
+      "p90ImprovementPercent": 3.536,
+      "latencyRatio": 1.635,
+      "passedPerSeedGate": true
+    },
+    {
+      "seed": 20261211,
+      "phase": "development",
+      "testProfiles": 373,
+      "champion120": {
+        "mae": 0.0905,
+        "p90AbsoluteError": 0.24363,
+        "fitSeconds": 1.737,
+        "apiBatchLatencyMs": 13.045
+      },
+      "candidate200": {
+        "mae": 0.08791,
+        "p90AbsoluteError": 0.23641,
+        "fitSeconds": 2.606,
+        "apiBatchLatencyMs": 24.518,
+        "calibration": {
+          "coverage80": 0.8025,
+          "coverage90": 0.8985,
+          "meanRadius80": 0.01,
+          "meanRadius90": 0.0668
+        }
+      },
+      "maeImprovementPercent": 2.862,
+      "p90ImprovementPercent": 2.964,
+      "latencyRatio": 1.879,
+      "passedPerSeedGate": true
+    },
+    {
+      "seed": 20261212,
+      "phase": "development",
+      "testProfiles": 373,
+      "champion120": {
+        "mae": 0.0934,
+        "p90AbsoluteError": 0.25698,
+        "fitSeconds": 1.699,
+        "apiBatchLatencyMs": 14.562
+      },
+      "candidate200": {
+        "mae": 0.09076,
+        "p90AbsoluteError": 0.24376,
+        "fitSeconds": 2.603,
+        "apiBatchLatencyMs": 25.23,
+        "calibration": {
+          "coverage80": 0.8035,
+          "coverage90": 0.902,
+          "meanRadius80": 0.0119,
+          "meanRadius90": 0.0719
+        }
+      },
+      "maeImprovementPercent": 2.827,
+      "p90ImprovementPercent": 5.144,
+      "latencyRatio": 1.733,
+      "passedPerSeedGate": true
+    },
+    {
+      "seed": 20261213,
+      "phase": "confirmation",
+      "testProfiles": 373,
+      "champion120": {
+        "mae": 0.08551,
+        "p90AbsoluteError": 0.2259,
+        "fitSeconds": 1.797,
+        "apiBatchLatencyMs": 14.46
+      },
+      "candidate200": {
+        "mae": 0.08312,
+        "p90AbsoluteError": 0.22323,
+        "fitSeconds": 2.683,
+        "apiBatchLatencyMs": 25.548,
+        "calibration": {
+          "coverage80": 0.8008,
+          "coverage90": 0.8986,
+          "meanRadius80": 0.0054,
+          "meanRadius90": 0.0628
+        }
+      },
+      "maeImprovementPercent": 2.795,
+      "p90ImprovementPercent": 1.182,
+      "latencyRatio": 1.767,
+      "passedPerSeedGate": true
+    },
+    {
+      "seed": 20261214,
+      "phase": "confirmation",
+      "testProfiles": 373,
+      "champion120": {
+        "mae": 0.09526,
+        "p90AbsoluteError": 0.25302,
+        "fitSeconds": 1.675,
+        "apiBatchLatencyMs": 14.688
+      },
+      "candidate200": {
+        "mae": 0.09303,
+        "p90AbsoluteError": 0.2494,
+        "fitSeconds": 2.588,
+        "apiBatchLatencyMs": 25.279,
+        "calibration": {
+          "coverage80": 0.7981,
+          "coverage90": 0.899,
+          "meanRadius80": 0.0087,
+          "meanRadius90": 0.072
+        }
+      },
+      "maeImprovementPercent": 2.341,
+      "p90ImprovementPercent": 1.431,
+      "latencyRatio": 1.721,
+      "passedPerSeedGate": true
+    },
+    {
+      "seed": 20261215,
+      "phase": "final",
+      "testProfiles": 373,
+      "champion120": {
+        "mae": 0.0906,
+        "p90AbsoluteError": 0.24232,
+        "fitSeconds": 1.781,
+        "apiBatchLatencyMs": 14.813
+      },
+      "candidate200": {
+        "mae": 0.08816,
+        "p90AbsoluteError": 0.23215,
+        "fitSeconds": 2.701,
+        "apiBatchLatencyMs": 24.194,
+        "calibration": {
+          "coverage80": 0.8003,
+          "coverage90": 0.8994,
+          "meanRadius80": 0.0075,
+          "meanRadius90": 0.0675
+        }
+      },
+      "maeImprovementPercent": 2.693,
+      "p90ImprovementPercent": 4.197,
+      "latencyRatio": 1.633,
+      "passedPerSeedGate": true
+    },
+    {
+      "seed": 20261216,
+      "phase": "final",
+      "testProfiles": 373,
+      "champion120": {
+        "mae": 0.08226,
+        "p90AbsoluteError": 0.21855,
+        "fitSeconds": 1.681,
+        "apiBatchLatencyMs": 14.409
+      },
+      "candidate200": {
+        "mae": 0.0804,
+        "p90AbsoluteError": 0.21158,
+        "fitSeconds": 2.802,
+        "apiBatchLatencyMs": 25.309,
+        "calibration": {
+          "coverage80": 0.799,
+          "coverage90": 0.9002,
+          "meanRadius80": 0.0039,
+          "meanRadius90": 0.0628
+        }
+      },
+      "maeImprovementPercent": 2.261,
+      "p90ImprovementPercent": 3.189,
+      "latencyRatio": 1.756,
+      "passedPerSeedGate": true
+    },
+    {
+      "seed": 20261217,
+      "phase": "final",
+      "testProfiles": 373,
+      "champion120": {
+        "mae": 0.0878,
+        "p90AbsoluteError": 0.23482,
+        "fitSeconds": 1.883,
+        "apiBatchLatencyMs": 14.962
+      },
+      "candidate200": {
+        "mae": 0.08523,
+        "p90AbsoluteError": 0.23212,
+        "fitSeconds": 2.753,
+        "apiBatchLatencyMs": 24.025,
+        "calibration": {
+          "coverage80": 0.8038,
+          "coverage90": 0.9026,
+          "meanRadius80": 0.01,
+          "meanRadius90": 0.0672
+        }
+      },
+      "maeImprovementPercent": 2.927,
+      "p90ImprovementPercent": 1.15,
+      "latencyRatio": 1.606,
+      "passedPerSeedGate": true
+    },
+    {
+      "seed": 20261218,
+      "phase": "final",
+      "testProfiles": 373,
+      "champion120": {
+        "mae": 0.0926,
+        "p90AbsoluteError": 0.25532,
+        "fitSeconds": 1.576,
+        "apiBatchLatencyMs": 12.616
+      },
+      "candidate200": {
+        "mae": 0.08955,
+        "p90AbsoluteError": 0.2404,
+        "fitSeconds": 2.703,
+        "apiBatchLatencyMs": 25.254,
+        "calibration": {
+          "coverage80": 0.8021,
+          "coverage90": 0.8988,
+          "meanRadius80": 0.0107,
+          "meanRadius90": 0.0714
+        }
+      },
+      "maeImprovementPercent": 3.294,
+      "p90ImprovementPercent": 5.844,
+      "latencyRatio": 2.002,
+      "passedPerSeedGate": true
+    },
+    {
+      "seed": 20261219,
+      "phase": "final",
+      "testProfiles": 373,
+      "champion120": {
+        "mae": 0.09069,
+        "p90AbsoluteError": 0.24656,
+        "fitSeconds": 1.732,
+        "apiBatchLatencyMs": 24.778
+      },
+      "candidate200": {
+        "mae": 0.08823,
+        "p90AbsoluteError": 0.23994,
+        "fitSeconds": 2.672,
+        "apiBatchLatencyMs": 24.704,
+        "calibration": {
+          "coverage80": 0.7907,
+          "coverage90": 0.8965,
+          "meanRadius80": 0.0031,
+          "meanRadius90": 0.066
+        }
+      },
+      "maeImprovementPercent": 2.713,
+      "p90ImprovementPercent": 2.685,
+      "latencyRatio": 0.997,
+      "passedPerSeedGate": true
+    }
+  ],
+  "summary": {
+    "lockedSeedWins": 7,
+    "lockedSeeds": 7,
+    "lockedMeanMaeImprovementPercent": 2.72,
+    "lockedMeanP90ImprovementPercent": 2.81,
+    "finalMeanMaeImprovementPercent": 2.78,
+    "finalMeanP90ImprovementPercent": 3.41,
+    "lockedMeanCoverage80": 0.7993,
+    "lockedMeanCoverage90": 0.8993,
+    "lockedMeanApiBatchLatencyRatio": 1.64,
+    "candidateSerializedSizeBytes": 124891450
+  },
+  "gate": {
+    "passed": true,
+    "rule": "Every confirmation/final seed must improve MAE and p90 with calibrated coverage within 3 points of nominal; locked mean gains must be >=2% MAE and >=1% p90; mean API-batch latency <=2x; compressed artifact <=130 MB."
+  }
+}

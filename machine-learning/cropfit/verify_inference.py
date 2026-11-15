@@ -35,7 +35,7 @@ def verify(artifact: Path, profiles: Path) -> None:
     assert (CLIMATE_HISTORY_START_YEAR, CLIMATE_HISTORY_END_YEAR, len(CLIMATE_HISTORY_YEARS)) == (2016, 2025, 10)
     predictor = CropFitPredictor(artifact, profiles)
     assert predictor.model.n_features_in_ == len(FEATURE_NAMES), "artifact and feature code disagree"
-    if predictor.metadata["model"].endswith("v0.6"):
+    if predictor.metadata["model"].endswith(("v0.6", "v0.7")):
         assert predictor.metadata["selectedModel"] == "extraTrees"
     if predictor.metadata.get("promotionGate"):
         assert predictor.metadata["promotionGate"]["passed"]
@@ -174,6 +174,15 @@ def verify(artifact: Path, profiles: Path) -> None:
         assert estimator_report["summary"]["lockedSeedWins"] == estimator_report["summary"]["lockedSeeds"] == 7
         assert estimator_report["summary"]["finalMeanMaeImprovementPercent"] >= 30
 
+    capacity_validation = artifact.parents[1] / "evaluation/capacity-validation-v0.7.json"
+    if capacity_validation.exists():
+        capacity_report = json.loads(capacity_validation.read_text())
+        assert capacity_report["gate"]["passed"]
+        assert capacity_report["summary"]["lockedSeedWins"] == capacity_report["summary"]["lockedSeeds"] == 7
+        assert capacity_report["summary"]["lockedMeanMaeImprovementPercent"] >= 2
+        assert capacity_report["summary"]["lockedMeanP90ImprovementPercent"] >= 1
+        assert capacity_report["summary"]["candidateSerializedSizeBytes"] <= 130_000_000
+
     compact_validation = artifact.parents[1] / "evaluation/compact-validation-v1.json"
     if compact_validation.exists():
         compact_report = json.loads(compact_validation.read_text())
@@ -181,7 +190,7 @@ def verify(artifact: Path, profiles: Path) -> None:
         assert compact_report["summary"]["seedWins"] == 0
         assert compact_report["summary"]["decision"].startswith("reject")
 
-    ood_validation = artifact.parents[1] / "evaluation/ood-validation-v0.6.1.json"
+    ood_validation = artifact.parents[1] / "evaluation/ood-validation-v0.7.json"
     if ood_validation.exists():
         ood_report = json.loads(ood_validation.read_text())
         assert ood_report["gate"]["passed"]
