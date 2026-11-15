@@ -758,6 +758,7 @@ def nearest_evidence(crop: str, latitude: float, longitude: float, path: Path, m
     } for distance, index in zip(distances[0], indices[0], strict=True) if float(distance * 6371.0) <= max_distance_km]
     if not neighbors:
         return None
+    used_regional_blend = False
     if production_blend.get("gate", {}).get("passed") and len(neighbors) > 1:
         primary, regional = neighbors[0], neighbors[1:]
         selected_weights = production_blend["selectedWeights"]
@@ -767,6 +768,7 @@ def nearest_evidence(crop: str, latitude: float, longitude: float, path: Path, m
             if weights_by_region else selected_weights["regionalNeighborhood"]
         )
         if regional_weight > 0:
+            used_regional_blend = True
             regional_expected, regional_count, regional_history, regional_weights = aggregate_neighbor_prior(
                 regional, max_neighbors, float(neighborhood["distancePower"]),
             )
@@ -793,7 +795,10 @@ def nearest_evidence(crop: str, latitude: float, longitude: float, path: Path, m
             "expectedPercentile": round(expected, 4),
             "interval80": [round(max(0.0, expected - calibration["absoluteErrorP80"]), 4), round(min(1.0, expected + calibration["absoluteErrorP80"]), 4)],
             "interval90": [round(max(0.0, expected - calibration["absoluteErrorP90"]), 4), round(min(1.0, expected + calibration["absoluteErrorP90"]), 4)],
-            "intervalMethod": "local-regional-blend-conformal" if production_calibration.get("groups") else "spatial-neighborhood-conformal",
+            "intervalMethod": (
+                "local-regional-blend-conformal" if used_regional_blend
+                else "region-gated-local-conformal"
+            ) if production_calibration.get("groups") else "spatial-neighborhood-conformal",
             "distanceBucket": bucket,
             "calibrationExamples": calibration["examples"], "neighborCount": neighbor_count,
             "effectiveHistoryCount": effective_history, "effectiveHistoryBucket": history_bucket(effective_history),

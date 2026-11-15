@@ -115,6 +115,7 @@ def verify(artifact: Path, profiles: Path) -> None:
         western_evidence = nearest_evidence("wheat", 39.7392, -104.9903, atlas)
         assert western_evidence and western_evidence["state"] == "CO"
         assert western_evidence["observedYieldPrior"]["neighborCount"] == 1
+        assert western_evidence["observedYieldPrior"]["intervalMethod"] == "region-gated-local-conformal"
         assert western_evidence["regionalNeighbors"][0]["weight"] == 1.0
         assert atlas_report["predictionMethod"] == {"name": "shrunken exponential recency prior", "forecastYear": 2026, "halfLifeYears": 3.0, "recencyWeight": .8, "longHistoryWeight": .2}
         assert evidence["observedYieldPrior"]["interval90"][0] <= evidence["observedYieldPrior"]["interval80"][0]
