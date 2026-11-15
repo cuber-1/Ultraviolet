@@ -10,6 +10,7 @@ import { handleGeoRoute } from './geocode';
 import { handleSensorsRoute } from './sensors';
 import { combinedRoofScore, handleMlRoute, mlModelStatus, modelBaseUrl, predictCropSuitability, siteSuitability, type MlCrop } from './mlModel';
 import { landLensAgentStatus, roofSites, runLandLensAgent, type AgentCandidate, type GeometryEvidence, type SunlightEvidence } from './landlensAgent';
+import { runFollowUpAgent, type FollowUpContext } from './followupAgent';
 import { createPhotonConversation, photonStatus, sendPhotonMessage, type PhotonPlatform } from './photon';
 
 const API_ROOT = 'https://api.vexcelgroup.com/v2';
@@ -642,6 +643,34 @@ export function vexcelApiPlugin(root: string) {
         });
         return json(res, 200, { mode: 'direct', query, dates, targetHours, targetAreaSqft, candidates, simulations });
       }
+      if (url.pathname === '/api/vexcel/followup' && req.method === 'POST') {
+        const input = await body(req);
+        const threadId = typeof input.threadId === 'string' ? input.threadId.slice(0, 120) : '';
+        const message = typeof input.message === 'string' ? input.message.trim().slice(0, 1000) : '';
+        const context = input.context as FollowUpContext | undefined;
+        if (!threadId || !message || !context || !Array.isArray(context.candidates)) return json(res, 400, { error: 'threadId, message and context are required.' });
+        if (!landLensAgentStatus().configured) return json(res, 503, { error: 'Agent model access is not configured.' });
+        res.statusCode = 200;
+        res.setHeader('Content-Type', 'text/event-stream');
+        res.setHeader('Cache-Control', 'no-cache, no-transform');
+        res.setHeader('Connection', 'keep-alive');
+        const send = (value: unknown) => res.write(`data: ${JSON.stringify(value)}\n\n`);
+        const geometryCache = new Map<string, Promise<ResolvedGeometry | null>>();
+        const simulate = async (candidate: AgentCandidate, dates: string[], hours: number, area: number) => {
+          if (!geometryCache.has(candidate.id)) geometryCache.set(candidate.id, resolveCandidateGeometry(key, candidate).catch(() => null));
+          return simulateCandidate(key, candidate, dates, hours, area, await geometryCache.get(candidate.id)!);
+        };
+        try {
+          // Stop the agent if the browser goes away, so abandoned questions don't keep using the model.
+          const abort = new AbortController();
+          res.on('close', () => { if (!res.writableEnded) abort.abort(); });
+          const output = await runFollowUpAgent({ threadId, message, context, signal: abort.signal }, { simulate }, (event) => { if (!abort.signal.aborted) send({ type: 'trace', event }); });
+          send({ type: 'result', ...output });
+        } catch (error) {
+          send({ type: 'error', error: error instanceof Error ? error.message : 'The follow-up failed.' });
+        } finally { res.end(); }
+        return;
+      }
       if (url.pathname === '/api/vexcel/agent' && req.method === 'POST') {
         const input = await body(req);
         const lat = Number(input.lat); const lon = Number(input.lon);
@@ -681,7 +710,7 @@ export function vexcelApiPlugin(root: string) {
           return simulateCandidate(key, candidate, requestedDates, requestedHours, requestedArea, await geometryCache.get(candidate.id)!);
         };
         try {
-          const output = await runLandLensAgent({ goal, followUp: typeof input.followUp === 'string' ? input.followUp : undefined, location: searchLocation || locationPhrase(goal) || 'all available Vexcel coverage', dates, targetHours, targetAreaSqft, crops: Array.isArray(input.crops) ? input.crops.map(String).slice(0, 6) : undefined, cropProfiles, preferredMonth, source: input.source === 'guided' ? 'guided' : 'search' }, { search, geometry, simulate: sunlight }, (event) => send({ type: 'progress', ...event }), (event) => send({ type: 'trace', event }));
+          const output = await runLandLensAgent({ goal, followUp: typeof input.followUp === 'string' ? input.followUp : undefined, location: searchLocation || locationPhrase(goal) || 'all available Vexcel coverage', dates, targetHours, targetAreaSqft, crops: Array.isArray(input.crops) ? input.crops.map(String).slice(0, 6) : undefined, cropProfiles, preferredMonth, notes: typeof input.notes === 'string' && input.notes.trim() ? input.notes.trim().slice(0, 1000) : undefined, source: input.source === 'guided' ? 'guided' : 'search' }, { search, geometry, simulate: sunlight }, (event) => send({ type: 'progress', ...event }), (event) => send({ type: 'trace', event }));
           const simulatedIds = new Set(output.simulations.map((item) => item.candidateId));
           for (const candidate of output.candidates) if (!simulatedIds.has(candidate.id)) output.simulations.push(await sunlight(candidate, dates, targetHours, targetAreaSqft));
           const byId = new Map(output.candidates.map((candidate) => [candidate.id, candidate]));

@@ -82,7 +82,7 @@ export default function PlanPage() {
     try {
       if (input.scale === 'urban') {
         // Model offline but these exact answers were searched with it before: play that search back.
-        const recorded = (await mlOnline(controller.signal)) ? null : await findModelRun<UrbanOutcome>(input, controller.signal).catch(() => null);
+        const recorded = input.notes || (await mlOnline(controller.signal)) ? null : await findModelRun<UrbanOutcome>(input, controller.signal).catch(() => null);
         if (!live()) return;
         if (recorded) {
           const saved = recorded.outcome;
@@ -121,7 +121,7 @@ export default function PlanPage() {
         const comparison = await runAgentComparison({
           goal: criteria.goal, location: input.urbanArea ?? 'All available Vexcel coverage', lat: 0, lon: 0, radiusM: 20_000,
           dates: criteria.dates, targetHours: criteria.targetHours, targetAreaSqft: criteria.targetAreaSqft,
-          crops: briefCrops(input).map((crop) => crop.name), cropProfiles: cropProfiles(input), preferredMonth: input.preferredMonth, source: 'guided',
+          crops: briefCrops(input).map((crop) => crop.name), cropProfiles: cropProfiles(input), preferredMonth: input.preferredMonth, notes: input.notes, source: 'guided',
         }, (event) => {
           advance(URBAN_STAGES, event.stage); push(event.message);
         }, controller.signal, (event) => { if (live()) setLiveTrace((items) => [...items, event]); });

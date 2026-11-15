@@ -96,9 +96,10 @@ const responseSchema = z.object({
   }),
   explanations: z.array(z.object({ candidateId: z.string(), explanation: z.string() })),
   unknowns: z.array(z.string()),
+  notesInterpretation: z.string().nullable().describe("How you read the user's notes and how they shaped the search and explanations. Null when there were no notes."),
 });
 
-function configuredModel() {
+export function configuredAgentModel() {
   const nrpKey = process.env.NRP_API_KEY;
   const apiKey = process.env.LANDLENS_AGENT_API_KEY || nrpKey || process.env.OPENAI_API_KEY;
   if (!apiKey) return null;
@@ -144,7 +145,7 @@ function traceConfig(input: { goal: string; location: string; dates: string[]; t
 }
 
 export function landLensAgentStatus() {
-  const model = configuredModel();
+  const model = configuredAgentModel();
   const tracing = ['true', '1'].includes(String(process.env.LANGSMITH_TRACING ?? process.env.LANGCHAIN_TRACING_V2 ?? '').toLowerCase()) && Boolean(process.env.LANGSMITH_API_KEY || process.env.LANGCHAIN_API_KEY);
   const project = process.env.LANGSMITH_PROJECT || (process.env.LANGSMITH_AGENT_ID ? `${process.env.LANGSMITH_AGENT_ID}-${process.env.LANGSMITH_AGENT_ENVIRONMENT || 'local'}` : 'default');
   return { configured: Boolean(model), model: model?.name ?? null, provider: process.env.NRP_API_KEY && !process.env.LANDLENS_AGENT_BASE_URL ? 'NRP' : model ? 'OpenAI-compatible' : null, baseUrl: process.env.LANDLENS_AGENT_BASE_URL || (process.env.NRP_API_KEY ? 'https://ellm.nrp-nautilus.io/v1' : null), tracing: { enabled: tracing, project } };
@@ -160,6 +161,7 @@ export async function runLandLensAgent(input: {
   crops?: string[];
   cropProfiles?: MlCrop[];
   preferredMonth?: number;
+  notes?: string;
   source?: 'guided' | 'search' | 'photon-watch';
 }, services: LandLensAgentServices, progress: (event: AgentProgress) => void, onTrace: (event: AgentTraceEvent) => void = () => {}) {
   const trace: AgentTraceEvent[] = [];
@@ -169,7 +171,7 @@ export async function runLandLensAgent(input: {
   const size = (sqft: number | null | undefined) => sqft ? (sqft >= 10_000 ? `${Math.round(sqft / 1000)}k ft²` : `${nf.format(sqft)} ft²`) : 'unknown size';
   const roofName = (candidate: AgentCandidate | undefined) => candidate?.costar?.buildingName || candidate?.costar?.address?.split(',')[0] || `${size(candidate?.property?.roofAreaSqft)} roof`;
   const activity = (tool: string, title: string, detail: string) => emit({ kind: 'activity', tool, title, detail, at: Date.now() - started });
-  const model = configuredModel();
+  const model = configuredAgentModel();
   if (!model) throw new Error('Agent model access is not configured. Set NRP_API_KEY or LANDLENS_AGENT_API_KEY.');
 
   const candidates = new Map<string, AgentCandidate>();
@@ -326,7 +328,7 @@ export async function runLandLensAgent(input: {
   const useModel = cropProfiles.length > 0;
 
   progress({ stage: 'planning', message: 'Planning the site comparison' });
-  const systemPrompt = `You compare real urban rooftops for growing goals. Call search_rooftop_imagery exactly once. Then, for every candidate ID it returns, call lookup_property_record and simulate_rooftop_sunlight (it resolves geometry itself; call resolve_roof_geometry only if you need height details). Batch independent tool calls in the same turn. Do not repeat a call you already made. ${useModel ? `After the sunlight runs, call predict_crop_suitability once with every candidate ID. Its "sites" list is already in final rank order (sunlit area and crop suitability combined); use that order as-is and do not recompute scores. Mention each roof's planting window. ` : 'Rank only by sharedAreaSqft returned by the sunlight tool. '}A verified Matterport tour may break a near tie but can never outrank materially greater suitable area. Never estimate missing geometry, listing status, or sunlight; list them under unknowns. Crop-model scores are agroclimatic screening: never present them as yield, revenue, or purchase advice. Write the summary, explanations, and unknowns in plain, friendly language for a grower: refer to sites by rank or address rather than coordinates, round numbers, and never include tool or field names, code identifiers, or URLs. Write explanations only for the five best-ranked roofs, one or two sentences each about why that roof ranks where it does.`;
+  const systemPrompt = `You compare real urban rooftops for growing goals. Call search_rooftop_imagery exactly once. Then, for every candidate ID it returns, call lookup_property_record and simulate_rooftop_sunlight (it resolves geometry itself; call resolve_roof_geometry only if you need height details). Batch independent tool calls in the same turn. Do not repeat a call you already made. ${useModel ? `After the sunlight runs, call predict_crop_suitability once with every candidate ID. Its "sites" list is already in final rank order (sunlit area and crop suitability combined); use that order as-is and do not recompute scores. Mention each roof's planting window. ` : 'Rank only by sharedAreaSqft returned by the sunlight tool. '}A verified Matterport tour may break a near tie but can never outrank materially greater suitable area. Never estimate missing geometry, listing status, or sunlight; list them under unknowns. Crop-model scores are agroclimatic screening: never present them as yield, revenue, or purchase advice. Write the summary, explanations, and unknowns in plain, friendly language for a grower: refer to sites by rank or address rather than coordinates, round numbers, and never include tool or field names, code identifiers, or URLs. Write explanations only for the five best-ranked roofs, one or two sentences each about why that roof ranks where it does.${input.notes ? ` The user added notes. Interpret them yourself: use them to shape your imagery search query and to comment, in each explanation, on how that roof fits or conflicts with them (for example listing status, obstacles, building type, or planting window). Notes never change measured numbers or the final rank order; say in notesInterpretation how you read them and flag roofs that conflict with them.` : ''}`;
   const agent = createDeepAgent({
     model: model.client,
     tools: useModel ? [searchImagery, lookupProperty, resolveGeometry, simulateSunlight, predictSuitability] : [searchImagery, lookupProperty, resolveGeometry, simulateSunlight],
@@ -334,7 +336,7 @@ export async function runLandLensAgent(input: {
     systemPrompt,
   });
 
-  const userMessage = `${input.goal}\nLocation: ${input.location}\nRepresentative dates: ${input.dates.join(', ')}\nDirect sun target: ${input.targetHours} hours\nGrowing area target: ${input.targetAreaSqft} square feet.${input.followUp ? `\nFollow-up: ${input.followUp}` : ''}`;
+  const userMessage = `${input.goal}\nLocation: ${input.location}\nRepresentative dates: ${input.dates.join(', ')}\nDirect sun target: ${input.targetHours} hours\nGrowing area target: ${input.targetAreaSqft} square feet.${input.notes ? `\nUser notes: ${input.notes}` : ''}${input.followUp ? `\nFollow-up: ${input.followUp}` : ''}`;
   emit({ kind: 'prompt', role: 'system', title: 'Ultraviolet instructions (added to the Deep Agents planning prompt)', text: systemPrompt, at: 0 });
   emit({ kind: 'prompt', role: 'user', title: 'Request sent to the agent', text: userMessage, at: 0 });
   // LangChain callbacks: every model turn and tool call becomes a trace event.

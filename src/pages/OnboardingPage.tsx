@@ -30,6 +30,7 @@ export default function OnboardingPage() {
   const [urbanArea, setUrbanArea] = useState<string>(saved?.urbanArea ?? URBAN_AREAS[0].value);
   const [ruralRegions, setRuralRegions] = useState<string[]>(saved?.ruralRegions ?? []);
   const [preferredMonth, setPreferredMonth] = useState(saved?.preferredMonth ?? new Date().getMonth());
+  const [agentNotes, setAgentNotes] = useState(saved?.notes ?? '');
 
   const scale = scaleForArea(areaSqft);
   const [caps, setCaps] = useState<MlCapabilities | null>(null);
@@ -43,7 +44,7 @@ export default function OnboardingPage() {
   // Each completed step fills a full share; answering the current step fills most of its share.
   const progress = step === STEPS.length - 1 ? 1 : Math.min(1, (step + (ready[step] ? .75 : .2)) / STEPS.length);
 
-  const brief: Brief = { scale, areaSqft, crops: chosenCrops, urbanArea: scale === 'urban' ? urbanArea : undefined, ruralRegions: scale === 'rural' ? ruralRegions : undefined, preferredMonth };
+  const brief: Brief = { scale, areaSqft, crops: chosenCrops, urbanArea: scale === 'urban' ? urbanArea : undefined, ruralRegions: scale === 'rural' ? ruralRegions : undefined, preferredMonth , notes: agentNotes.trim() ? agentNotes.trim().slice(0, 1000) : undefined };
   const toggleCrop = (id: string) => setCrops((items) => items.includes(id) ? items.filter((item) => item !== id) : items.length >= MAX_CROPS ? items : [...items, id]);
   const toggleRegion = (id: string) => setRuralRegions((items) => items.includes(id) ? items.filter((item) => item !== id) : [...items, id]);
   const next = () => setStep((value) => Math.min(STEPS.length - 1, value + 1));
@@ -155,6 +156,12 @@ export default function OnboardingPage() {
           <div><dt>{scale === 'urban' ? 'City' : 'Regions'}</dt><dd>{scale === 'urban' ? URBAN_AREAS.find((area) => area.value === urbanArea)?.label : ruralRegions.map((id) => RURAL_REGIONS.find((region) => region.id === id)?.label).join(', ')}</dd><button onClick={() => setStep(2)}>Edit</button></div>
           <div><dt>Start</dt><dd>{MONTH_LONG[preferredMonth]} or later</dd><button onClick={() => setStep(3)}>Edit</button></div>
         </dl>
+        {scale === 'urban' && <label className="onboarding-notes">
+          <span>Anything else the agent should know? <small>Optional</small></span>
+          <textarea value={agentNotes} onChange={(event) => setAgentNotes(event.target.value)} rows={3} maxLength={1000}
+            placeholder="e.g. Low maintenance, must be for lease now, close to downtown, for a community garden, we can only use the roof on weekends…" />
+          <small>The Deep Agent reads this in plain language. It shapes the search and explanations; sunlight, crop fit and listing status still come from real data.</small>
+        </label>}
         <p className="onboarding-lede">{scale === 'urban'
           ? 'The Deep Agent searches live aerial imagery, checks property records, measures each roof’s height and obstructions, and simulates sunlight on your season’s dates. Expect one to three minutes.'
           : 'We read NASA monthly climate for each farming town and match it to your crops’ growing calendars. This takes a few seconds.'}</p>

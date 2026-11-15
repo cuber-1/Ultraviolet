@@ -4,7 +4,8 @@ import { ArrowRight, Heart, Home, Layers, LineChart, Map as MapIcon, Pencil, Rot
 import Wordmark from '../../components/Wordmark';
 import { ActivityFeed, AgentTrace } from './AgentTrace';
 import { CLASSES, CROP_COLORS, classify } from '../../components/charts/DeepAgentCharts';
-import { briefCrops, estimateFood, formatLbs, urbanAreaLabel, type Brief } from '../../services/cropPlan';
+import { briefCrops, cropProfiles, estimateFood, formatLbs, urbanAreaLabel, type Brief } from '../../services/cropPlan';
+import AskPanel from './AskPanel';
 import { roofTitle, useAddresses } from '../../services/addresses';
 import { addFavorite, loadFavorites, removeFavorite, type Favorite } from '../../services/favorites';
 import type { AgentComparison, SearchResult } from '../../services/vexcel';
@@ -71,6 +72,26 @@ export default function ResultsApp({ brief, criteria, comparison, top, insights,
   }));
   const savedIds = new Set(favorites.map((item) => item.id));
 
+  // Follow-up conversation: one Deep Agent thread per results session, seeded with this search's evidence.
+  const threadId = useMemo(() => `ask-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`, []);
+  const askContext = useMemo(() => ({
+    location: urbanAreaLabel(brief), crops: cropProfiles(brief), preferredMonth: brief.preferredMonth, criteria, notes: brief.notes ?? null,
+    candidates: comparison.candidates, simulations: comparison.simulations,
+    predictions: (comparison.predictions ?? []).map(({ profile: _profile, observedYieldEvidence: _observed, ...item }) => ({ ...item, curve: item.curve?.map((point) => ({ month: point.month, score: point.score })) })),
+    explanations: comparison.narrative?.explanations ?? [], ranking: comparison.simulations.map((item) => item.candidateId),
+  }), [brief, comparison, criteria]);
+  const [filter, setFilter] = useState<{ ids: string[]; label: string | null } | null>(null);
+  const deckRoofs = useMemo(() => {
+    if (!filter) return roofs;
+    const byId = new Map(roofs.map((roof) => [roof.result.id, roof]));
+    const picked = filter.ids.map((id) => byId.get(id)).filter((roof): roof is typeof roofs[number] => Boolean(roof));
+    return picked.length ? picked : roofs;
+  }, [filter, roofs]);
+  const applyView = useCallback((ids: string[] | null, label: string | null) => {
+    setFilter(ids ? { ids, label } : null);
+    go({ view: 'deck', i: 0 });
+  }, [go]);
+
   return <div className="ra">
     <header className="ra-bar">
       <div className="ra-brand"><button className="ra-home" onClick={onHome} title="Back to the home page"><Home size={18} /><Wordmark /></button><span>{urbanAreaLabel(brief)} · {crops.map((crop) => crop.name).join(', ')}</span></div>
@@ -86,7 +107,8 @@ export default function ResultsApp({ brief, criteria, comparison, top, insights,
       </div>
     </header>
 
-    {view === 'deck' && <Deck roofs={roofs} index={index} total={top.length} criteria={criteria} crops={crops.map((crop) => crop.id)} cropNames={crops.map((crop) => crop.name)} savedIds={savedIds}
+    {view === 'deck' && filter && <div className="ra-filter"><span>Showing: <b>{filter.label ?? 'Agent selection'}</b> · {deckRoofs.length} of {roofs.length} roofs</span><button onClick={() => { setFilter(null); go({ i: 0 }); }}>Show all</button></div>}
+    {view === 'deck' && <Deck roofs={deckRoofs} index={Math.min(index, deckRoofs.length)} total={deckRoofs.length} criteria={criteria} crops={crops.map((crop) => crop.id)} cropNames={crops.map((crop) => crop.name)} savedIds={savedIds}
       onIndex={(i) => go({ i })} onSave={save} onOpen={onOpen} onShowSaved={() => go({ view: 'saved' })} />}
 
     {view === 'saved' && <main className="ra-saved">
@@ -106,10 +128,13 @@ export default function ResultsApp({ brief, criteria, comparison, top, insights,
 
     {view === 'insights' && <main className="ra-insights">{insights}</main>}
 
+    <AskPanel threadId={threadId} context={askContext} onView={applyView} />
+
     {view === 'agent' && <main className="ra-agent">
       <h1>What the Deep Agent did</h1>
       <p>Every prompt, model turn, and tool call from this search, in order. The same run is traced in LangSmith.</p>
       {(comparison.trace ?? []).some((event) => event.kind === 'activity') && <><h2 className="feed-heading">Activity</h2><ActivityFeed events={comparison.trace ?? []} /></>}
+      {comparison.narrative?.notesInterpretation && <><h2 className="feed-heading">How the agent read your notes</h2><p className="ra-notes-read">{comparison.narrative.notesInterpretation}</p></>}
       <h2 className="feed-heading">Full trace</h2>
       <AgentTrace events={comparison.trace ?? []} model={comparison.model ?? null} />
     </main>}

@@ -63,6 +63,8 @@ export type Brief = {
   urbanArea?: string;
   ruralRegions?: string[];
   preferredMonth: number; // 0-11
+  /** Free-text notes the Deep Agent interprets (preferences, constraints). */
+  notes?: string;
 };
 
 export const ACRE_SQFT = 43_560;

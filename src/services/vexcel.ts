@@ -111,6 +111,7 @@ export type AgentComparison = {
     criteria: { location: string; targetAreaSqft: number; targetHours: number; dates: string[] };
     explanations: Array<{ candidateId: string; explanation: string }>;
     unknowns: string[];
+    notesInterpretation?: string | null;
   };
 };
 
@@ -127,6 +128,7 @@ export type ComparisonInput = {
   crops?: string[];
   cropProfiles?: CropProfileInput[];
   preferredMonth?: number;
+  notes?: string;
   source?: 'guided' | 'search';
 };
 
@@ -199,5 +201,36 @@ export async function runAgentComparison(input: ComparisonInput, onProgress: (pr
     }
   }
   if (!result) throw new Error('The agent finished without a comparison result.');
+  return result;
+}
+
+/** "Ask Ultraviolet": a follow-up question about a finished search, answered by the same Deep Agent with memory per thread. */
+export type FollowUpAnswer = { answer: string; showCandidateIds: string[] | null; viewLabel: string | null; ms: number };
+export async function askFollowUp(input: { threadId: string; message: string; context: unknown }, onTrace: (event: AgentTraceEvent) => void, signal?: AbortSignal): Promise<FollowUpAnswer> {
+  const response = await fetch('/api/vexcel/followup', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(input), signal });
+  if (!response.ok || !response.body) {
+    const payload = await response.json().catch(() => ({}));
+    throw new Error(payload.error || 'The agent could not answer right now.');
+  }
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+  let result: FollowUpAnswer | null = null;
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const events = buffer.split('\n\n');
+    buffer = events.pop() ?? '';
+    for (const event of events) {
+      const line = event.split('\n').find((item) => item.startsWith('data: '));
+      if (!line) continue;
+      const payload = JSON.parse(line.slice(6));
+      if (payload.type === 'trace') onTrace(payload.event as AgentTraceEvent);
+      if (payload.type === 'error') throw new Error(payload.error || 'The agent could not answer right now.');
+      if (payload.type === 'result') result = payload as FollowUpAnswer;
+    }
+  }
+  if (!result) throw new Error('The agent finished without an answer.');
   return result;
 }

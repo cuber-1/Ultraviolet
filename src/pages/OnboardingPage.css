@@ -115,3 +115,10 @@
 @media (max-width: 760px) { .onboarding-scribe { top: 92px; } .onboarding-scribe .mouse-scribe { width: 84px; } .onboarding-quip { font-size: 14px; margin-top: 14px; } }
 @media (prefers-reduced-motion: reduce) { .onboarding-quip { animation: none; } }
 .size-unit { color: var(--gray-500); font-size: 15px; }
+
+.onboarding-notes { display: grid; gap: 8px; max-width: 680px; margin: 0 0 18px; }
+.onboarding-notes > span { font-size: 16px; font-weight: 600; }
+.onboarding-notes > span small { margin-left: 6px; color: var(--gray-400); font-size: 13px; font-weight: 500; }
+.onboarding-notes textarea { width: 100%; resize: vertical; padding: 12px 14px; border: 1px solid var(--gray-200); border-radius: 14px; background: var(--white); font: inherit; font-size: 15px; line-height: 1.45; }
+.onboarding-notes textarea:focus { outline: none; border-color: var(--earth); box-shadow: 0 0 0 3px rgba(232, 93, 4, .12); }
+.onboarding-notes > small { color: var(--gray-500); font-size: 12.5px; }
