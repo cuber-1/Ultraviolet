@@ -46,7 +46,7 @@ rejected; that experiment did not replace the 120-tree v0.6 champion. See
 
 ## Out-of-distribution ceiling
 
-API v0.9.1 retains the v0.6.1 safety ceiling that caps the ML score by the exact
+API v0.9.2 retains the v0.6.1 safety ceiling that caps the ML score by the exact
 seasonal and establishment EcoCrop suitability already computed for
 limiting-factor explanations. This is a one-sided safety constraint: the
 ensemble still determines underprediction but cannot claim suitability above
@@ -238,9 +238,13 @@ reuse a stale prediction. The cache is a bounded 2,048-entry LRU, and CI checks
 key sensitivity, revision invalidation, model isolation, expiry, and
 least-recently-used eviction.
 
-API v0.9.1 exposes its API+training-run revision through `/health`. The browser
-proxy reads it once per prediction request. If revision health is unavailable,
-model predictions continue but bypass the cache until provenance is verified.
+API v0.9.2 exposes its API+training-run+artifact-hash revision and the full
+artifact SHA-256 through `/health`. The browser proxy reads the revision once
+per prediction request. Startup rejects artifacts missing the fitted ensemble,
+model identity, or a consistent feature contract. Direct and HTTP inference
+share finite coordinate, geographic, soil-pH, boolean irrigation, climate, and
+history-size checks. If revision health is unavailable, model predictions
+continue but bypass the cache until provenance is verified.
 
 ## Local-plus-regional yield evidence
 

@@ -13,7 +13,7 @@
 > remain excluded in strict mode.
 > Optional: `ML_SOIL_PH` (default 6.5), `ML_IRRIGATED` (default true).
 
-For corn, soybean, and wheat, CropFit API v0.9.1 also returns optional
+For corn, soybean, and wheat, CropFit API v0.9.2 also returns optional
 `observedYieldEvidence` from the nearest USDA reporting county within 100 km.
 Atlas v9 includes 2010–2025 history plus a calibrated observed-yield percentile
 prior with 80% and 90% uncertainty intervals. The prior blends 80% exponential
@@ -30,7 +30,11 @@ EcoCrop suitability and is not a parcel yield forecast.
 Nearest-county retrieval uses a cached exact haversine spatial index; it returns
 the same county as brute force while avoiding a full atlas scan per request.
 Caller-supplied climate accepts 12 or 24 ordered monthly records and at most 20
-12-month history years. Invalid shapes or physical ranges return HTTP 422.
+12-month history years. Invalid shapes, non-finite coordinates, geographic or
+soil ranges, and non-boolean irrigation values are rejected inside the
+predictor as well as at the HTTP boundary. Invalid caller input returns HTTP
+422. `/health` exposes the full artifact SHA-256 and incorporates its prefix in
+the service revision.
 The Ultraviolet server caches successful CropFit calls for one hour using a
 SHA-256 key over the complete request (including climate, soil, irrigation,
 coordinates, model URL, API version, and training run) and caps the LRU at
@@ -68,8 +72,8 @@ results "Crop calendar · model offline". The UI and Deep Agent keep working.
 Failed health probes are not cached, so a recovered primary is redetected as
 CropFit on the next request rather than receiving the generic API payload.
 
-CropFit v0.9.1 is the production model artifact; the generic contract below is
-for any other model you want to plug in.
+CropFit API v0.9.2 with the v0.9.1 production model artifact is the supported
+runtime; the generic contract below is for any other model you want to plug in.
 
 ## `GET /health`
 

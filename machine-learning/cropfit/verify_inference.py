@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 from pathlib import Path
 from unittest.mock import patch
 
@@ -9,7 +10,7 @@ from fastapi import HTTPException
 from pydantic import ValidationError
 
 from .features import FEATURE_NAMES, feature_row, teacher_scores
-from .inference import CLIMATE_HISTORY_END_YEAR, CLIMATE_HISTORY_START_YEAR, CLIMATE_HISTORY_YEARS, MONTHS, CropFitPredictor, align_model_features
+from .inference import CLIMATE_HISTORY_END_YEAR, CLIMATE_HISTORY_START_YEAR, CLIMATE_HISTORY_YEARS, MAX_CLIMATE_HISTORY_YEARS, MONTHS, CropFitPredictor, align_model_features, sha256_file
 from .profiles import resolve_profile
 from .yield_atlas import haversine_km, load_atlas, metric_summary, nearest_evidence
 
@@ -34,6 +35,8 @@ def verify(artifact: Path, profiles: Path) -> None:
 
     assert (CLIMATE_HISTORY_START_YEAR, CLIMATE_HISTORY_END_YEAR, len(CLIMATE_HISTORY_YEARS)) == (2016, 2025, 10)
     predictor = CropFitPredictor(artifact, profiles)
+    assert predictor.artifact_sha256 == sha256_file(artifact)
+    assert len(predictor.artifact_sha256) == 64
     assert predictor.model.n_features_in_ == len(FEATURE_NAMES), "artifact and feature code disagree"
     assert predictor.model_features(list(range(len(FEATURE_NAMES)))) == list(range(len(FEATURE_NAMES)))
     assert align_model_features(list(range(len(FEATURE_NAMES))), len(FEATURE_NAMES) - 2) == list(range(len(FEATURE_NAMES) - 2))
@@ -103,6 +106,31 @@ def verify(artifact: Path, profiles: Path) -> None:
         pass
     else:
         raise AssertionError("invalid second-year climate was accepted")
+
+    for invalid_arguments in (
+        {"crop": "x", "latitude": 29.76, "longitude": -95.37},
+        {"crop": "corn", "latitude": math.nan, "longitude": -95.37},
+        {"crop": "corn", "latitude": 91, "longitude": -95.37},
+        {"crop": "corn", "latitude": 29.76, "longitude": -181},
+        {"crop": "corn", "latitude": 29.76, "longitude": -95.37, "soil_ph": 11},
+        {"crop": "corn", "latitude": 29.76, "longitude": -95.37, "irrigated": 1},
+        {"crop": "corn", "latitude": 29.76, "longitude": -95.37, "climate_history": [climate(20.0)] * (MAX_CLIMATE_HISTORY_YEARS + 1)},
+        {"crop": "corn", "latitude": 29.76, "longitude": -95.37, "climate_history": [climate(20.0)[:11]]},
+    ):
+        try:
+            predictor.predict(climate=climate(20.0), **invalid_arguments)
+        except ValueError:
+            pass
+        else:
+            raise AssertionError(f"invalid direct predictor request was accepted: {invalid_arguments}")
+
+    with patch("cropfit.inference.joblib.load", return_value={"unexpected": True}):
+        try:
+            CropFitPredictor(artifact, profiles)
+        except RuntimeError as error:
+            assert "model and metadata" in str(error)
+        else:
+            raise AssertionError("malformed artifact contract was accepted")
 
     atlas = artifact.parents[1] / "evaluation/yield-atlas-v9.json"
     if atlas.exists():
@@ -248,6 +276,7 @@ def verify(artifact: Path, profiles: Path) -> None:
         {"climate": valid_climate[:11]},
         {"climateHistory": [valid_climate] * 21},
         {"climateHistory": [valid_climate[:11]]},
+        {"irrigated": 1},
     ):
         try:
             PredictionRequest(crop="corn", latitude=29.76, longitude=-95.37, **invalid)

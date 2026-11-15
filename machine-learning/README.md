@@ -29,6 +29,13 @@ artifact instead, use the full setup below. Because the repository is private,
 the installer uses an authenticated GitHub CLI session (`gh auth login`) or a
 `GITHUB_TOKEN`.
 
+Runtime API v0.9.2 keeps the validated v0.9.1 estimator and hardens every direct
+and HTTP prediction path with the same finite coordinate, soil-pH, boolean,
+climate-shape, and 20-year history limits. Startup validates the artifact's
+internal model/metadata contract. `GET /health` returns the artifact SHA-256 and
+includes its first 12 characters in `revision`, so the web cache and operators
+can identify the exact model binary serving a result.
+
 Every push to `main` repeats the release installation and loopback HTTP test on
 a GitHub-hosted Apple Silicon (`macos-15`, arm64) runner with Python 3.12.
 
