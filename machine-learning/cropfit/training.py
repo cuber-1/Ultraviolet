@@ -76,7 +76,7 @@ def atomic_text_write(path: Path, value: str) -> None:
         temporary.unlink(missing_ok=True)
 
 
-def generate_examples(profiles, samples_per_crop: int, seed: int):
+def generate_examples(profiles, samples_per_crop: int, seed: int, include_interactions: bool = True):
     random = np.random.default_rng(seed)
     features, labels, groups = [], [], []
     for group, profile in enumerate(profiles):
@@ -87,7 +87,7 @@ def generate_examples(profiles, samples_per_crop: int, seed: int):
             ph = random.uniform(max(2.5, profile.ph_abs_min - 1.2), min(10.5, profile.ph_abs_max + 1.2))
             solar = random.uniform(4.0, 32.0)
             irrigated = bool(random.integers(0, 2))
-            features.append(feature_row(profile, temperature, precipitation, ph, solar, irrigated))
+            features.append(feature_row(profile, temperature, precipitation, ph, solar, irrigated, include_interactions))
             labels.append(teacher_scores(profile, temperature, precipitation, ph, solar, irrigated)["suitability"])
             groups.append(group)
     return np.asarray(features, dtype=np.float32), np.asarray(labels, dtype=np.float32), np.asarray(groups)
@@ -154,7 +154,7 @@ def train(raw: Path, artifact: Path, metadata_path: Path, runs: Path, samples_pe
     train_indices = train_validation_indices[inner_train]
     validation_indices = train_validation_indices[inner_validation]
     model = ExtraTreesRegressor(
-        n_estimators=200,
+        n_estimators=120,
         min_samples_leaf=1,
         max_features=1.0,
         n_jobs=-1,
@@ -189,7 +189,7 @@ def train(raw: Path, artifact: Path, metadata_path: Path, runs: Path, samples_pe
     held_out_profiles = int(len(set(groups[test_indices].tolist())))
     promotion = production_gate(metrics, held_out_profiles, held_out_p80_coverage, held_out_p90_coverage)
     metadata = {
-        "model": "CropFit EcoCrop surrogate v0.7",
+        "model": "CropFit EcoCrop surrogate v0.8",
         "selectedModel": "extraTrees",
         "createdAt": created.isoformat(),
         "runId": run_id,
@@ -207,7 +207,7 @@ def train(raw: Path, artifact: Path, metadata_path: Path, runs: Path, samples_pe
         },
         "modelParameters": {
             "estimator": "ExtraTreesRegressor",
-            "nEstimators": 200,
+            "nEstimators": 120,
             "minSamplesLeaf": 1,
             "maxFeatures": 1.0,
         },
@@ -233,7 +233,7 @@ def train(raw: Path, artifact: Path, metadata_path: Path, runs: Path, samples_pe
                 "rule": "Held-out crop-profile coverage must be within 2 percentage points of both nominal levels.",
             },
         },
-        "selectionEvidence": "The 200-tree Extra Trees candidate improved MAE and p90 error on all seven locked confirmation/final crop-profile seeds while preserving calibrated coverage and Mac-compatible latency; see evaluation/capacity-validation-v0.7.json.",
+        "selectionEvidence": "Two input-derived agroclimatic interactions with 120 Extra Trees improved MAE and p90 error on all seven locked confirmation/final crop-profile seeds while reducing artifact size and latency; see evaluation/interaction-validation-v0.8.json.",
         "boostedCandidate": {
             "mae": round(float(mean_absolute_error(y[test_indices], boosted_predictions)), 4),
             "r2": round(float(r2_score(y[test_indices], boosted_predictions)), 4),

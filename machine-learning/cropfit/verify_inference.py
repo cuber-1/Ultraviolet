@@ -8,8 +8,8 @@ from unittest.mock import patch
 from fastapi import HTTPException
 from pydantic import ValidationError
 
-from .features import FEATURE_NAMES
-from .inference import CLIMATE_HISTORY_END_YEAR, CLIMATE_HISTORY_START_YEAR, CLIMATE_HISTORY_YEARS, MONTHS, CropFitPredictor
+from .features import FEATURE_NAMES, feature_row, teacher_scores
+from .inference import CLIMATE_HISTORY_END_YEAR, CLIMATE_HISTORY_START_YEAR, CLIMATE_HISTORY_YEARS, MONTHS, CropFitPredictor, align_model_features
 from .profiles import resolve_profile
 from .yield_atlas import haversine_km, load_atlas, metric_summary, nearest_evidence
 
@@ -35,7 +35,9 @@ def verify(artifact: Path, profiles: Path) -> None:
     assert (CLIMATE_HISTORY_START_YEAR, CLIMATE_HISTORY_END_YEAR, len(CLIMATE_HISTORY_YEARS)) == (2016, 2025, 10)
     predictor = CropFitPredictor(artifact, profiles)
     assert predictor.model.n_features_in_ == len(FEATURE_NAMES), "artifact and feature code disagree"
-    if predictor.metadata["model"].endswith(("v0.6", "v0.7")):
+    assert predictor.model_features(list(range(len(FEATURE_NAMES)))) == list(range(len(FEATURE_NAMES)))
+    assert align_model_features(list(range(len(FEATURE_NAMES))), len(FEATURE_NAMES) - 2) == list(range(len(FEATURE_NAMES) - 2))
+    if predictor.metadata["model"].endswith(("v0.6", "v0.7", "v0.8")):
         assert predictor.metadata["selectedModel"] == "extraTrees"
     if predictor.metadata.get("promotionGate"):
         assert predictor.metadata["promotionGate"]["passed"]
@@ -56,6 +58,9 @@ def verify(artifact: Path, profiles: Path) -> None:
         assert 0 <= month["reliability"] <= 1
 
     profile = resolve_profile("tomato", predictor.profiles)
+    interaction_row = feature_row(profile, 22, 900, 6.5, 18, True)
+    interaction_target = teacher_scores(profile, 22, 900, 6.5, 18, True)["suitability"]
+    assert abs(100 * interaction_row[-2] * interaction_row[-1] - interaction_target) < 1e-10
     ordinary = predictor.curve(profile, climate(20.0) + climate(20.0), 6.5, True)
     hot_next_year = predictor.curve(profile, climate(20.0) + climate(45.0), 6.5, True)
     assert ordinary[-1]["score"] != hot_next_year[-1]["score"], "late planting did not use following-year climate"
@@ -183,6 +188,15 @@ def verify(artifact: Path, profiles: Path) -> None:
         assert capacity_report["summary"]["lockedMeanP90ImprovementPercent"] >= 1
         assert capacity_report["summary"]["candidateSerializedSizeBytes"] <= 130_000_000
 
+    interaction_validation = artifact.parents[1] / "evaluation/interaction-validation-v0.8.json"
+    if interaction_validation.exists():
+        interaction_report = json.loads(interaction_validation.read_text())
+        assert interaction_report["gate"]["passed"]
+        assert interaction_report["summary"]["lockedSeedWins"] == interaction_report["summary"]["lockedSeeds"] == 7
+        assert interaction_report["summary"]["lockedMeanMaeImprovementPercent"] >= 70
+        assert interaction_report["summary"]["lockedMeanP90ImprovementPercent"] >= 70
+        assert interaction_report["summary"]["candidateSerializedSizeBytes"] <= 80_000_000
+
     compact_validation = artifact.parents[1] / "evaluation/compact-validation-v1.json"
     if compact_validation.exists():
         compact_report = json.loads(compact_validation.read_text())
@@ -190,7 +204,7 @@ def verify(artifact: Path, profiles: Path) -> None:
         assert compact_report["summary"]["seedWins"] == 0
         assert compact_report["summary"]["decision"].startswith("reject")
 
-    ood_validation = artifact.parents[1] / "evaluation/ood-validation-v0.7.json"
+    ood_validation = artifact.parents[1] / "evaluation/ood-validation-v0.8.json"
     if ood_validation.exists():
         ood_report = json.loads(ood_validation.read_text())
         assert ood_report["gate"]["passed"]

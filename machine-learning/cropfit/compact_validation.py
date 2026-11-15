@@ -38,7 +38,7 @@ def evaluate(profiles_path: Path, samples_per_crop: int) -> dict:
     results = []
     sizes = None
     for seed in SEEDS:
-        x, y, groups = generate_examples(profiles, samples_per_crop, seed)
+        x, y, groups = generate_examples(profiles, samples_per_crop, seed, include_interactions=False)
         train, validation, test = split_indices(x, y, groups, seed)
         models = {"champion120": model(120, seed), "compact80": model(80, seed)}
         item = {"seed": seed, "testProfiles": len(np.unique(groups[test]))}

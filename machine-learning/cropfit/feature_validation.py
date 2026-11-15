@@ -28,7 +28,7 @@ def evaluate(raw: Path, samples_per_crop: int, seeds: list[int], estimators: int
     profiles = load_profiles(raw)
     results = []
     for seed in seeds:
-        enriched, labels, groups = generate_examples(profiles, samples_per_crop, seed)
+        enriched, labels, groups = generate_examples(profiles, samples_per_crop, seed, include_interactions=False)
         baseline = enriched[:, :-4]
         train_validation, test = next(GroupShuffleSplit(n_splits=1, test_size=.2, random_state=seed).split(enriched, labels, groups))
         inner_groups = groups[train_validation]
@@ -50,7 +50,7 @@ def evaluate(raw: Path, samples_per_crop: int, seeds: list[int], estimators: int
             "estimators": estimators,
             "seeds": seeds,
             "baselineFeatures": FEATURE_NAMES[:-4],
-            "candidateFeatures": FEATURE_NAMES,
+            "candidateFeatures": FEATURE_NAMES[:-2],
         },
         "results": results,
         "summary": {

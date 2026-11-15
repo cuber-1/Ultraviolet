@@ -71,7 +71,7 @@ def evaluate(profiles_path: Path, samples_per_crop: int, estimators: int) -> dic
     profiles = load_profiles(profiles_path)
     results = []
     for seed in DEVELOPMENT_SEEDS + CONFIRMATION_SEEDS + FINAL_SEEDS:
-        x, y, groups = generate_examples(profiles, samples_per_crop, seed)
+        x, y, groups = generate_examples(profiles, samples_per_crop, seed, include_interactions=False)
         train, validation, test = split_indices(x, y, groups, seed)
         models = {
             "randomForest": RandomForestRegressor(n_estimators=estimators, min_samples_leaf=1, max_features=1.0, n_jobs=-1, random_state=seed),

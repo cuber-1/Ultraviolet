@@ -50,7 +50,7 @@ def evaluate(profiles_path: Path, samples_per_crop: int) -> dict:
     results = []
     candidate_size = None
     for seed in DEVELOPMENT_SEEDS + CONFIRMATION_SEEDS + FINAL_SEEDS:
-        x, y, groups = generate_examples(profiles, samples_per_crop, seed)
+        x, y, groups = generate_examples(profiles, samples_per_crop, seed, include_interactions=False)
         train, validation, test = split_indices(x, y, groups, seed)
         models = {
             "champion120": estimator(CHAMPION_TREES, seed),

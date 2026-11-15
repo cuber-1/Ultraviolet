@@ -19,6 +19,14 @@ CLIMATE_HISTORY_END_YEAR = 2025
 CLIMATE_HISTORY_YEARS = tuple(range(CLIMATE_HISTORY_START_YEAR, CLIMATE_HISTORY_END_YEAR + 1))
 
 
+def align_model_features(row: list[float], expected: int) -> list[float]:
+    if len(row) == expected:
+        return row
+    if len(row) == expected + 2:
+        return row[:-2]
+    raise RuntimeError(f"Artifact expects {expected} features but inference produced {len(row)}")
+
+
 class CropFitPredictor:
     def __init__(self, artifact: Path, profiles_path: Path):
         bundle = joblib.load(artifact)
@@ -26,6 +34,10 @@ class CropFitPredictor:
         self.booster = bundle.get("booster")
         self.metadata = bundle["metadata"]
         self.profiles = load_profiles(profiles_path)
+
+    def model_features(self, row: list[float]) -> list[float]:
+        """Keep inference usable while a v0.7 artifact is upgraded to v0.8."""
+        return align_model_features(row, int(self.model.n_features_in_))
 
     def calibrated_error(self, tree_std: float) -> tuple[float, float]:
         calibration = self.metadata.get("uncertaintyCalibration", {})
@@ -115,7 +127,7 @@ class CropFitPredictor:
             precipitation_mm_day = precipitation_total / cycle_days
             annualized_precipitation = precipitation_mm_day * 365.25
             seasonal_climate.append((temperature, precipitation_mm_day, solar))
-            row = feature_row(profile, temperature, annualized_precipitation, soil_ph, solar, irrigated)
+            row = self.model_features(feature_row(profile, temperature, annualized_precipitation, soil_ph, solar, irrigated))
             rows.append(row)
             teacher.append(teacher_scores(profile, temperature, annualized_precipitation, soil_ph, solar, irrigated))
             start_precipitation = float(month["precipitationMmDay"]) * 365.25

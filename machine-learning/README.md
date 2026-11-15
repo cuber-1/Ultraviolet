@@ -7,7 +7,7 @@ revenue, or a buy/sell recommendation.
 
 ## Run the trained model
 
-On macOS or Linux, install the released v0.7 artifact, EcoCrop profiles, and
+On macOS or Linux, install the released v0.8 artifact, EcoCrop profiles, and
 inference dependencies without access to the Spark:
 
 ```bash
@@ -82,12 +82,13 @@ learning-rate schedule, error distribution, and feature importance to
 `machine-learning/runs/<run-id>/`. A candidate is only promoted when it improves held-out
 crop-profile error.
 
-CropFit v0.7 uses 200 Extra Trees. Its promotion report compares the candidate
-with the 120-tree v0.6 champion on identical grouped splits, including locked
-confirmation/final seeds, conformal coverage, artifact size, and API-sized latency:
+CropFit v0.8 uses 120 Extra Trees with two transparent agroclimatic interaction
+features. Its promotion report compares the candidate with the 200-tree v0.7
+champion on identical grouped splits, including locked confirmation/final seeds,
+conformal coverage, artifact size, and API-sized latency:
 
 ```bash
-npm run ml:evaluate:capacity
+npm run ml:evaluate:interactions
 ```
 
 Training refuses to replace the production artifact unless frozen MAE, p90,

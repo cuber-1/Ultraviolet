@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-release_url="https://github.com/cuber-1/Ultraviolet/releases/download/cropfit-v0.7/ultraviolet-cropfit-v0.7.tar.gz"
-expected_sha256="c46ee69bb582b74ba7936918483082cf2bc07fe211242e2578d55cbe47eac35a"
+release_url="https://github.com/cuber-1/Ultraviolet/releases/download/cropfit-v0.8/ultraviolet-cropfit-v0.8.tar.gz"
+expected_sha256="5fab7686f960588bfd23a96429929269dafef5c1f320e6cb6ac2112bc68e8f28"
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 bundle_tmp="$(mktemp -d)"
 trap 'rm -rf "${bundle_tmp}"' EXIT
@@ -17,9 +17,9 @@ if ! "${python_bin}" -c 'import sys; raise SystemExit(0 if sys.version_info >= (
   exit 1
 fi
 
-echo "Downloading CropFit v0.7 model bundle..."
+echo "Downloading CropFit v0.8 model bundle..."
 if command -v gh >/dev/null 2>&1; then
-  gh release download cropfit-v0.7 --repo cuber-1/Ultraviolet --pattern ultraviolet-cropfit-v0.7.tar.gz --output "${bundle_tmp}/cropfit.tar.gz"
+  gh release download cropfit-v0.8 --repo cuber-1/Ultraviolet --pattern ultraviolet-cropfit-v0.8.tar.gz --output "${bundle_tmp}/cropfit.tar.gz"
 elif [[ -n "${GITHUB_TOKEN:-}" ]]; then
   curl --fail --location --retry 3 --header "Authorization: Bearer ${GITHUB_TOKEN}" --output "${bundle_tmp}/cropfit.tar.gz" "${release_url}"
 else
@@ -50,6 +50,6 @@ tar -xzf "${bundle_tmp}/cropfit.tar.gz" -C "${repo_root}"
 "${repo_root}/machine-learning/.venv/bin/python" -m pip install -r "${repo_root}/machine-learning/requirements-inference.txt"
 PYTHONPATH="${repo_root}/machine-learning" "${repo_root}/machine-learning/.venv/bin/python" -m cropfit.verify_inference
 
-echo "CropFit v0.7 is installed and verified."
+echo "CropFit v0.8 is installed and verified."
 echo "Local Mac fallback: npm run ml:serve:local"
 echo "Tailscale/LAN service: npm run ml:serve"
