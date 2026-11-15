@@ -1,0 +1,4351 @@
+{
+  "name": "Atlas v12 prediction-stratified interval development",
+  "protocol": {
+    "champion": "atlas v11 symmetric crop/history radii and crop-region scales",
+    "candidate": "retain v11 80% radii; blend v11 90% radii toward crop/history/prediction-band conformal radii",
+    "calibrationYears": [
+      2011,
+      2012,
+      2013,
+      2014,
+      2015,
+      2016,
+      2017
+    ],
+    "developmentYears": [
+      2018,
+      2019,
+      2020
+    ],
+    "stabilityYears": [
+      2021,
+      2022
+    ],
+    "finalYearsOpenedForSelection": [],
+    "binCandidates": [
+      [
+        0.5
+      ],
+      [
+        0.33,
+        0.67
+      ],
+      [
+        0.2,
+        0.4,
+        0.6,
+        0.8
+      ],
+      [
+        0.1,
+        0.3,
+        0.5,
+        0.7,
+        0.9
+      ]
+    ],
+    "blendCandidates": [
+      0.25,
+      0.5,
+      0.75,
+      1.0
+    ],
+    "minimumCalibrationExamples": 100,
+    "minimumWidthReductionEachBlock": 0.01,
+    "rule": "Require >=100 calibration examples per conditional cell, pooled/crop/region 90% coverage on development and stability, unchanged 80% intervals, and >=1% narrower mean 90% intervals on both blocks; select the passing candidate with the largest stability reduction."
+  },
+  "champion": {
+    "development": {
+      "pooled": {
+        "observations": 10351,
+        "coverage80": 0.8331,
+        "coverage90": 0.9258,
+        "meanWidth80": 0.3822,
+        "meanWidth90": 0.4974
+      },
+      "perCrop": [
+        {
+          "crop": "corn",
+          "observations": 4214,
+          "coverage80": 0.8448,
+          "coverage90": 0.9397,
+          "meanWidth80": 0.4013,
+          "meanWidth90": 0.5209
+        },
+        {
+          "crop": "soybean",
+          "observations": 3702,
+          "coverage80": 0.8441,
+          "coverage90": 0.9335,
+          "meanWidth80": 0.3858,
+          "meanWidth90": 0.4992
+        },
+        {
+          "crop": "wheat",
+          "observations": 2435,
+          "coverage80": 0.7959,
+          "coverage90": 0.8899,
+          "meanWidth80": 0.3434,
+          "meanWidth90": 0.4539
+        }
+      ],
+      "perRegion": [
+        {
+          "region": "Northeast",
+          "observations": 469,
+          "coverage80": 0.7825,
+          "coverage90": 0.9062,
+          "meanWidth80": 0.4327,
+          "meanWidth90": 0.5442
+        },
+        {
+          "region": "Midwest",
+          "observations": 5859,
+          "coverage80": 0.8317,
+          "coverage90": 0.9266,
+          "meanWidth80": 0.3788,
+          "meanWidth90": 0.4915
+        },
+        {
+          "region": "South",
+          "observations": 3679,
+          "coverage80": 0.8328,
+          "coverage90": 0.9228,
+          "meanWidth80": 0.3752,
+          "meanWidth90": 0.4946
+        },
+        {
+          "region": "West",
+          "observations": 344,
+          "coverage80": 0.9273,
+          "coverage90": 0.9709,
+          "meanWidth80": 0.4445,
+          "meanWidth90": 0.5629
+        }
+      ],
+      "perPredictionBand": []
+    },
+    "stability": {
+      "pooled": {
+        "observations": 7331,
+        "coverage80": 0.84,
+        "coverage90": 0.9317,
+        "meanWidth80": 0.3811,
+        "meanWidth90": 0.4957
+      },
+      "perCrop": [
+        {
+          "crop": "corn",
+          "observations": 2948,
+          "coverage80": 0.8375,
+          "coverage90": 0.9257,
+          "meanWidth80": 0.3996,
+          "meanWidth90": 0.518
+        },
+        {
+          "crop": "soybean",
+          "observations": 2674,
+          "coverage80": 0.8489,
+          "coverage90": 0.9338,
+          "meanWidth80": 0.3838,
+          "meanWidth90": 0.4956
+        },
+        {
+          "crop": "wheat",
+          "observations": 1709,
+          "coverage80": 0.8303,
+          "coverage90": 0.9386,
+          "meanWidth80": 0.3449,
+          "meanWidth90": 0.4575
+        }
+      ],
+      "perRegion": [
+        {
+          "region": "Northeast",
+          "observations": 370,
+          "coverage80": 0.8189,
+          "coverage90": 0.9,
+          "meanWidth80": 0.4351,
+          "meanWidth90": 0.5458
+        },
+        {
+          "region": "Midwest",
+          "observations": 4136,
+          "coverage80": 0.8378,
+          "coverage90": 0.9321,
+          "meanWidth80": 0.3773,
+          "meanWidth90": 0.4892
+        },
+        {
+          "region": "South",
+          "observations": 2584,
+          "coverage80": 0.8495,
+          "coverage90": 0.9385,
+          "meanWidth80": 0.3754,
+          "meanWidth90": 0.4949
+        },
+        {
+          "region": "West",
+          "observations": 241,
+          "coverage80": 0.8091,
+          "coverage90": 0.9004,
+          "meanWidth80": 0.4232,
+          "meanWidth90": 0.5386
+        }
+      ],
+      "perPredictionBand": []
+    }
+  },
+  "candidates": [
+    {
+      "cuts": [
+        0.5
+      ],
+      "blend": 0.25,
+      "minimumCalibrationExamples": 724,
+      "development": {
+        "pooled": {
+          "observations": 10351,
+          "coverage80": 0.8331,
+          "coverage90": 0.9261,
+          "meanWidth80": 0.3822,
+          "meanWidth90": 0.4977
+        },
+        "perCrop": [
+          {
+            "crop": "corn",
+            "observations": 4214,
+            "coverage80": 0.8448,
+            "coverage90": 0.9385,
+            "meanWidth80": 0.4013,
+            "meanWidth90": 0.5208
+          },
+          {
+            "crop": "soybean",
+            "observations": 3702,
+            "coverage80": 0.8441,
+            "coverage90": 0.9335,
+            "meanWidth80": 0.3858,
+            "meanWidth90": 0.4991
+          },
+          {
+            "crop": "wheat",
+            "observations": 2435,
+            "coverage80": 0.7959,
+            "coverage90": 0.8932,
+            "meanWidth80": 0.3434,
+            "meanWidth90": 0.4557
+          }
+        ],
+        "perRegion": [
+          {
+            "region": "Northeast",
+            "observations": 469,
+            "coverage80": 0.7825,
+            "coverage90": 0.9062,
+            "meanWidth80": 0.4327,
+            "meanWidth90": 0.5451
+          },
+          {
+            "region": "Midwest",
+            "observations": 5859,
+            "coverage80": 0.8317,
+            "coverage90": 0.9266,
+            "meanWidth80": 0.3788,
+            "meanWidth90": 0.4919
+          },
+          {
+            "region": "South",
+            "observations": 3679,
+            "coverage80": 0.8328,
+            "coverage90": 0.9233,
+            "meanWidth80": 0.3752,
+            "meanWidth90": 0.4947
+          },
+          {
+            "region": "West",
+            "observations": 344,
+            "coverage80": 0.9273,
+            "coverage90": 0.9738,
+            "meanWidth80": 0.4445,
+            "meanWidth90": 0.5631
+          }
+        ],
+        "perPredictionBand": [
+          {
+            "band": 0,
+            "lower": 0.0,
+            "upper": 0.5,
+            "observations": 5087,
+            "coverage80": 0.8598,
+            "coverage90": 0.9426,
+            "meanWidth80": 0.3848,
+            "meanWidth90": 0.4998
+          },
+          {
+            "band": 1,
+            "lower": 0.5,
+            "upper": 1.0,
+            "observations": 5264,
+            "coverage80": 0.8072,
+            "coverage90": 0.9101,
+            "meanWidth80": 0.3796,
+            "meanWidth90": 0.4957
+          }
+        ]
+      },
+      "stability": {
+        "pooled": {
+          "observations": 7331,
+          "coverage80": 0.84,
+          "coverage90": 0.9314,
+          "meanWidth80": 0.3811,
+          "meanWidth90": 0.4961
+        },
+        "perCrop": [
+          {
+            "crop": "corn",
+            "observations": 2948,
+            "coverage80": 0.8375,
+            "coverage90": 0.9264,
+            "meanWidth80": 0.3996,
+            "meanWidth90": 0.5179
+          },
+          {
+            "crop": "soybean",
+            "observations": 2674,
+            "coverage80": 0.8489,
+            "coverage90": 0.9334,
+            "meanWidth80": 0.3838,
+            "meanWidth90": 0.4954
+          },
+          {
+            "crop": "wheat",
+            "observations": 1709,
+            "coverage80": 0.8303,
+            "coverage90": 0.9368,
+            "meanWidth80": 0.3449,
+            "meanWidth90": 0.4593
+          }
+        ],
+        "perRegion": [
+          {
+            "region": "Northeast",
+            "observations": 370,
+            "coverage80": 0.8189,
+            "coverage90": 0.8973,
+            "meanWidth80": 0.4351,
+            "meanWidth90": 0.5468
+          },
+          {
+            "region": "Midwest",
+            "observations": 4136,
+            "coverage80": 0.8378,
+            "coverage90": 0.9321,
+            "meanWidth80": 0.3773,
+            "meanWidth90": 0.4896
+          },
+          {
+            "region": "South",
+            "observations": 2584,
+            "coverage80": 0.8495,
+            "coverage90": 0.9385,
+            "meanWidth80": 0.3754,
+            "meanWidth90": 0.4951
+          },
+          {
+            "region": "West",
+            "observations": 241,
+            "coverage80": 0.8091,
+            "coverage90": 0.8963,
+            "meanWidth80": 0.4232,
+            "meanWidth90": 0.539
+          }
+        ],
+        "perPredictionBand": [
+          {
+            "band": 0,
+            "lower": 0.0,
+            "upper": 0.5,
+            "observations": 3707,
+            "coverage80": 0.8454,
+            "coverage90": 0.9398,
+            "meanWidth80": 0.3823,
+            "meanWidth90": 0.496
+          },
+          {
+            "band": 1,
+            "lower": 0.5,
+            "upper": 1.0,
+            "observations": 3624,
+            "coverage80": 0.8344,
+            "coverage90": 0.9227,
+            "meanWidth80": 0.3798,
+            "meanWidth90": 0.4961
+          }
+        ]
+      },
+      "widthReduction90": {
+        "development": -0.0006,
+        "stability": -0.0008
+      },
+      "gate": {
+        "passed": false,
+        "checks": {
+          "minimumCalibrationExamples": true,
+          "coverage": false,
+          "developmentWidthReduction": false,
+          "stabilityWidthReduction": false,
+          "eightyPercentBandUnchanged": true
+        }
+      }
+    },
+    {
+      "cuts": [
+        0.5
+      ],
+      "blend": 0.5,
+      "minimumCalibrationExamples": 724,
+      "development": {
+        "pooled": {
+          "observations": 10351,
+          "coverage80": 0.8331,
+          "coverage90": 0.9256,
+          "meanWidth80": 0.3822,
+          "meanWidth90": 0.498
+        },
+        "perCrop": [
+          {
+            "crop": "corn",
+            "observations": 4214,
+            "coverage80": 0.8448,
+            "coverage90": 0.9371,
+            "meanWidth80": 0.4013,
+            "meanWidth90": 0.5207
+          },
+          {
+            "crop": "soybean",
+            "observations": 3702,
+            "coverage80": 0.8441,
+            "coverage90": 0.9335,
+            "meanWidth80": 0.3858,
+            "meanWidth90": 0.4989
+          },
+          {
+            "crop": "wheat",
+            "observations": 2435,
+            "coverage80": 0.7959,
+            "coverage90": 0.8936,
+            "meanWidth80": 0.3434,
+            "meanWidth90": 0.4574
+          }
+        ],
+        "perRegion": [
+          {
+            "region": "Northeast",
+            "observations": 469,
+            "coverage80": 0.7825,
+            "coverage90": 0.9019,
+            "meanWidth80": 0.4327,
+            "meanWidth90": 0.546
+          },
+          {
+            "region": "Midwest",
+            "observations": 5859,
+            "coverage80": 0.8317,
+            "coverage90": 0.9266,
+            "meanWidth80": 0.3788,
+            "meanWidth90": 0.4923
+          },
+          {
+            "region": "South",
+            "observations": 3679,
+            "coverage80": 0.8328,
+            "coverage90": 0.9225,
+            "meanWidth80": 0.3752,
+            "meanWidth90": 0.4949
+          },
+          {
+            "region": "West",
+            "observations": 344,
+            "coverage80": 0.9273,
+            "coverage90": 0.9738,
+            "meanWidth80": 0.4445,
+            "meanWidth90": 0.5632
+          }
+        ],
+        "perPredictionBand": [
+          {
+            "band": 0,
+            "lower": 0.0,
+            "upper": 0.5,
+            "observations": 5087,
+            "coverage80": 0.8598,
+            "coverage90": 0.9418,
+            "meanWidth80": 0.3848,
+            "meanWidth90": 0.4992
+          },
+          {
+            "band": 1,
+            "lower": 0.5,
+            "upper": 1.0,
+            "observations": 5264,
+            "coverage80": 0.8072,
+            "coverage90": 0.91,
+            "meanWidth80": 0.3796,
+            "meanWidth90": 0.4969
+          }
+        ]
+      },
+      "stability": {
+        "pooled": {
+          "observations": 7331,
+          "coverage80": 0.84,
+          "coverage90": 0.9317,
+          "meanWidth80": 0.3811,
+          "meanWidth90": 0.4964
+        },
+        "perCrop": [
+          {
+            "crop": "corn",
+            "observations": 2948,
+            "coverage80": 0.8375,
+            "coverage90": 0.9271,
+            "meanWidth80": 0.3996,
+            "meanWidth90": 0.5179
+          },
+          {
+            "crop": "soybean",
+            "observations": 2674,
+            "coverage80": 0.8489,
+            "coverage90": 0.9331,
+            "meanWidth80": 0.3838,
+            "meanWidth90": 0.4953
+          },
+          {
+            "crop": "wheat",
+            "observations": 1709,
+            "coverage80": 0.8303,
+            "coverage90": 0.9374,
+            "meanWidth80": 0.3449,
+            "meanWidth90": 0.461
+          }
+        ],
+        "perRegion": [
+          {
+            "region": "Northeast",
+            "observations": 370,
+            "coverage80": 0.8189,
+            "coverage90": 0.8973,
+            "meanWidth80": 0.4351,
+            "meanWidth90": 0.5477
+          },
+          {
+            "region": "Midwest",
+            "observations": 4136,
+            "coverage80": 0.8378,
+            "coverage90": 0.9323,
+            "meanWidth80": 0.3773,
+            "meanWidth90": 0.49
+          },
+          {
+            "region": "South",
+            "observations": 2584,
+            "coverage80": 0.8495,
+            "coverage90": 0.9389,
+            "meanWidth80": 0.3754,
+            "meanWidth90": 0.4952
+          },
+          {
+            "region": "West",
+            "observations": 241,
+            "coverage80": 0.8091,
+            "coverage90": 0.8963,
+            "meanWidth80": 0.4232,
+            "meanWidth90": 0.5392
+          }
+        ],
+        "perPredictionBand": [
+          {
+            "band": 0,
+            "lower": 0.0,
+            "upper": 0.5,
+            "observations": 3707,
+            "coverage80": 0.8454,
+            "coverage90": 0.9404,
+            "meanWidth80": 0.3823,
+            "meanWidth90": 0.4954
+          },
+          {
+            "band": 1,
+            "lower": 0.5,
+            "upper": 1.0,
+            "observations": 3624,
+            "coverage80": 0.8344,
+            "coverage90": 0.9227,
+            "meanWidth80": 0.3798,
+            "meanWidth90": 0.4974
+          }
+        ]
+      },
+      "widthReduction90": {
+        "development": -0.0012,
+        "stability": -0.0014
+      },
+      "gate": {
+        "passed": false,
+        "checks": {
+          "minimumCalibrationExamples": true,
+          "coverage": false,
+          "developmentWidthReduction": false,
+          "stabilityWidthReduction": false,
+          "eightyPercentBandUnchanged": true
+        }
+      }
+    },
+    {
+      "cuts": [
+        0.5
+      ],
+      "blend": 0.75,
+      "minimumCalibrationExamples": 724,
+      "development": {
+        "pooled": {
+          "observations": 10351,
+          "coverage80": 0.8331,
+          "coverage90": 0.9254,
+          "meanWidth80": 0.3822,
+          "meanWidth90": 0.4983
+        },
+        "perCrop": [
+          {
+            "crop": "corn",
+            "observations": 4214,
+            "coverage80": 0.8448,
+            "coverage90": 0.9369,
+            "meanWidth80": 0.4013,
+            "meanWidth90": 0.5205
+          },
+          {
+            "crop": "soybean",
+            "observations": 3702,
+            "coverage80": 0.8441,
+            "coverage90": 0.9338,
+            "meanWidth80": 0.3858,
+            "meanWidth90": 0.4988
+          },
+          {
+            "crop": "wheat",
+            "observations": 2435,
+            "coverage80": 0.7959,
+            "coverage90": 0.8928,
+            "meanWidth80": 0.3434,
+            "meanWidth90": 0.4591
+          }
+        ],
+        "perRegion": [
+          {
+            "region": "Northeast",
+            "observations": 469,
+            "coverage80": 0.7825,
+            "coverage90": 0.8998,
+            "meanWidth80": 0.4327,
+            "meanWidth90": 0.5469
+          },
+          {
+            "region": "Midwest",
+            "observations": 5859,
+            "coverage80": 0.8317,
+            "coverage90": 0.9266,
+            "meanWidth80": 0.3788,
+            "meanWidth90": 0.4927
+          },
+          {
+            "region": "South",
+            "observations": 3679,
+            "coverage80": 0.8328,
+            "coverage90": 0.9225,
+            "meanWidth80": 0.3752,
+            "meanWidth90": 0.495
+          },
+          {
+            "region": "West",
+            "observations": 344,
+            "coverage80": 0.9273,
+            "coverage90": 0.9709,
+            "meanWidth80": 0.4445,
+            "meanWidth90": 0.5632
+          }
+        ],
+        "perPredictionBand": [
+          {
+            "band": 0,
+            "lower": 0.0,
+            "upper": 0.5,
+            "observations": 5087,
+            "coverage80": 0.8598,
+            "coverage90": 0.9412,
+            "meanWidth80": 0.3848,
+            "meanWidth90": 0.4985
+          },
+          {
+            "band": 1,
+            "lower": 0.5,
+            "upper": 1.0,
+            "observations": 5264,
+            "coverage80": 0.8072,
+            "coverage90": 0.9101,
+            "meanWidth80": 0.3796,
+            "meanWidth90": 0.4981
+          }
+        ]
+      },
+      "stability": {
+        "pooled": {
+          "observations": 7331,
+          "coverage80": 0.84,
+          "coverage90": 0.9318,
+          "meanWidth80": 0.3811,
+          "meanWidth90": 0.4967
+        },
+        "perCrop": [
+          {
+            "crop": "corn",
+            "observations": 2948,
+            "coverage80": 0.8375,
+            "coverage90": 0.9277,
+            "meanWidth80": 0.3996,
+            "meanWidth90": 0.5178
+          },
+          {
+            "crop": "soybean",
+            "observations": 2674,
+            "coverage80": 0.8489,
+            "coverage90": 0.9327,
+            "meanWidth80": 0.3838,
+            "meanWidth90": 0.4951
+          },
+          {
+            "crop": "wheat",
+            "observations": 1709,
+            "coverage80": 0.8303,
+            "coverage90": 0.9374,
+            "meanWidth80": 0.3449,
+            "meanWidth90": 0.4627
+          }
+        ],
+        "perRegion": [
+          {
+            "region": "Northeast",
+            "observations": 370,
+            "coverage80": 0.8189,
+            "coverage90": 0.8973,
+            "meanWidth80": 0.4351,
+            "meanWidth90": 0.5486
+          },
+          {
+            "region": "Midwest",
+            "observations": 4136,
+            "coverage80": 0.8378,
+            "coverage90": 0.9325,
+            "meanWidth80": 0.3773,
+            "meanWidth90": 0.4904
+          },
+          {
+            "region": "South",
+            "observations": 2584,
+            "coverage80": 0.8495,
+            "coverage90": 0.9389,
+            "meanWidth80": 0.3754,
+            "meanWidth90": 0.4953
+          },
+          {
+            "region": "West",
+            "observations": 241,
+            "coverage80": 0.8091,
+            "coverage90": 0.8963,
+            "meanWidth80": 0.4232,
+            "meanWidth90": 0.5394
+          }
+        ],
+        "perPredictionBand": [
+          {
+            "band": 0,
+            "lower": 0.0,
+            "upper": 0.5,
+            "observations": 3707,
+            "coverage80": 0.8454,
+            "coverage90": 0.9398,
+            "meanWidth80": 0.3823,
+            "meanWidth90": 0.4947
+          },
+          {
+            "band": 1,
+            "lower": 0.5,
+            "upper": 1.0,
+            "observations": 3624,
+            "coverage80": 0.8344,
+            "coverage90": 0.9236,
+            "meanWidth80": 0.3798,
+            "meanWidth90": 0.4987
+          }
+        ]
+      },
+      "widthReduction90": {
+        "development": -0.0018,
+        "stability": -0.002
+      },
+      "gate": {
+        "passed": false,
+        "checks": {
+          "minimumCalibrationExamples": true,
+          "coverage": false,
+          "developmentWidthReduction": false,
+          "stabilityWidthReduction": false,
+          "eightyPercentBandUnchanged": true
+        }
+      }
+    },
+    {
+      "cuts": [
+        0.5
+      ],
+      "blend": 1.0,
+      "minimumCalibrationExamples": 724,
+      "development": {
+        "pooled": {
+          "observations": 10351,
+          "coverage80": 0.8331,
+          "coverage90": 0.926,
+          "meanWidth80": 0.3822,
+          "meanWidth90": 0.4985
+        },
+        "perCrop": [
+          {
+            "crop": "corn",
+            "observations": 4214,
+            "coverage80": 0.8448,
+            "coverage90": 0.9364,
+            "meanWidth80": 0.4013,
+            "meanWidth90": 0.5204
+          },
+          {
+            "crop": "soybean",
+            "observations": 3702,
+            "coverage80": 0.8441,
+            "coverage90": 0.9338,
+            "meanWidth80": 0.3858,
+            "meanWidth90": 0.4986
+          },
+          {
+            "crop": "wheat",
+            "observations": 2435,
+            "coverage80": 0.7959,
+            "coverage90": 0.8961,
+            "meanWidth80": 0.3434,
+            "meanWidth90": 0.4607
+          }
+        ],
+        "perRegion": [
+          {
+            "region": "Northeast",
+            "observations": 469,
+            "coverage80": 0.7825,
+            "coverage90": 0.8998,
+            "meanWidth80": 0.4327,
+            "meanWidth90": 0.5478
+          },
+          {
+            "region": "Midwest",
+            "observations": 5859,
+            "coverage80": 0.8317,
+            "coverage90": 0.9275,
+            "meanWidth80": 0.3788,
+            "meanWidth90": 0.493
+          },
+          {
+            "region": "South",
+            "observations": 3679,
+            "coverage80": 0.8328,
+            "coverage90": 0.9231,
+            "meanWidth80": 0.3752,
+            "meanWidth90": 0.4951
+          },
+          {
+            "region": "West",
+            "observations": 344,
+            "coverage80": 0.9273,
+            "coverage90": 0.968,
+            "meanWidth80": 0.4445,
+            "meanWidth90": 0.5631
+          }
+        ],
+        "perPredictionBand": [
+          {
+            "band": 0,
+            "lower": 0.0,
+            "upper": 0.5,
+            "observations": 5087,
+            "coverage80": 0.8598,
+            "coverage90": 0.9408,
+            "meanWidth80": 0.3848,
+            "meanWidth90": 0.4978
+          },
+          {
+            "band": 1,
+            "lower": 0.5,
+            "upper": 1.0,
+            "observations": 5264,
+            "coverage80": 0.8072,
+            "coverage90": 0.9117,
+            "meanWidth80": 0.3796,
+            "meanWidth90": 0.4992
+          }
+        ]
+      },
+      "stability": {
+        "pooled": {
+          "observations": 7331,
+          "coverage80": 0.84,
+          "coverage90": 0.9319,
+          "meanWidth80": 0.3811,
+          "meanWidth90": 0.4969
+        },
+        "perCrop": [
+          {
+            "crop": "corn",
+            "observations": 2948,
+            "coverage80": 0.8375,
+            "coverage90": 0.9277,
+            "meanWidth80": 0.3996,
+            "meanWidth90": 0.5177
+          },
+          {
+            "crop": "soybean",
+            "observations": 2674,
+            "coverage80": 0.8489,
+            "coverage90": 0.9331,
+            "meanWidth80": 0.3838,
+            "meanWidth90": 0.495
+          },
+          {
+            "crop": "wheat",
+            "observations": 1709,
+            "coverage80": 0.8303,
+            "coverage90": 0.9374,
+            "meanWidth80": 0.3449,
+            "meanWidth90": 0.4642
+          }
+        ],
+        "perRegion": [
+          {
+            "region": "Northeast",
+            "observations": 370,
+            "coverage80": 0.8189,
+            "coverage90": 0.8973,
+            "meanWidth80": 0.4351,
+            "meanWidth90": 0.5495
+          },
+          {
+            "region": "Midwest",
+            "observations": 4136,
+            "coverage80": 0.8378,
+            "coverage90": 0.9328,
+            "meanWidth80": 0.3773,
+            "meanWidth90": 0.4907
+          },
+          {
+            "region": "South",
+            "observations": 2584,
+            "coverage80": 0.8495,
+            "coverage90": 0.9389,
+            "meanWidth80": 0.3754,
+            "meanWidth90": 0.4954
+          },
+          {
+            "region": "West",
+            "observations": 241,
+            "coverage80": 0.8091,
+            "coverage90": 0.8963,
+            "meanWidth80": 0.4232,
+            "meanWidth90": 0.5396
+          }
+        ],
+        "perPredictionBand": [
+          {
+            "band": 0,
+            "lower": 0.0,
+            "upper": 0.5,
+            "observations": 3707,
+            "coverage80": 0.8454,
+            "coverage90": 0.939,
+            "meanWidth80": 0.3823,
+            "meanWidth90": 0.494
+          },
+          {
+            "band": 1,
+            "lower": 0.5,
+            "upper": 1.0,
+            "observations": 3624,
+            "coverage80": 0.8344,
+            "coverage90": 0.9247,
+            "meanWidth80": 0.3798,
+            "meanWidth90": 0.4999
+          }
+        ]
+      },
+      "widthReduction90": {
+        "development": -0.0022,
+        "stability": -0.0024
+      },
+      "gate": {
+        "passed": false,
+        "checks": {
+          "minimumCalibrationExamples": true,
+          "coverage": false,
+          "developmentWidthReduction": false,
+          "stabilityWidthReduction": false,
+          "eightyPercentBandUnchanged": true
+        }
+      }
+    },
+    {
+      "cuts": [
+        0.33,
+        0.67
+      ],
+      "blend": 0.25,
+      "minimumCalibrationExamples": 445,
+      "development": {
+        "pooled": {
+          "observations": 10351,
+          "coverage80": 0.8331,
+          "coverage90": 0.9257,
+          "meanWidth80": 0.3822,
+          "meanWidth90": 0.4954
+        },
+        "perCrop": [
+          {
+            "crop": "corn",
+            "observations": 4214,
+            "coverage80": 0.8448,
+            "coverage90": 0.9369,
+            "meanWidth80": 0.4013,
+            "meanWidth90": 0.5173
+          },
+          {
+            "crop": "soybean",
+            "observations": 3702,
+            "coverage80": 0.8441,
+            "coverage90": 0.9338,
+            "meanWidth80": 0.3858,
+            "meanWidth90": 0.4966
+          },
+          {
+            "crop": "wheat",
+            "observations": 2435,
+            "coverage80": 0.7959,
+            "coverage90": 0.894,
+            "meanWidth80": 0.3434,
+            "meanWidth90": 0.4554
+          }
+        ],
+        "perRegion": [
+          {
+            "region": "Northeast",
+            "observations": 469,
+            "coverage80": 0.7825,
+            "coverage90": 0.9019,
+            "meanWidth80": 0.4327,
+            "meanWidth90": 0.5445
+          },
+          {
+            "region": "Midwest",
+            "observations": 5859,
+            "coverage80": 0.8317,
+            "coverage90": 0.9259,
+            "meanWidth80": 0.3788,
+            "meanWidth90": 0.4894
+          },
+          {
+            "region": "South",
+            "observations": 3679,
+            "coverage80": 0.8328,
+            "coverage90": 0.9239,
+            "meanWidth80": 0.3752,
+            "meanWidth90": 0.4927
+          },
+          {
+            "region": "West",
+            "observations": 344,
+            "coverage80": 0.9273,
+            "coverage90": 0.9738,
+            "meanWidth80": 0.4445,
+            "meanWidth90": 0.558
+          }
+        ],
+        "perPredictionBand": [
+          {
+            "band": 0,
+            "lower": 0.0,
+            "upper": 0.33,
+            "observations": 2911,
+            "coverage80": 0.921,
+            "coverage90": 0.9622,
+            "meanWidth80": 0.3685,
+            "meanWidth90": 0.4505
+          },
+          {
+            "band": 1,
+            "lower": 0.33,
+            "upper": 0.67,
+            "observations": 4289,
+            "coverage80": 0.7533,
+            "coverage90": 0.9067,
+            "meanWidth80": 0.4037,
+            "meanWidth90": 0.5571
+          },
+          {
+            "band": 2,
+            "lower": 0.67,
+            "upper": 1.0,
+            "observations": 3151,
+            "coverage80": 0.8604,
+            "coverage90": 0.9178,
+            "meanWidth80": 0.3653,
+            "meanWidth90": 0.4528
+          }
+        ]
+      },
+      "stability": {
+        "pooled": {
+          "observations": 7331,
+          "coverage80": 0.84,
+          "coverage90": 0.933,
+          "meanWidth80": 0.3811,
+          "meanWidth90": 0.4936
+        },
+        "perCrop": [
+          {
+            "crop": "corn",
+            "observations": 2948,
+            "coverage80": 0.8375,
+            "coverage90": 0.9281,
+            "meanWidth80": 0.3996,
+            "meanWidth90": 0.5138
+          },
+          {
+            "crop": "soybean",
+            "observations": 2674,
+            "coverage80": 0.8489,
+            "coverage90": 0.9338,
+            "meanWidth80": 0.3838,
+            "meanWidth90": 0.493
+          },
+          {
+            "crop": "wheat",
+            "observations": 1709,
+            "coverage80": 0.8303,
+            "coverage90": 0.9403,
+            "meanWidth80": 0.3449,
+            "meanWidth90": 0.4595
+          }
+        ],
+        "perRegion": [
+          {
+            "region": "Northeast",
+            "observations": 370,
+            "coverage80": 0.8189,
+            "coverage90": 0.9054,
+            "meanWidth80": 0.4351,
+            "meanWidth90": 0.5459
+          },
+          {
+            "region": "Midwest",
+            "observations": 4136,
+            "coverage80": 0.8378,
+            "coverage90": 0.9338,
+            "meanWidth80": 0.3773,
+            "meanWidth90": 0.487
+          },
+          {
+            "region": "South",
+            "observations": 2584,
+            "coverage80": 0.8495,
+            "coverage90": 0.9392,
+            "meanWidth80": 0.3754,
+            "meanWidth90": 0.493
+          },
+          {
+            "region": "West",
+            "observations": 241,
+            "coverage80": 0.8091,
+            "coverage90": 0.8963,
+            "meanWidth80": 0.4232,
+            "meanWidth90": 0.5325
+          }
+        ],
+        "perPredictionBand": [
+          {
+            "band": 0,
+            "lower": 0.0,
+            "upper": 0.33,
+            "observations": 2187,
+            "coverage80": 0.9063,
+            "coverage90": 0.9698,
+            "meanWidth80": 0.3666,
+            "meanWidth90": 0.4479
+          },
+          {
+            "band": 1,
+            "lower": 0.33,
+            "upper": 0.67,
+            "observations": 3011,
+            "coverage80": 0.7642,
+            "coverage90": 0.904,
+            "meanWidth80": 0.4016,
+            "meanWidth90": 0.5545
+          },
+          {
+            "band": 2,
+            "lower": 0.67,
+            "upper": 1.0,
+            "observations": 2133,
+            "coverage80": 0.879,
+            "coverage90": 0.9362,
+            "meanWidth80": 0.367,
+            "meanWidth90": 0.4543
+          }
+        ]
+      },
+      "widthReduction90": {
+        "development": 0.004,
+        "stability": 0.0042
+      },
+      "gate": {
+        "passed": false,
+        "checks": {
+          "minimumCalibrationExamples": true,
+          "coverage": false,
+          "developmentWidthReduction": false,
+          "stabilityWidthReduction": false,
+          "eightyPercentBandUnchanged": true
+        }
+      }
+    },
+    {
+      "cuts": [
+        0.33,
+        0.67
+      ],
+      "blend": 0.5,
+      "minimumCalibrationExamples": 445,
+      "development": {
+        "pooled": {
+          "observations": 10351,
+          "coverage80": 0.8331,
+          "coverage90": 0.926,
+          "meanWidth80": 0.3822,
+          "meanWidth90": 0.4931
+        },
+        "perCrop": [
+          {
+            "crop": "corn",
+            "observations": 4214,
+            "coverage80": 0.8448,
+            "coverage90": 0.9362,
+            "meanWidth80": 0.4013,
+            "meanWidth90": 0.5135
+          },
+          {
+            "crop": "soybean",
+            "observations": 3702,
+            "coverage80": 0.8441,
+            "coverage90": 0.9352,
+            "meanWidth80": 0.3858,
+            "meanWidth90": 0.4938
+          },
+          {
+            "crop": "wheat",
+            "observations": 2435,
+            "coverage80": 0.7959,
+            "coverage90": 0.8945,
+            "meanWidth80": 0.3434,
+            "meanWidth90": 0.4567
+          }
+        ],
+        "perRegion": [
+          {
+            "region": "Northeast",
+            "observations": 469,
+            "coverage80": 0.7825,
+            "coverage90": 0.9062,
+            "meanWidth80": 0.4327,
+            "meanWidth90": 0.5445
+          },
+          {
+            "region": "Midwest",
+            "observations": 5859,
+            "coverage80": 0.8317,
+            "coverage90": 0.9259,
+            "meanWidth80": 0.3788,
+            "meanWidth90": 0.487
+          },
+          {
+            "region": "South",
+            "observations": 3679,
+            "coverage80": 0.8328,
+            "coverage90": 0.9242,
+            "meanWidth80": 0.3752,
+            "meanWidth90": 0.4906
+          },
+          {
+            "region": "West",
+            "observations": 344,
+            "coverage80": 0.9273,
+            "coverage90": 0.9738,
+            "meanWidth80": 0.4445,
+            "meanWidth90": 0.5524
+          }
+        ],
+        "perPredictionBand": [
+          {
+            "band": 0,
+            "lower": 0.0,
+            "upper": 0.33,
+            "observations": 2911,
+            "coverage80": 0.921,
+            "coverage90": 0.9564,
+            "meanWidth80": 0.3685,
+            "meanWidth90": 0.4346
+          },
+          {
+            "band": 1,
+            "lower": 0.33,
+            "upper": 0.67,
+            "observations": 4289,
+            "coverage80": 0.7533,
+            "coverage90": 0.917,
+            "meanWidth80": 0.4037,
+            "meanWidth90": 0.5705
+          },
+          {
+            "band": 2,
+            "lower": 0.67,
+            "upper": 1.0,
+            "observations": 3151,
+            "coverage80": 0.8604,
+            "coverage90": 0.9102,
+            "meanWidth80": 0.3653,
+            "meanWidth90": 0.4417
+          }
+        ]
+      },
+      "stability": {
+        "pooled": {
+          "observations": 7331,
+          "coverage80": 0.84,
+          "coverage90": 0.9314,
+          "meanWidth80": 0.3811,
+          "meanWidth90": 0.4912
+        },
+        "perCrop": [
+          {
+            "crop": "corn",
+            "observations": 2948,
+            "coverage80": 0.8375,
+            "coverage90": 0.924,
+            "meanWidth80": 0.3996,
+            "meanWidth90": 0.5095
+          },
+          {
+            "crop": "soybean",
+            "observations": 2674,
+            "coverage80": 0.8489,
+            "coverage90": 0.9349,
+            "meanWidth80": 0.3838,
+            "meanWidth90": 0.4901
+          },
+          {
+            "crop": "wheat",
+            "observations": 1709,
+            "coverage80": 0.8303,
+            "coverage90": 0.9386,
+            "meanWidth80": 0.3449,
+            "meanWidth90": 0.4612
+          }
+        ],
+        "perRegion": [
+          {
+            "region": "Northeast",
+            "observations": 370,
+            "coverage80": 0.8189,
+            "coverage90": 0.9027,
+            "meanWidth80": 0.4351,
+            "meanWidth90": 0.5457
+          },
+          {
+            "region": "Midwest",
+            "observations": 4136,
+            "coverage80": 0.8378,
+            "coverage90": 0.9323,
+            "meanWidth80": 0.3773,
+            "meanWidth90": 0.4845
+          },
+          {
+            "region": "South",
+            "observations": 2584,
+            "coverage80": 0.8495,
+            "coverage90": 0.9377,
+            "meanWidth80": 0.3754,
+            "meanWidth90": 0.4907
+          },
+          {
+            "region": "West",
+            "observations": 241,
+            "coverage80": 0.8091,
+            "coverage90": 0.8921,
+            "meanWidth80": 0.4232,
+            "meanWidth90": 0.5259
+          }
+        ],
+        "perPredictionBand": [
+          {
+            "band": 0,
+            "lower": 0.0,
+            "upper": 0.33,
+            "observations": 2187,
+            "coverage80": 0.9063,
+            "coverage90": 0.9598,
+            "meanWidth80": 0.3666,
+            "meanWidth90": 0.432
+          },
+          {
+            "band": 1,
+            "lower": 0.33,
+            "upper": 0.67,
+            "observations": 3011,
+            "coverage80": 0.7642,
+            "coverage90": 0.9113,
+            "meanWidth80": 0.4016,
+            "meanWidth90": 0.5681
+          },
+          {
+            "band": 2,
+            "lower": 0.67,
+            "upper": 1.0,
+            "observations": 2133,
+            "coverage80": 0.879,
+            "coverage90": 0.9306,
+            "meanWidth80": 0.367,
+            "meanWidth90": 0.4432
+          }
+        ]
+      },
+      "widthReduction90": {
+        "development": 0.0086,
+        "stability": 0.0091
+      },
+      "gate": {
+        "passed": false,
+        "checks": {
+          "minimumCalibrationExamples": true,
+          "coverage": false,
+          "developmentWidthReduction": false,
+          "stabilityWidthReduction": false,
+          "eightyPercentBandUnchanged": true
+        }
+      }
+    },
+    {
+      "cuts": [
+        0.33,
+        0.67
+      ],
+      "blend": 0.75,
+      "minimumCalibrationExamples": 445,
+      "development": {
+        "pooled": {
+          "observations": 10351,
+          "coverage80": 0.8331,
+          "coverage90": 0.9253,
+          "meanWidth80": 0.3822,
+          "meanWidth90": 0.4905
+        },
+        "perCrop": [
+          {
+            "crop": "corn",
+            "observations": 4214,
+            "coverage80": 0.8448,
+            "coverage90": 0.9359,
+            "meanWidth80": 0.4013,
+            "meanWidth90": 0.5094
+          },
+          {
+            "crop": "soybean",
+            "observations": 3702,
+            "coverage80": 0.8441,
+            "coverage90": 0.9338,
+            "meanWidth80": 0.3858,
+            "meanWidth90": 0.4906
+          },
+          {
+            "crop": "wheat",
+            "observations": 2435,
+            "coverage80": 0.7959,
+            "coverage90": 0.894,
+            "meanWidth80": 0.3434,
+            "meanWidth90": 0.4578
+          }
+        ],
+        "perRegion": [
+          {
+            "region": "Northeast",
+            "observations": 469,
+            "coverage80": 0.7825,
+            "coverage90": 0.9019,
+            "meanWidth80": 0.4327,
+            "meanWidth90": 0.5442
+          },
+          {
+            "region": "Midwest",
+            "observations": 5859,
+            "coverage80": 0.8317,
+            "coverage90": 0.9249,
+            "meanWidth80": 0.3788,
+            "meanWidth90": 0.4844
+          },
+          {
+            "region": "South",
+            "observations": 3679,
+            "coverage80": 0.8328,
+            "coverage90": 0.9244,
+            "meanWidth80": 0.3752,
+            "meanWidth90": 0.4882
+          },
+          {
+            "region": "West",
+            "observations": 344,
+            "coverage80": 0.9273,
+            "coverage90": 0.9738,
+            "meanWidth80": 0.4445,
+            "meanWidth90": 0.546
+          }
+        ],
+        "perPredictionBand": [
+          {
+            "band": 0,
+            "lower": 0.0,
+            "upper": 0.33,
+            "observations": 2911,
+            "coverage80": 0.921,
+            "coverage90": 0.9502,
+            "meanWidth80": 0.3685,
+            "meanWidth90": 0.4182
+          },
+          {
+            "band": 1,
+            "lower": 0.33,
+            "upper": 0.67,
+            "observations": 4289,
+            "coverage80": 0.7533,
+            "coverage90": 0.9238,
+            "meanWidth80": 0.4037,
+            "meanWidth90": 0.5838
+          },
+          {
+            "band": 2,
+            "lower": 0.67,
+            "upper": 1.0,
+            "observations": 3151,
+            "coverage80": 0.8604,
+            "coverage90": 0.9045,
+            "meanWidth80": 0.3653,
+            "meanWidth90": 0.4303
+          }
+        ]
+      },
+      "stability": {
+        "pooled": {
+          "observations": 7331,
+          "coverage80": 0.84,
+          "coverage90": 0.9292,
+          "meanWidth80": 0.3811,
+          "meanWidth90": 0.4885
+        },
+        "perCrop": [
+          {
+            "crop": "corn",
+            "observations": 2948,
+            "coverage80": 0.8375,
+            "coverage90": 0.9206,
+            "meanWidth80": 0.3996,
+            "meanWidth90": 0.5048
+          },
+          {
+            "crop": "soybean",
+            "observations": 2674,
+            "coverage80": 0.8489,
+            "coverage90": 0.9308,
+            "meanWidth80": 0.3838,
+            "meanWidth90": 0.487
+          },
+          {
+            "crop": "wheat",
+            "observations": 1709,
+            "coverage80": 0.8303,
+            "coverage90": 0.9415,
+            "meanWidth80": 0.3449,
+            "meanWidth90": 0.4627
+          }
+        ],
+        "perRegion": [
+          {
+            "region": "Northeast",
+            "observations": 370,
+            "coverage80": 0.8189,
+            "coverage90": 0.9,
+            "meanWidth80": 0.4351,
+            "meanWidth90": 0.5451
+          },
+          {
+            "region": "Midwest",
+            "observations": 4136,
+            "coverage80": 0.8378,
+            "coverage90": 0.9292,
+            "meanWidth80": 0.3773,
+            "meanWidth90": 0.4818
+          },
+          {
+            "region": "South",
+            "observations": 2584,
+            "coverage80": 0.8495,
+            "coverage90": 0.9361,
+            "meanWidth80": 0.3754,
+            "meanWidth90": 0.4883
+          },
+          {
+            "region": "West",
+            "observations": 241,
+            "coverage80": 0.8091,
+            "coverage90": 0.9004,
+            "meanWidth80": 0.4232,
+            "meanWidth90": 0.5186
+          }
+        ],
+        "perPredictionBand": [
+          {
+            "band": 0,
+            "lower": 0.0,
+            "upper": 0.33,
+            "observations": 2187,
+            "coverage80": 0.9063,
+            "coverage90": 0.9488,
+            "meanWidth80": 0.3666,
+            "meanWidth90": 0.4155
+          },
+          {
+            "band": 1,
+            "lower": 0.33,
+            "upper": 0.67,
+            "observations": 3011,
+            "coverage80": 0.7642,
+            "coverage90": 0.9186,
+            "meanWidth80": 0.4016,
+            "meanWidth90": 0.5817
+          },
+          {
+            "band": 2,
+            "lower": 0.67,
+            "upper": 1.0,
+            "observations": 2133,
+            "coverage80": 0.879,
+            "coverage90": 0.9241,
+            "meanWidth80": 0.367,
+            "meanWidth90": 0.4317
+          }
+        ]
+      },
+      "widthReduction90": {
+        "development": 0.0139,
+        "stability": 0.0145
+      },
+      "gate": {
+        "passed": true,
+        "checks": {
+          "minimumCalibrationExamples": true,
+          "coverage": true,
+          "developmentWidthReduction": true,
+          "stabilityWidthReduction": true,
+          "eightyPercentBandUnchanged": true
+        }
+      }
+    },
+    {
+      "cuts": [
+        0.33,
+        0.67
+      ],
+      "blend": 1.0,
+      "minimumCalibrationExamples": 445,
+      "development": {
+        "pooled": {
+          "observations": 10351,
+          "coverage80": 0.8331,
+          "coverage90": 0.9242,
+          "meanWidth80": 0.3822,
+          "meanWidth90": 0.4877
+        },
+        "perCrop": [
+          {
+            "crop": "corn",
+            "observations": 4214,
+            "coverage80": 0.8448,
+            "coverage90": 0.9331,
+            "meanWidth80": 0.4013,
+            "meanWidth90": 0.505
+          },
+          {
+            "crop": "soybean",
+            "observations": 3702,
+            "coverage80": 0.8441,
+            "coverage90": 0.9333,
+            "meanWidth80": 0.3858,
+            "meanWidth90": 0.4871
+          },
+          {
+            "crop": "wheat",
+            "observations": 2435,
+            "coverage80": 0.7959,
+            "coverage90": 0.8949,
+            "meanWidth80": 0.3434,
+            "meanWidth90": 0.4586
+          }
+        ],
+        "perRegion": [
+          {
+            "region": "Northeast",
+            "observations": 469,
+            "coverage80": 0.7825,
+            "coverage90": 0.8977,
+            "meanWidth80": 0.4327,
+            "meanWidth90": 0.5439
+          },
+          {
+            "region": "Midwest",
+            "observations": 5859,
+            "coverage80": 0.8317,
+            "coverage90": 0.9234,
+            "meanWidth80": 0.3788,
+            "meanWidth90": 0.4815
+          },
+          {
+            "region": "South",
+            "observations": 3679,
+            "coverage80": 0.8328,
+            "coverage90": 0.9239,
+            "meanWidth80": 0.3752,
+            "meanWidth90": 0.4857
+          },
+          {
+            "region": "West",
+            "observations": 344,
+            "coverage80": 0.9273,
+            "coverage90": 0.9767,
+            "meanWidth80": 0.4445,
+            "meanWidth90": 0.5388
+          }
+        ],
+        "perPredictionBand": [
+          {
+            "band": 0,
+            "lower": 0.0,
+            "upper": 0.33,
+            "observations": 2911,
+            "coverage80": 0.921,
+            "coverage90": 0.9416,
+            "meanWidth80": 0.3685,
+            "meanWidth90": 0.4013
+          },
+          {
+            "band": 1,
+            "lower": 0.33,
+            "upper": 0.67,
+            "observations": 4289,
+            "coverage80": 0.7533,
+            "coverage90": 0.9298,
+            "meanWidth80": 0.4037,
+            "meanWidth90": 0.5971
+          },
+          {
+            "band": 2,
+            "lower": 0.67,
+            "upper": 1.0,
+            "observations": 3151,
+            "coverage80": 0.8604,
+            "coverage90": 0.9003,
+            "meanWidth80": 0.3653,
+            "meanWidth90": 0.4186
+          }
+        ]
+      },
+      "stability": {
+        "pooled": {
+          "observations": 7331,
+          "coverage80": 0.84,
+          "coverage90": 0.927,
+          "meanWidth80": 0.3811,
+          "meanWidth90": 0.4856
+        },
+        "perCrop": [
+          {
+            "crop": "corn",
+            "observations": 2948,
+            "coverage80": 0.8375,
+            "coverage90": 0.9179,
+            "meanWidth80": 0.3996,
+            "meanWidth90": 0.4999
+          },
+          {
+            "crop": "soybean",
+            "observations": 2674,
+            "coverage80": 0.8489,
+            "coverage90": 0.9312,
+            "meanWidth80": 0.3838,
+            "meanWidth90": 0.4836
+          },
+          {
+            "crop": "wheat",
+            "observations": 1709,
+            "coverage80": 0.8303,
+            "coverage90": 0.9362,
+            "meanWidth80": 0.3449,
+            "meanWidth90": 0.464
+          }
+        ],
+        "perRegion": [
+          {
+            "region": "Northeast",
+            "observations": 370,
+            "coverage80": 0.8189,
+            "coverage90": 0.9027,
+            "meanWidth80": 0.4351,
+            "meanWidth90": 0.5443
+          },
+          {
+            "region": "Midwest",
+            "observations": 4136,
+            "coverage80": 0.8378,
+            "coverage90": 0.9292,
+            "meanWidth80": 0.3773,
+            "meanWidth90": 0.4788
+          },
+          {
+            "region": "South",
+            "observations": 2584,
+            "coverage80": 0.8495,
+            "coverage90": 0.9307,
+            "meanWidth80": 0.3754,
+            "meanWidth90": 0.4856
+          },
+          {
+            "region": "West",
+            "observations": 241,
+            "coverage80": 0.8091,
+            "coverage90": 0.888,
+            "meanWidth80": 0.4232,
+            "meanWidth90": 0.5106
+          }
+        ],
+        "perPredictionBand": [
+          {
+            "band": 0,
+            "lower": 0.0,
+            "upper": 0.33,
+            "observations": 2187,
+            "coverage80": 0.9063,
+            "coverage90": 0.9355,
+            "meanWidth80": 0.3666,
+            "meanWidth90": 0.3985
+          },
+          {
+            "band": 1,
+            "lower": 0.33,
+            "upper": 0.67,
+            "observations": 3011,
+            "coverage80": 0.7642,
+            "coverage90": 0.9269,
+            "meanWidth80": 0.4016,
+            "meanWidth90": 0.5953
+          },
+          {
+            "band": 2,
+            "lower": 0.67,
+            "upper": 1.0,
+            "observations": 2133,
+            "coverage80": 0.879,
+            "coverage90": 0.9184,
+            "meanWidth80": 0.367,
+            "meanWidth90": 0.42
+          }
+        ]
+      },
+      "widthReduction90": {
+        "development": 0.0195,
+        "stability": 0.0204
+      },
+      "gate": {
+        "passed": false,
+        "checks": {
+          "minimumCalibrationExamples": true,
+          "coverage": false,
+          "developmentWidthReduction": true,
+          "stabilityWidthReduction": true,
+          "eightyPercentBandUnchanged": true
+        }
+      }
+    },
+    {
+      "cuts": [
+        0.2,
+        0.4,
+        0.6,
+        0.8
+      ],
+      "blend": 0.25,
+      "minimumCalibrationExamples": 250,
+      "development": {
+        "pooled": {
+          "observations": 10351,
+          "coverage80": 0.8331,
+          "coverage90": 0.9271,
+          "meanWidth80": 0.3822,
+          "meanWidth90": 0.4953
+        },
+        "perCrop": [
+          {
+            "crop": "corn",
+            "observations": 4214,
+            "coverage80": 0.8448,
+            "coverage90": 0.9381,
+            "meanWidth80": 0.4013,
+            "meanWidth90": 0.5164
+          },
+          {
+            "crop": "soybean",
+            "observations": 3702,
+            "coverage80": 0.8441,
+            "coverage90": 0.9354,
+            "meanWidth80": 0.3858,
+            "meanWidth90": 0.4968
+          },
+          {
+            "crop": "wheat",
+            "observations": 2435,
+            "coverage80": 0.7959,
+            "coverage90": 0.8953,
+            "meanWidth80": 0.3434,
+            "meanWidth90": 0.4564
+          }
+        ],
+        "perRegion": [
+          {
+            "region": "Northeast",
+            "observations": 469,
+            "coverage80": 0.7825,
+            "coverage90": 0.9062,
+            "meanWidth80": 0.4327,
+            "meanWidth90": 0.5484
+          },
+          {
+            "region": "Midwest",
+            "observations": 5859,
+            "coverage80": 0.8317,
+            "coverage90": 0.9271,
+            "meanWidth80": 0.3788,
+            "meanWidth90": 0.4898
+          },
+          {
+            "region": "South",
+            "observations": 3679,
+            "coverage80": 0.8328,
+            "coverage90": 0.9253,
+            "meanWidth80": 0.3752,
+            "meanWidth90": 0.4917
+          },
+          {
+            "region": "West",
+            "observations": 344,
+            "coverage80": 0.9273,
+            "coverage90": 0.9738,
+            "meanWidth80": 0.4445,
+            "meanWidth90": 0.5536
+          }
+        ],
+        "perPredictionBand": [
+          {
+            "band": 0,
+            "lower": 0.0,
+            "upper": 0.2,
+            "observations": 1438,
+            "coverage80": 0.9624,
+            "coverage90": 0.9771,
+            "meanWidth80": 0.3288,
+            "meanWidth90": 0.3796
+          },
+          {
+            "band": 1,
+            "lower": 0.2,
+            "upper": 0.4,
+            "observations": 2358,
+            "coverage80": 0.8418,
+            "coverage90": 0.9406,
+            "meanWidth80": 0.4071,
+            "meanWidth90": 0.5348
+          },
+          {
+            "band": 2,
+            "lower": 0.4,
+            "upper": 0.6,
+            "observations": 2543,
+            "coverage80": 0.7468,
+            "coverage90": 0.9025,
+            "meanWidth80": 0.4036,
+            "meanWidth90": 0.5588
+          },
+          {
+            "band": 3,
+            "lower": 0.6,
+            "upper": 0.8,
+            "observations": 2548,
+            "coverage80": 0.792,
+            "coverage90": 0.9078,
+            "meanWidth80": 0.3965,
+            "meanWidth90": 0.5245
+          },
+          {
+            "band": 4,
+            "lower": 0.8,
+            "upper": 1.0,
+            "observations": 1464,
+            "coverage80": 0.9133,
+            "coverage90": 0.9324,
+            "meanWidth80": 0.3322,
+            "meanWidth90": 0.384
+          }
+        ]
+      },
+      "stability": {
+        "pooled": {
+          "observations": 7331,
+          "coverage80": 0.84,
+          "coverage90": 0.9318,
+          "meanWidth80": 0.3811,
+          "meanWidth90": 0.4935
+        },
+        "perCrop": [
+          {
+            "crop": "corn",
+            "observations": 2948,
+            "coverage80": 0.8375,
+            "coverage90": 0.9254,
+            "meanWidth80": 0.3996,
+            "meanWidth90": 0.5129
+          },
+          {
+            "crop": "soybean",
+            "observations": 2674,
+            "coverage80": 0.8489,
+            "coverage90": 0.9319,
+            "meanWidth80": 0.3838,
+            "meanWidth90": 0.4929
+          },
+          {
+            "crop": "wheat",
+            "observations": 1709,
+            "coverage80": 0.8303,
+            "coverage90": 0.9427,
+            "meanWidth80": 0.3449,
+            "meanWidth90": 0.4611
+          }
+        ],
+        "perRegion": [
+          {
+            "region": "Northeast",
+            "observations": 370,
+            "coverage80": 0.8189,
+            "coverage90": 0.9,
+            "meanWidth80": 0.4351,
+            "meanWidth90": 0.5485
+          },
+          {
+            "region": "Midwest",
+            "observations": 4136,
+            "coverage80": 0.8378,
+            "coverage90": 0.9338,
+            "meanWidth80": 0.3773,
+            "meanWidth90": 0.4874
+          },
+          {
+            "region": "South",
+            "observations": 2584,
+            "coverage80": 0.8495,
+            "coverage90": 0.9365,
+            "meanWidth80": 0.3754,
+            "meanWidth90": 0.4924
+          },
+          {
+            "region": "West",
+            "observations": 241,
+            "coverage80": 0.8091,
+            "coverage90": 0.8963,
+            "meanWidth80": 0.4232,
+            "meanWidth90": 0.5265
+          }
+        ],
+        "perPredictionBand": [
+          {
+            "band": 0,
+            "lower": 0.0,
+            "upper": 0.2,
+            "observations": 1106,
+            "coverage80": 0.9611,
+            "coverage90": 0.9783,
+            "meanWidth80": 0.3296,
+            "meanWidth90": 0.38
+          },
+          {
+            "band": 1,
+            "lower": 0.2,
+            "upper": 0.4,
+            "observations": 1699,
+            "coverage80": 0.8181,
+            "coverage90": 0.9441,
+            "meanWidth80": 0.4053,
+            "meanWidth90": 0.5323
+          },
+          {
+            "band": 2,
+            "lower": 0.4,
+            "upper": 0.6,
+            "observations": 1812,
+            "coverage80": 0.7616,
+            "coverage90": 0.9012,
+            "meanWidth80": 0.4006,
+            "meanWidth90": 0.5558
+          },
+          {
+            "band": 3,
+            "lower": 0.6,
+            "upper": 0.8,
+            "observations": 1734,
+            "coverage80": 0.8276,
+            "coverage90": 0.9256,
+            "meanWidth80": 0.3959,
+            "meanWidth90": 0.5232
+          },
+          {
+            "band": 4,
+            "lower": 0.8,
+            "upper": 1.0,
+            "observations": 980,
+            "coverage80": 0.9082,
+            "coverage90": 0.9255,
+            "meanWidth80": 0.3351,
+            "meanWidth90": 0.3866
+          }
+        ]
+      },
+      "widthReduction90": {
+        "development": 0.0042,
+        "stability": 0.0044
+      },
+      "gate": {
+        "passed": false,
+        "checks": {
+          "minimumCalibrationExamples": true,
+          "coverage": false,
+          "developmentWidthReduction": false,
+          "stabilityWidthReduction": false,
+          "eightyPercentBandUnchanged": true
+        }
+      }
+    },
+    {
+      "cuts": [
+        0.2,
+        0.4,
+        0.6,
+        0.8
+      ],
+      "blend": 0.5,
+      "minimumCalibrationExamples": 250,
+      "development": {
+        "pooled": {
+          "observations": 10351,
+          "coverage80": 0.8331,
+          "coverage90": 0.9283,
+          "meanWidth80": 0.3822,
+          "meanWidth90": 0.4931
+        },
+        "perCrop": [
+          {
+            "crop": "corn",
+            "observations": 4214,
+            "coverage80": 0.8448,
+            "coverage90": 0.9374,
+            "meanWidth80": 0.4013,
+            "meanWidth90": 0.5118
+          },
+          {
+            "crop": "soybean",
+            "observations": 3702,
+            "coverage80": 0.8441,
+            "coverage90": 0.9371,
+            "meanWidth80": 0.3858,
+            "meanWidth90": 0.4944
+          },
+          {
+            "crop": "wheat",
+            "observations": 2435,
+            "coverage80": 0.7959,
+            "coverage90": 0.8994,
+            "meanWidth80": 0.3434,
+            "meanWidth90": 0.4588
+          }
+        ],
+        "perRegion": [
+          {
+            "region": "Northeast",
+            "observations": 469,
+            "coverage80": 0.7825,
+            "coverage90": 0.8998,
+            "meanWidth80": 0.4327,
+            "meanWidth90": 0.5526
+          },
+          {
+            "region": "Midwest",
+            "observations": 5859,
+            "coverage80": 0.8317,
+            "coverage90": 0.929,
+            "meanWidth80": 0.3788,
+            "meanWidth90": 0.4881
+          },
+          {
+            "region": "South",
+            "observations": 3679,
+            "coverage80": 0.8328,
+            "coverage90": 0.9266,
+            "meanWidth80": 0.3752,
+            "meanWidth90": 0.4888
+          },
+          {
+            "region": "West",
+            "observations": 344,
+            "coverage80": 0.9273,
+            "coverage90": 0.9738,
+            "meanWidth80": 0.4445,
+            "meanWidth90": 0.5443
+          }
+        ],
+        "perPredictionBand": [
+          {
+            "band": 0,
+            "lower": 0.0,
+            "upper": 0.2,
+            "observations": 1438,
+            "coverage80": 0.9624,
+            "coverage90": 0.9729,
+            "meanWidth80": 0.3288,
+            "meanWidth90": 0.3566
+          },
+          {
+            "band": 1,
+            "lower": 0.2,
+            "upper": 0.4,
+            "observations": 2358,
+            "coverage80": 0.8418,
+            "coverage90": 0.9398,
+            "meanWidth80": 0.4071,
+            "meanWidth90": 0.5347
+          },
+          {
+            "band": 2,
+            "lower": 0.4,
+            "upper": 0.6,
+            "observations": 2543,
+            "coverage80": 0.7468,
+            "coverage90": 0.9131,
+            "meanWidth80": 0.4036,
+            "meanWidth90": 0.5739
+          },
+          {
+            "band": 3,
+            "lower": 0.6,
+            "upper": 0.8,
+            "observations": 2548,
+            "coverage80": 0.792,
+            "coverage90": 0.9082,
+            "meanWidth80": 0.3965,
+            "meanWidth90": 0.5253
+          },
+          {
+            "band": 4,
+            "lower": 0.8,
+            "upper": 1.0,
+            "observations": 1464,
+            "coverage80": 0.9133,
+            "coverage90": 0.9276,
+            "meanWidth80": 0.3322,
+            "meanWidth90": 0.3637
+          }
+        ]
+      },
+      "stability": {
+        "pooled": {
+          "observations": 7331,
+          "coverage80": 0.84,
+          "coverage90": 0.9328,
+          "meanWidth80": 0.3811,
+          "meanWidth90": 0.4913
+        },
+        "perCrop": [
+          {
+            "crop": "corn",
+            "observations": 2948,
+            "coverage80": 0.8375,
+            "coverage90": 0.924,
+            "meanWidth80": 0.3996,
+            "meanWidth90": 0.5078
+          },
+          {
+            "crop": "soybean",
+            "observations": 2674,
+            "coverage80": 0.8489,
+            "coverage90": 0.9327,
+            "meanWidth80": 0.3838,
+            "meanWidth90": 0.4902
+          },
+          {
+            "crop": "wheat",
+            "observations": 1709,
+            "coverage80": 0.8303,
+            "coverage90": 0.9479,
+            "meanWidth80": 0.3449,
+            "meanWidth90": 0.4646
+          }
+        ],
+        "perRegion": [
+          {
+            "region": "Northeast",
+            "observations": 370,
+            "coverage80": 0.8189,
+            "coverage90": 0.8973,
+            "meanWidth80": 0.4351,
+            "meanWidth90": 0.5511
+          },
+          {
+            "region": "Midwest",
+            "observations": 4136,
+            "coverage80": 0.8378,
+            "coverage90": 0.935,
+            "meanWidth80": 0.3773,
+            "meanWidth90": 0.4855
+          },
+          {
+            "region": "South",
+            "observations": 2584,
+            "coverage80": 0.8495,
+            "coverage90": 0.9369,
+            "meanWidth80": 0.3754,
+            "meanWidth90": 0.4899
+          },
+          {
+            "region": "West",
+            "observations": 241,
+            "coverage80": 0.8091,
+            "coverage90": 0.9046,
+            "meanWidth80": 0.4232,
+            "meanWidth90": 0.5143
+          }
+        ],
+        "perPredictionBand": [
+          {
+            "band": 0,
+            "lower": 0.0,
+            "upper": 0.2,
+            "observations": 1106,
+            "coverage80": 0.9611,
+            "coverage90": 0.9738,
+            "meanWidth80": 0.3296,
+            "meanWidth90": 0.3567
+          },
+          {
+            "band": 1,
+            "lower": 0.2,
+            "upper": 0.4,
+            "observations": 1699,
+            "coverage80": 0.8181,
+            "coverage90": 0.9435,
+            "meanWidth80": 0.4053,
+            "meanWidth90": 0.5324
+          },
+          {
+            "band": 2,
+            "lower": 0.4,
+            "upper": 0.6,
+            "observations": 1812,
+            "coverage80": 0.7616,
+            "coverage90": 0.9111,
+            "meanWidth80": 0.4006,
+            "meanWidth90": 0.5716
+          },
+          {
+            "band": 3,
+            "lower": 0.6,
+            "upper": 0.8,
+            "observations": 1734,
+            "coverage80": 0.8276,
+            "coverage90": 0.925,
+            "meanWidth80": 0.3959,
+            "meanWidth90": 0.5241
+          },
+          {
+            "band": 4,
+            "lower": 0.8,
+            "upper": 1.0,
+            "observations": 980,
+            "coverage80": 0.9082,
+            "coverage90": 0.9214,
+            "meanWidth80": 0.3351,
+            "meanWidth90": 0.3655
+          }
+        ]
+      },
+      "widthReduction90": {
+        "development": 0.0086,
+        "stability": 0.0089
+      },
+      "gate": {
+        "passed": false,
+        "checks": {
+          "minimumCalibrationExamples": true,
+          "coverage": false,
+          "developmentWidthReduction": false,
+          "stabilityWidthReduction": false,
+          "eightyPercentBandUnchanged": true
+        }
+      }
+    },
+    {
+      "cuts": [
+        0.2,
+        0.4,
+        0.6,
+        0.8
+      ],
+      "blend": 0.75,
+      "minimumCalibrationExamples": 250,
+      "development": {
+        "pooled": {
+          "observations": 10351,
+          "coverage80": 0.8331,
+          "coverage90": 0.9274,
+          "meanWidth80": 0.3822,
+          "meanWidth90": 0.4908
+        },
+        "perCrop": [
+          {
+            "crop": "corn",
+            "observations": 4214,
+            "coverage80": 0.8448,
+            "coverage90": 0.9369,
+            "meanWidth80": 0.4013,
+            "meanWidth90": 0.5072
+          },
+          {
+            "crop": "soybean",
+            "observations": 3702,
+            "coverage80": 0.8441,
+            "coverage90": 0.9352,
+            "meanWidth80": 0.3858,
+            "meanWidth90": 0.4919
+          },
+          {
+            "crop": "wheat",
+            "observations": 2435,
+            "coverage80": 0.7959,
+            "coverage90": 0.8994,
+            "meanWidth80": 0.3434,
+            "meanWidth90": 0.4609
+          }
+        ],
+        "perRegion": [
+          {
+            "region": "Northeast",
+            "observations": 469,
+            "coverage80": 0.7825,
+            "coverage90": 0.8955,
+            "meanWidth80": 0.4327,
+            "meanWidth90": 0.5567
+          },
+          {
+            "region": "Midwest",
+            "observations": 5859,
+            "coverage80": 0.8317,
+            "coverage90": 0.9275,
+            "meanWidth80": 0.3788,
+            "meanWidth90": 0.4861
+          },
+          {
+            "region": "South",
+            "observations": 3679,
+            "coverage80": 0.8328,
+            "coverage90": 0.9277,
+            "meanWidth80": 0.3752,
+            "meanWidth90": 0.4858
+          },
+          {
+            "region": "West",
+            "observations": 344,
+            "coverage80": 0.9273,
+            "coverage90": 0.968,
+            "meanWidth80": 0.4445,
+            "meanWidth90": 0.5347
+          }
+        ],
+        "perPredictionBand": [
+          {
+            "band": 0,
+            "lower": 0.0,
+            "upper": 0.2,
+            "observations": 1438,
+            "coverage80": 0.9624,
+            "coverage90": 0.9618,
+            "meanWidth80": 0.3288,
+            "meanWidth90": 0.3331
+          },
+          {
+            "band": 1,
+            "lower": 0.2,
+            "upper": 0.4,
+            "observations": 2358,
+            "coverage80": 0.8418,
+            "coverage90": 0.9394,
+            "meanWidth80": 0.4071,
+            "meanWidth90": 0.5347
+          },
+          {
+            "band": 2,
+            "lower": 0.4,
+            "upper": 0.6,
+            "observations": 2543,
+            "coverage80": 0.7468,
+            "coverage90": 0.9233,
+            "meanWidth80": 0.4036,
+            "meanWidth90": 0.5891
+          },
+          {
+            "band": 3,
+            "lower": 0.6,
+            "upper": 0.8,
+            "observations": 2548,
+            "coverage80": 0.792,
+            "coverage90": 0.9078,
+            "meanWidth80": 0.3965,
+            "meanWidth90": 0.5262
+          },
+          {
+            "band": 4,
+            "lower": 0.8,
+            "upper": 1.0,
+            "observations": 1464,
+            "coverage80": 0.9133,
+            "coverage90": 0.916,
+            "meanWidth80": 0.3322,
+            "meanWidth90": 0.343
+          }
+        ]
+      },
+      "stability": {
+        "pooled": {
+          "observations": 7331,
+          "coverage80": 0.84,
+          "coverage90": 0.9319,
+          "meanWidth80": 0.3811,
+          "meanWidth90": 0.4889
+        },
+        "perCrop": [
+          {
+            "crop": "corn",
+            "observations": 2948,
+            "coverage80": 0.8375,
+            "coverage90": 0.922,
+            "meanWidth80": 0.3996,
+            "meanWidth90": 0.5026
+          },
+          {
+            "crop": "soybean",
+            "observations": 2674,
+            "coverage80": 0.8489,
+            "coverage90": 0.9334,
+            "meanWidth80": 0.3838,
+            "meanWidth90": 0.4872
+          },
+          {
+            "crop": "wheat",
+            "observations": 1709,
+            "coverage80": 0.8303,
+            "coverage90": 0.9468,
+            "meanWidth80": 0.3449,
+            "meanWidth90": 0.4676
+          }
+        ],
+        "perRegion": [
+          {
+            "region": "Northeast",
+            "observations": 370,
+            "coverage80": 0.8189,
+            "coverage90": 0.9027,
+            "meanWidth80": 0.4351,
+            "meanWidth90": 0.5537
+          },
+          {
+            "region": "Midwest",
+            "observations": 4136,
+            "coverage80": 0.8378,
+            "coverage90": 0.9347,
+            "meanWidth80": 0.3773,
+            "meanWidth90": 0.4834
+          },
+          {
+            "region": "South",
+            "observations": 2584,
+            "coverage80": 0.8495,
+            "coverage90": 0.9342,
+            "meanWidth80": 0.3754,
+            "meanWidth90": 0.4871
+          },
+          {
+            "region": "West",
+            "observations": 241,
+            "coverage80": 0.8091,
+            "coverage90": 0.9046,
+            "meanWidth80": 0.4232,
+            "meanWidth90": 0.5019
+          }
+        ],
+        "perPredictionBand": [
+          {
+            "band": 0,
+            "lower": 0.0,
+            "upper": 0.2,
+            "observations": 1106,
+            "coverage80": 0.9611,
+            "coverage90": 0.9602,
+            "meanWidth80": 0.3296,
+            "meanWidth90": 0.3327
+          },
+          {
+            "band": 1,
+            "lower": 0.2,
+            "upper": 0.4,
+            "observations": 1699,
+            "coverage80": 0.8181,
+            "coverage90": 0.9441,
+            "meanWidth80": 0.4053,
+            "meanWidth90": 0.5324
+          },
+          {
+            "band": 2,
+            "lower": 0.4,
+            "upper": 0.6,
+            "observations": 1812,
+            "coverage80": 0.7616,
+            "coverage90": 0.9183,
+            "meanWidth80": 0.4006,
+            "meanWidth90": 0.5873
+          },
+          {
+            "band": 3,
+            "lower": 0.6,
+            "upper": 0.8,
+            "observations": 1734,
+            "coverage80": 0.8276,
+            "coverage90": 0.9256,
+            "meanWidth80": 0.3959,
+            "meanWidth90": 0.5249
+          },
+          {
+            "band": 4,
+            "lower": 0.8,
+            "upper": 1.0,
+            "observations": 980,
+            "coverage80": 0.9082,
+            "coverage90": 0.9153,
+            "meanWidth80": 0.3351,
+            "meanWidth90": 0.3438
+          }
+        ]
+      },
+      "widthReduction90": {
+        "development": 0.0133,
+        "stability": 0.0137
+      },
+      "gate": {
+        "passed": false,
+        "checks": {
+          "minimumCalibrationExamples": true,
+          "coverage": false,
+          "developmentWidthReduction": true,
+          "stabilityWidthReduction": true,
+          "eightyPercentBandUnchanged": true
+        }
+      }
+    },
+    {
+      "cuts": [
+        0.2,
+        0.4,
+        0.6,
+        0.8
+      ],
+      "blend": 1.0,
+      "minimumCalibrationExamples": 250,
+      "development": {
+        "pooled": {
+          "observations": 10351,
+          "coverage80": 0.8331,
+          "coverage90": 0.9242,
+          "meanWidth80": 0.3822,
+          "meanWidth90": 0.4879
+        },
+        "perCrop": [
+          {
+            "crop": "corn",
+            "observations": 4214,
+            "coverage80": 0.8448,
+            "coverage90": 0.9338,
+            "meanWidth80": 0.4013,
+            "meanWidth90": 0.502
+          },
+          {
+            "crop": "soybean",
+            "observations": 3702,
+            "coverage80": 0.8441,
+            "coverage90": 0.93,
+            "meanWidth80": 0.3858,
+            "meanWidth90": 0.4886
+          },
+          {
+            "crop": "wheat",
+            "observations": 2435,
+            "coverage80": 0.7959,
+            "coverage90": 0.8986,
+            "meanWidth80": 0.3434,
+            "meanWidth90": 0.4627
+          }
+        ],
+        "perRegion": [
+          {
+            "region": "Northeast",
+            "observations": 469,
+            "coverage80": 0.7825,
+            "coverage90": 0.8977,
+            "meanWidth80": 0.4327,
+            "meanWidth90": 0.5604
+          },
+          {
+            "region": "Midwest",
+            "observations": 5859,
+            "coverage80": 0.8317,
+            "coverage90": 0.9239,
+            "meanWidth80": 0.3788,
+            "meanWidth90": 0.4836
+          },
+          {
+            "region": "South",
+            "observations": 3679,
+            "coverage80": 0.8328,
+            "coverage90": 0.9242,
+            "meanWidth80": 0.3752,
+            "meanWidth90": 0.4822
+          },
+          {
+            "region": "West",
+            "observations": 344,
+            "coverage80": 0.9273,
+            "coverage90": 0.9651,
+            "meanWidth80": 0.4445,
+            "meanWidth90": 0.5247
+          }
+        ],
+        "perPredictionBand": [
+          {
+            "band": 0,
+            "lower": 0.0,
+            "upper": 0.2,
+            "observations": 1438,
+            "coverage80": 0.9624,
+            "coverage90": 0.9444,
+            "meanWidth80": 0.3288,
+            "meanWidth90": 0.3074
+          },
+          {
+            "band": 1,
+            "lower": 0.2,
+            "upper": 0.4,
+            "observations": 2358,
+            "coverage80": 0.8418,
+            "coverage90": 0.9385,
+            "meanWidth80": 0.4071,
+            "meanWidth90": 0.5346
+          },
+          {
+            "band": 2,
+            "lower": 0.4,
+            "upper": 0.6,
+            "observations": 2543,
+            "coverage80": 0.7468,
+            "coverage90": 0.9292,
+            "meanWidth80": 0.4036,
+            "meanWidth90": 0.6041
+          },
+          {
+            "band": 3,
+            "lower": 0.6,
+            "upper": 0.8,
+            "observations": 2548,
+            "coverage80": 0.792,
+            "coverage90": 0.9089,
+            "meanWidth80": 0.3965,
+            "meanWidth90": 0.527
+          },
+          {
+            "band": 4,
+            "lower": 0.8,
+            "upper": 1.0,
+            "observations": 1464,
+            "coverage80": 0.9133,
+            "coverage90": 0.8989,
+            "meanWidth80": 0.3322,
+            "meanWidth90": 0.3203
+          }
+        ]
+      },
+      "stability": {
+        "pooled": {
+          "observations": 7331,
+          "coverage80": 0.84,
+          "coverage90": 0.9306,
+          "meanWidth80": 0.3811,
+          "meanWidth90": 0.4858
+        },
+        "perCrop": [
+          {
+            "crop": "corn",
+            "observations": 2948,
+            "coverage80": 0.8375,
+            "coverage90": 0.9189,
+            "meanWidth80": 0.3996,
+            "meanWidth90": 0.4968
+          },
+          {
+            "crop": "soybean",
+            "observations": 2674,
+            "coverage80": 0.8489,
+            "coverage90": 0.9327,
+            "meanWidth80": 0.3838,
+            "meanWidth90": 0.4835
+          },
+          {
+            "crop": "wheat",
+            "observations": 1709,
+            "coverage80": 0.8303,
+            "coverage90": 0.9473,
+            "meanWidth80": 0.3449,
+            "meanWidth90": 0.4704
+          }
+        ],
+        "perRegion": [
+          {
+            "region": "Northeast",
+            "observations": 370,
+            "coverage80": 0.8189,
+            "coverage90": 0.9027,
+            "meanWidth80": 0.4351,
+            "meanWidth90": 0.5556
+          },
+          {
+            "region": "Midwest",
+            "observations": 4136,
+            "coverage80": 0.8378,
+            "coverage90": 0.9342,
+            "meanWidth80": 0.3773,
+            "meanWidth90": 0.4807
+          },
+          {
+            "region": "South",
+            "observations": 2584,
+            "coverage80": 0.8495,
+            "coverage90": 0.9311,
+            "meanWidth80": 0.3754,
+            "meanWidth90": 0.4837
+          },
+          {
+            "region": "West",
+            "observations": 241,
+            "coverage80": 0.8091,
+            "coverage90": 0.9046,
+            "meanWidth80": 0.4232,
+            "meanWidth90": 0.4892
+          }
+        ],
+        "perPredictionBand": [
+          {
+            "band": 0,
+            "lower": 0.0,
+            "upper": 0.2,
+            "observations": 1106,
+            "coverage80": 0.9611,
+            "coverage90": 0.9458,
+            "meanWidth80": 0.3296,
+            "meanWidth90": 0.3066
+          },
+          {
+            "band": 1,
+            "lower": 0.2,
+            "upper": 0.4,
+            "observations": 1699,
+            "coverage80": 0.8181,
+            "coverage90": 0.9429,
+            "meanWidth80": 0.4053,
+            "meanWidth90": 0.5324
+          },
+          {
+            "band": 2,
+            "lower": 0.4,
+            "upper": 0.6,
+            "observations": 1812,
+            "coverage80": 0.7616,
+            "coverage90": 0.9272,
+            "meanWidth80": 0.4006,
+            "meanWidth90": 0.603
+          },
+          {
+            "band": 3,
+            "lower": 0.6,
+            "upper": 0.8,
+            "observations": 1734,
+            "coverage80": 0.8276,
+            "coverage90": 0.9256,
+            "meanWidth80": 0.3959,
+            "meanWidth90": 0.5258
+          },
+          {
+            "band": 4,
+            "lower": 0.8,
+            "upper": 1.0,
+            "observations": 980,
+            "coverage80": 0.9082,
+            "coverage90": 0.9071,
+            "meanWidth80": 0.3351,
+            "meanWidth90": 0.32
+          }
+        ]
+      },
+      "widthReduction90": {
+        "development": 0.0191,
+        "stability": 0.02
+      },
+      "gate": {
+        "passed": false,
+        "checks": {
+          "minimumCalibrationExamples": true,
+          "coverage": false,
+          "developmentWidthReduction": true,
+          "stabilityWidthReduction": true,
+          "eightyPercentBandUnchanged": true
+        }
+      }
+    },
+    {
+      "cuts": [
+        0.1,
+        0.3,
+        0.5,
+        0.7,
+        0.9
+      ],
+      "blend": 0.25,
+      "minimumCalibrationExamples": 109,
+      "development": {
+        "pooled": {
+          "observations": 10351,
+          "coverage80": 0.8331,
+          "coverage90": 0.9272,
+          "meanWidth80": 0.3822,
+          "meanWidth90": 0.4957
+        },
+        "perCrop": [
+          {
+            "crop": "corn",
+            "observations": 4214,
+            "coverage80": 0.8448,
+            "coverage90": 0.9378,
+            "meanWidth80": 0.4013,
+            "meanWidth90": 0.5178
+          },
+          {
+            "crop": "soybean",
+            "observations": 3702,
+            "coverage80": 0.8441,
+            "coverage90": 0.9349,
+            "meanWidth80": 0.3858,
+            "meanWidth90": 0.4966
+          },
+          {
+            "crop": "wheat",
+            "observations": 2435,
+            "coverage80": 0.7959,
+            "coverage90": 0.8969,
+            "meanWidth80": 0.3434,
+            "meanWidth90": 0.4559
+          }
+        ],
+        "perRegion": [
+          {
+            "region": "Northeast",
+            "observations": 469,
+            "coverage80": 0.7825,
+            "coverage90": 0.9041,
+            "meanWidth80": 0.4327,
+            "meanWidth90": 0.5489
+          },
+          {
+            "region": "Midwest",
+            "observations": 5859,
+            "coverage80": 0.8317,
+            "coverage90": 0.9271,
+            "meanWidth80": 0.3788,
+            "meanWidth90": 0.4899
+          },
+          {
+            "region": "South",
+            "observations": 3679,
+            "coverage80": 0.8328,
+            "coverage90": 0.9255,
+            "meanWidth80": 0.3752,
+            "meanWidth90": 0.4929
+          },
+          {
+            "region": "West",
+            "observations": 344,
+            "coverage80": 0.9273,
+            "coverage90": 0.9767,
+            "meanWidth80": 0.4445,
+            "meanWidth90": 0.5513
+          }
+        ],
+        "perPredictionBand": [
+          {
+            "band": 0,
+            "lower": 0.0,
+            "upper": 0.1,
+            "observations": 476,
+            "coverage80": 0.9916,
+            "coverage90": 0.9916,
+            "meanWidth80": 0.272,
+            "meanWidth90": 0.3187
+          },
+          {
+            "band": 1,
+            "lower": 0.1,
+            "upper": 0.3,
+            "observations": 2035,
+            "coverage80": 0.9209,
+            "coverage90": 0.9627,
+            "meanWidth80": 0.3828,
+            "meanWidth90": 0.4631
+          },
+          {
+            "band": 2,
+            "lower": 0.3,
+            "upper": 0.5,
+            "observations": 2576,
+            "coverage80": 0.7873,
+            "coverage90": 0.9243,
+            "meanWidth80": 0.4072,
+            "meanWidth90": 0.5599
+          },
+          {
+            "band": 3,
+            "lower": 0.5,
+            "upper": 0.7,
+            "observations": 2488,
+            "coverage80": 0.7287,
+            "coverage90": 0.8911,
+            "meanWidth80": 0.4005,
+            "meanWidth90": 0.5523
+          },
+          {
+            "band": 4,
+            "lower": 0.7,
+            "upper": 0.9,
+            "observations": 2340,
+            "coverage80": 0.8624,
+            "coverage90": 0.9184,
+            "meanWidth80": 0.3756,
+            "meanWidth90": 0.462
+          },
+          {
+            "band": 5,
+            "lower": 0.9,
+            "upper": 1.0,
+            "observations": 436,
+            "coverage80": 0.9587,
+            "coverage90": 0.961,
+            "meanWidth80": 0.2815,
+            "meanWidth90": 0.3189
+          }
+        ]
+      },
+      "stability": {
+        "pooled": {
+          "observations": 7331,
+          "coverage80": 0.84,
+          "coverage90": 0.9338,
+          "meanWidth80": 0.3811,
+          "meanWidth90": 0.4938
+        },
+        "perCrop": [
+          {
+            "crop": "corn",
+            "observations": 2948,
+            "coverage80": 0.8375,
+            "coverage90": 0.9291,
+            "meanWidth80": 0.3996,
+            "meanWidth90": 0.5138
+          },
+          {
+            "crop": "soybean",
+            "observations": 2674,
+            "coverage80": 0.8489,
+            "coverage90": 0.9338,
+            "meanWidth80": 0.3838,
+            "meanWidth90": 0.4927
+          },
+          {
+            "crop": "wheat",
+            "observations": 1709,
+            "coverage80": 0.8303,
+            "coverage90": 0.9421,
+            "meanWidth80": 0.3449,
+            "meanWidth90": 0.461
+          }
+        ],
+        "perRegion": [
+          {
+            "region": "Northeast",
+            "observations": 370,
+            "coverage80": 0.8189,
+            "coverage90": 0.9081,
+            "meanWidth80": 0.4351,
+            "meanWidth90": 0.5485
+          },
+          {
+            "region": "Midwest",
+            "observations": 4136,
+            "coverage80": 0.8378,
+            "coverage90": 0.9345,
+            "meanWidth80": 0.3773,
+            "meanWidth90": 0.4876
+          },
+          {
+            "region": "South",
+            "observations": 2584,
+            "coverage80": 0.8495,
+            "coverage90": 0.94,
+            "meanWidth80": 0.3754,
+            "meanWidth90": 0.4932
+          },
+          {
+            "region": "West",
+            "observations": 241,
+            "coverage80": 0.8091,
+            "coverage90": 0.8963,
+            "meanWidth80": 0.4232,
+            "meanWidth90": 0.5224
+          }
+        ],
+        "perPredictionBand": [
+          {
+            "band": 0,
+            "lower": 0.0,
+            "upper": 0.1,
+            "observations": 360,
+            "coverage80": 0.9889,
+            "coverage90": 0.9972,
+            "meanWidth80": 0.2721,
+            "meanWidth90": 0.319
+          },
+          {
+            "band": 1,
+            "lower": 0.1,
+            "upper": 0.3,
+            "observations": 1567,
+            "coverage80": 0.9068,
+            "coverage90": 0.9687,
+            "meanWidth80": 0.382,
+            "meanWidth90": 0.4625
+          },
+          {
+            "band": 2,
+            "lower": 0.3,
+            "upper": 0.5,
+            "observations": 1780,
+            "coverage80": 0.7624,
+            "coverage90": 0.9112,
+            "meanWidth80": 0.4049,
+            "meanWidth90": 0.5571
+          },
+          {
+            "band": 3,
+            "lower": 0.5,
+            "upper": 0.7,
+            "observations": 1758,
+            "coverage80": 0.7765,
+            "coverage90": 0.9067,
+            "meanWidth80": 0.398,
+            "meanWidth90": 0.5496
+          },
+          {
+            "band": 4,
+            "lower": 0.7,
+            "upper": 0.9,
+            "observations": 1580,
+            "coverage80": 0.8823,
+            "coverage90": 0.9411,
+            "meanWidth80": 0.3773,
+            "meanWidth90": 0.4628
+          },
+          {
+            "band": 5,
+            "lower": 0.9,
+            "upper": 1.0,
+            "observations": 286,
+            "coverage80": 0.9266,
+            "coverage90": 0.9301,
+            "meanWidth80": 0.2824,
+            "meanWidth90": 0.3196
+          }
+        ]
+      },
+      "widthReduction90": {
+        "development": 0.0034,
+        "stability": 0.0038
+      },
+      "gate": {
+        "passed": false,
+        "checks": {
+          "minimumCalibrationExamples": true,
+          "coverage": false,
+          "developmentWidthReduction": false,
+          "stabilityWidthReduction": false,
+          "eightyPercentBandUnchanged": true
+        }
+      }
+    },
+    {
+      "cuts": [
+        0.1,
+        0.3,
+        0.5,
+        0.7,
+        0.9
+      ],
+      "blend": 0.5,
+      "minimumCalibrationExamples": 109,
+      "development": {
+        "pooled": {
+          "observations": 10351,
+          "coverage80": 0.8331,
+          "coverage90": 0.9284,
+          "meanWidth80": 0.3822,
+          "meanWidth90": 0.4937
+        },
+        "perCrop": [
+          {
+            "crop": "corn",
+            "observations": 4214,
+            "coverage80": 0.8448,
+            "coverage90": 0.9374,
+            "meanWidth80": 0.4013,
+            "meanWidth90": 0.5143
+          },
+          {
+            "crop": "soybean",
+            "observations": 3702,
+            "coverage80": 0.8441,
+            "coverage90": 0.9363,
+            "meanWidth80": 0.3858,
+            "meanWidth90": 0.4937
+          },
+          {
+            "crop": "wheat",
+            "observations": 2435,
+            "coverage80": 0.7959,
+            "coverage90": 0.901,
+            "meanWidth80": 0.3434,
+            "meanWidth90": 0.4579
+          }
+        ],
+        "perRegion": [
+          {
+            "region": "Northeast",
+            "observations": 469,
+            "coverage80": 0.7825,
+            "coverage90": 0.9019,
+            "meanWidth80": 0.4327,
+            "meanWidth90": 0.5532
+          },
+          {
+            "region": "Midwest",
+            "observations": 5859,
+            "coverage80": 0.8317,
+            "coverage90": 0.928,
+            "meanWidth80": 0.3788,
+            "meanWidth90": 0.488
+          },
+          {
+            "region": "South",
+            "observations": 3679,
+            "coverage80": 0.8328,
+            "coverage90": 0.9282,
+            "meanWidth80": 0.3752,
+            "meanWidth90": 0.4908
+          },
+          {
+            "region": "West",
+            "observations": 344,
+            "coverage80": 0.9273,
+            "coverage90": 0.9738,
+            "meanWidth80": 0.4445,
+            "meanWidth90": 0.5394
+          }
+        ],
+        "perPredictionBand": [
+          {
+            "band": 0,
+            "lower": 0.0,
+            "upper": 0.1,
+            "observations": 476,
+            "coverage80": 0.9916,
+            "coverage90": 0.9916,
+            "meanWidth80": 0.272,
+            "meanWidth90": 0.291
+          },
+          {
+            "band": 1,
+            "lower": 0.1,
+            "upper": 0.3,
+            "observations": 2035,
+            "coverage80": 0.9209,
+            "coverage90": 0.9577,
+            "meanWidth80": 0.3828,
+            "meanWidth90": 0.4477
+          },
+          {
+            "band": 2,
+            "lower": 0.3,
+            "upper": 0.5,
+            "observations": 2576,
+            "coverage80": 0.7873,
+            "coverage90": 0.9321,
+            "meanWidth80": 0.4072,
+            "meanWidth90": 0.5729
+          },
+          {
+            "band": 3,
+            "lower": 0.5,
+            "upper": 0.7,
+            "observations": 2488,
+            "coverage80": 0.7287,
+            "coverage90": 0.8995,
+            "meanWidth80": 0.4005,
+            "meanWidth90": 0.5646
+          },
+          {
+            "band": 4,
+            "lower": 0.7,
+            "upper": 0.9,
+            "observations": 2340,
+            "coverage80": 0.8624,
+            "coverage90": 0.912,
+            "meanWidth80": 0.3756,
+            "meanWidth90": 0.4519
+          },
+          {
+            "band": 5,
+            "lower": 0.9,
+            "upper": 1.0,
+            "observations": 436,
+            "coverage80": 0.9587,
+            "coverage90": 0.9541,
+            "meanWidth80": 0.2815,
+            "meanWidth90": 0.2812
+          }
+        ]
+      },
+      "stability": {
+        "pooled": {
+          "observations": 7331,
+          "coverage80": 0.84,
+          "coverage90": 0.9333,
+          "meanWidth80": 0.3811,
+          "meanWidth90": 0.4916
+        },
+        "perCrop": [
+          {
+            "crop": "corn",
+            "observations": 2948,
+            "coverage80": 0.8375,
+            "coverage90": 0.9264,
+            "meanWidth80": 0.3996,
+            "meanWidth90": 0.5092
+          },
+          {
+            "crop": "soybean",
+            "observations": 2674,
+            "coverage80": 0.8489,
+            "coverage90": 0.9346,
+            "meanWidth80": 0.3838,
+            "meanWidth90": 0.4896
+          },
+          {
+            "crop": "wheat",
+            "observations": 1709,
+            "coverage80": 0.8303,
+            "coverage90": 0.9432,
+            "meanWidth80": 0.3449,
+            "meanWidth90": 0.4643
+          }
+        ],
+        "perRegion": [
+          {
+            "region": "Northeast",
+            "observations": 370,
+            "coverage80": 0.8189,
+            "coverage90": 0.9054,
+            "meanWidth80": 0.4351,
+            "meanWidth90": 0.5507
+          },
+          {
+            "region": "Midwest",
+            "observations": 4136,
+            "coverage80": 0.8378,
+            "coverage90": 0.9352,
+            "meanWidth80": 0.3773,
+            "meanWidth90": 0.4857
+          },
+          {
+            "region": "South",
+            "observations": 2584,
+            "coverage80": 0.8495,
+            "coverage90": 0.9377,
+            "meanWidth80": 0.3754,
+            "meanWidth90": 0.4912
+          },
+          {
+            "region": "West",
+            "observations": 241,
+            "coverage80": 0.8091,
+            "coverage90": 0.8963,
+            "meanWidth80": 0.4232,
+            "meanWidth90": 0.506
+          }
+        ],
+        "perPredictionBand": [
+          {
+            "band": 0,
+            "lower": 0.0,
+            "upper": 0.1,
+            "observations": 360,
+            "coverage80": 0.9889,
+            "coverage90": 0.9889,
+            "meanWidth80": 0.2721,
+            "meanWidth90": 0.2921
+          },
+          {
+            "band": 1,
+            "lower": 0.1,
+            "upper": 0.3,
+            "observations": 1567,
+            "coverage80": 0.9068,
+            "coverage90": 0.9579,
+            "meanWidth80": 0.382,
+            "meanWidth90": 0.4469
+          },
+          {
+            "band": 2,
+            "lower": 0.3,
+            "upper": 0.5,
+            "observations": 1780,
+            "coverage80": 0.7624,
+            "coverage90": 0.9202,
+            "meanWidth80": 0.4049,
+            "meanWidth90": 0.5701
+          },
+          {
+            "band": 3,
+            "lower": 0.5,
+            "upper": 0.7,
+            "observations": 1758,
+            "coverage80": 0.7765,
+            "coverage90": 0.9118,
+            "meanWidth80": 0.398,
+            "meanWidth90": 0.5623
+          },
+          {
+            "band": 4,
+            "lower": 0.7,
+            "upper": 0.9,
+            "observations": 1580,
+            "coverage80": 0.8823,
+            "coverage90": 0.9361,
+            "meanWidth80": 0.3773,
+            "meanWidth90": 0.4526
+          },
+          {
+            "band": 5,
+            "lower": 0.9,
+            "upper": 1.0,
+            "observations": 286,
+            "coverage80": 0.9266,
+            "coverage90": 0.9266,
+            "meanWidth80": 0.2824,
+            "meanWidth90": 0.2799
+          }
+        ]
+      },
+      "widthReduction90": {
+        "development": 0.0074,
+        "stability": 0.0083
+      },
+      "gate": {
+        "passed": false,
+        "checks": {
+          "minimumCalibrationExamples": true,
+          "coverage": false,
+          "developmentWidthReduction": false,
+          "stabilityWidthReduction": false,
+          "eightyPercentBandUnchanged": true
+        }
+      }
+    },
+    {
+      "cuts": [
+        0.1,
+        0.3,
+        0.5,
+        0.7,
+        0.9
+      ],
+      "blend": 0.75,
+      "minimumCalibrationExamples": 109,
+      "development": {
+        "pooled": {
+          "observations": 10351,
+          "coverage80": 0.8331,
+          "coverage90": 0.9275,
+          "meanWidth80": 0.3822,
+          "meanWidth90": 0.4914
+        },
+        "perCrop": [
+          {
+            "crop": "corn",
+            "observations": 4214,
+            "coverage80": 0.8448,
+            "coverage90": 0.9352,
+            "meanWidth80": 0.4013,
+            "meanWidth90": 0.5105
+          },
+          {
+            "crop": "soybean",
+            "observations": 3702,
+            "coverage80": 0.8441,
+            "coverage90": 0.9349,
+            "meanWidth80": 0.3858,
+            "meanWidth90": 0.4904
+          },
+          {
+            "crop": "wheat",
+            "observations": 2435,
+            "coverage80": 0.7959,
+            "coverage90": 0.9031,
+            "meanWidth80": 0.3434,
+            "meanWidth90": 0.4598
+          }
+        ],
+        "perRegion": [
+          {
+            "region": "Northeast",
+            "observations": 469,
+            "coverage80": 0.7825,
+            "coverage90": 0.8998,
+            "meanWidth80": 0.4327,
+            "meanWidth90": 0.5573
+          },
+          {
+            "region": "Midwest",
+            "observations": 5859,
+            "coverage80": 0.8317,
+            "coverage90": 0.9268,
+            "meanWidth80": 0.3788,
+            "meanWidth90": 0.4858
+          },
+          {
+            "region": "South",
+            "observations": 3679,
+            "coverage80": 0.8328,
+            "coverage90": 0.928,
+            "meanWidth80": 0.3752,
+            "meanWidth90": 0.4886
+          },
+          {
+            "region": "West",
+            "observations": 344,
+            "coverage80": 0.9273,
+            "coverage90": 0.9738,
+            "meanWidth80": 0.4445,
+            "meanWidth90": 0.5272
+          }
+        ],
+        "perPredictionBand": [
+          {
+            "band": 0,
+            "lower": 0.0,
+            "upper": 0.1,
+            "observations": 476,
+            "coverage80": 0.9916,
+            "coverage90": 0.9853,
+            "meanWidth80": 0.272,
+            "meanWidth90": 0.2632
+          },
+          {
+            "band": 1,
+            "lower": 0.1,
+            "upper": 0.3,
+            "observations": 2035,
+            "coverage80": 0.9209,
+            "coverage90": 0.9528,
+            "meanWidth80": 0.3828,
+            "meanWidth90": 0.4314
+          },
+          {
+            "band": 2,
+            "lower": 0.3,
+            "upper": 0.5,
+            "observations": 2576,
+            "coverage80": 0.7873,
+            "coverage90": 0.9344,
+            "meanWidth80": 0.4072,
+            "meanWidth90": 0.5858
+          },
+          {
+            "band": 3,
+            "lower": 0.5,
+            "upper": 0.7,
+            "observations": 2488,
+            "coverage80": 0.7287,
+            "coverage90": 0.9064,
+            "meanWidth80": 0.4005,
+            "meanWidth90": 0.5768
+          },
+          {
+            "band": 4,
+            "lower": 0.7,
+            "upper": 0.9,
+            "observations": 2340,
+            "coverage80": 0.8624,
+            "coverage90": 0.906,
+            "meanWidth80": 0.3756,
+            "meanWidth90": 0.4414
+          },
+          {
+            "band": 5,
+            "lower": 0.9,
+            "upper": 1.0,
+            "observations": 436,
+            "coverage80": 0.9587,
+            "coverage90": 0.9427,
+            "meanWidth80": 0.2815,
+            "meanWidth90": 0.2435
+          }
+        ]
+      },
+      "stability": {
+        "pooled": {
+          "observations": 7331,
+          "coverage80": 0.84,
+          "coverage90": 0.9311,
+          "meanWidth80": 0.3811,
+          "meanWidth90": 0.4891
+        },
+        "perCrop": [
+          {
+            "crop": "corn",
+            "observations": 2948,
+            "coverage80": 0.8375,
+            "coverage90": 0.9237,
+            "meanWidth80": 0.3996,
+            "meanWidth90": 0.5043
+          },
+          {
+            "crop": "soybean",
+            "observations": 2674,
+            "coverage80": 0.8489,
+            "coverage90": 0.9312,
+            "meanWidth80": 0.3838,
+            "meanWidth90": 0.4862
+          },
+          {
+            "crop": "wheat",
+            "observations": 1709,
+            "coverage80": 0.8303,
+            "coverage90": 0.9438,
+            "meanWidth80": 0.3449,
+            "meanWidth90": 0.4676
+          }
+        ],
+        "perRegion": [
+          {
+            "region": "Northeast",
+            "observations": 370,
+            "coverage80": 0.8189,
+            "coverage90": 0.9027,
+            "meanWidth80": 0.4351,
+            "meanWidth90": 0.5525
+          },
+          {
+            "region": "Midwest",
+            "observations": 4136,
+            "coverage80": 0.8378,
+            "coverage90": 0.9338,
+            "meanWidth80": 0.3773,
+            "meanWidth90": 0.4836
+          },
+          {
+            "region": "South",
+            "observations": 2584,
+            "coverage80": 0.8495,
+            "coverage90": 0.9346,
+            "meanWidth80": 0.3754,
+            "meanWidth90": 0.4889
+          },
+          {
+            "region": "West",
+            "observations": 241,
+            "coverage80": 0.8091,
+            "coverage90": 0.8921,
+            "meanWidth80": 0.4232,
+            "meanWidth90": 0.4895
+          }
+        ],
+        "perPredictionBand": [
+          {
+            "band": 0,
+            "lower": 0.0,
+            "upper": 0.1,
+            "observations": 360,
+            "coverage80": 0.9889,
+            "coverage90": 0.9806,
+            "meanWidth80": 0.2721,
+            "meanWidth90": 0.2652
+          },
+          {
+            "band": 1,
+            "lower": 0.1,
+            "upper": 0.3,
+            "observations": 1567,
+            "coverage80": 0.9068,
+            "coverage90": 0.9451,
+            "meanWidth80": 0.382,
+            "meanWidth90": 0.4304
+          },
+          {
+            "band": 2,
+            "lower": 0.3,
+            "upper": 0.5,
+            "observations": 1780,
+            "coverage80": 0.7624,
+            "coverage90": 0.9258,
+            "meanWidth80": 0.4049,
+            "meanWidth90": 0.5831
+          },
+          {
+            "band": 3,
+            "lower": 0.5,
+            "upper": 0.7,
+            "observations": 1758,
+            "coverage80": 0.7765,
+            "coverage90": 0.9187,
+            "meanWidth80": 0.398,
+            "meanWidth90": 0.5751
+          },
+          {
+            "band": 4,
+            "lower": 0.7,
+            "upper": 0.9,
+            "observations": 1580,
+            "coverage80": 0.8823,
+            "coverage90": 0.9297,
+            "meanWidth80": 0.3773,
+            "meanWidth90": 0.442
+          },
+          {
+            "band": 5,
+            "lower": 0.9,
+            "upper": 1.0,
+            "observations": 286,
+            "coverage80": 0.9266,
+            "coverage90": 0.9091,
+            "meanWidth80": 0.2824,
+            "meanWidth90": 0.2401
+          }
+        ]
+      },
+      "widthReduction90": {
+        "development": 0.0121,
+        "stability": 0.0133
+      },
+      "gate": {
+        "passed": false,
+        "checks": {
+          "minimumCalibrationExamples": true,
+          "coverage": false,
+          "developmentWidthReduction": true,
+          "stabilityWidthReduction": true,
+          "eightyPercentBandUnchanged": true
+        }
+      }
+    },
+    {
+      "cuts": [
+        0.1,
+        0.3,
+        0.5,
+        0.7,
+        0.9
+      ],
+      "blend": 1.0,
+      "minimumCalibrationExamples": 109,
+      "development": {
+        "pooled": {
+          "observations": 10351,
+          "coverage80": 0.8331,
+          "coverage90": 0.9261,
+          "meanWidth80": 0.3822,
+          "meanWidth90": 0.4888
+        },
+        "perCrop": [
+          {
+            "crop": "corn",
+            "observations": 4214,
+            "coverage80": 0.8448,
+            "coverage90": 0.9324,
+            "meanWidth80": 0.4013,
+            "meanWidth90": 0.5063
+          },
+          {
+            "crop": "soybean",
+            "observations": 3702,
+            "coverage80": 0.8441,
+            "coverage90": 0.9346,
+            "meanWidth80": 0.3858,
+            "meanWidth90": 0.4869
+          },
+          {
+            "crop": "wheat",
+            "observations": 2435,
+            "coverage80": 0.7959,
+            "coverage90": 0.9023,
+            "meanWidth80": 0.3434,
+            "meanWidth90": 0.4614
+          }
+        ],
+        "perRegion": [
+          {
+            "region": "Northeast",
+            "observations": 469,
+            "coverage80": 0.7825,
+            "coverage90": 0.8977,
+            "meanWidth80": 0.4327,
+            "meanWidth90": 0.561
+          },
+          {
+            "region": "Midwest",
+            "observations": 5859,
+            "coverage80": 0.8317,
+            "coverage90": 0.9251,
+            "meanWidth80": 0.3788,
+            "meanWidth90": 0.4833
+          },
+          {
+            "region": "South",
+            "observations": 3679,
+            "coverage80": 0.8328,
+            "coverage90": 0.9272,
+            "meanWidth80": 0.3752,
+            "meanWidth90": 0.4859
+          },
+          {
+            "region": "West",
+            "observations": 344,
+            "coverage80": 0.9273,
+            "coverage90": 0.9709,
+            "meanWidth80": 0.4445,
+            "meanWidth90": 0.5147
+          }
+        ],
+        "perPredictionBand": [
+          {
+            "band": 0,
+            "lower": 0.0,
+            "upper": 0.1,
+            "observations": 476,
+            "coverage80": 0.9916,
+            "coverage90": 0.9622,
+            "meanWidth80": 0.272,
+            "meanWidth90": 0.2348
+          },
+          {
+            "band": 1,
+            "lower": 0.1,
+            "upper": 0.3,
+            "observations": 2035,
+            "coverage80": 0.9209,
+            "coverage90": 0.9415,
+            "meanWidth80": 0.3828,
+            "meanWidth90": 0.4144
+          },
+          {
+            "band": 2,
+            "lower": 0.3,
+            "upper": 0.5,
+            "observations": 2576,
+            "coverage80": 0.7873,
+            "coverage90": 0.9387,
+            "meanWidth80": 0.4072,
+            "meanWidth90": 0.5987
+          },
+          {
+            "band": 3,
+            "lower": 0.5,
+            "upper": 0.7,
+            "observations": 2488,
+            "coverage80": 0.7287,
+            "coverage90": 0.9168,
+            "meanWidth80": 0.4005,
+            "meanWidth90": 0.5889
+          },
+          {
+            "band": 4,
+            "lower": 0.7,
+            "upper": 0.9,
+            "observations": 2340,
+            "coverage80": 0.8624,
+            "coverage90": 0.9017,
+            "meanWidth80": 0.3756,
+            "meanWidth90": 0.4304
+          },
+          {
+            "band": 5,
+            "lower": 0.9,
+            "upper": 1.0,
+            "observations": 436,
+            "coverage80": 0.9587,
+            "coverage90": 0.9243,
+            "meanWidth80": 0.2815,
+            "meanWidth90": 0.2056
+          }
+        ]
+      },
+      "stability": {
+        "pooled": {
+          "observations": 7331,
+          "coverage80": 0.84,
+          "coverage90": 0.9292,
+          "meanWidth80": 0.3811,
+          "meanWidth90": 0.4864
+        },
+        "perCrop": [
+          {
+            "crop": "corn",
+            "observations": 2948,
+            "coverage80": 0.8375,
+            "coverage90": 0.9199,
+            "meanWidth80": 0.3996,
+            "meanWidth90": 0.499
+          },
+          {
+            "crop": "soybean",
+            "observations": 2674,
+            "coverage80": 0.8489,
+            "coverage90": 0.9308,
+            "meanWidth80": 0.3838,
+            "meanWidth90": 0.4825
+          },
+          {
+            "crop": "wheat",
+            "observations": 1709,
+            "coverage80": 0.8303,
+            "coverage90": 0.9427,
+            "meanWidth80": 0.3449,
+            "meanWidth90": 0.4707
+          }
+        ],
+        "perRegion": [
+          {
+            "region": "Northeast",
+            "observations": 370,
+            "coverage80": 0.8189,
+            "coverage90": 0.9054,
+            "meanWidth80": 0.4351,
+            "meanWidth90": 0.5539
+          },
+          {
+            "region": "Midwest",
+            "observations": 4136,
+            "coverage80": 0.8378,
+            "coverage90": 0.9328,
+            "meanWidth80": 0.3773,
+            "meanWidth90": 0.4812
+          },
+          {
+            "region": "South",
+            "observations": 2584,
+            "coverage80": 0.8495,
+            "coverage90": 0.9307,
+            "meanWidth80": 0.3754,
+            "meanWidth90": 0.4863
+          },
+          {
+            "region": "West",
+            "observations": 241,
+            "coverage80": 0.8091,
+            "coverage90": 0.888,
+            "meanWidth80": 0.4232,
+            "meanWidth90": 0.4729
+          }
+        ],
+        "perPredictionBand": [
+          {
+            "band": 0,
+            "lower": 0.0,
+            "upper": 0.1,
+            "observations": 360,
+            "coverage80": 0.9889,
+            "coverage90": 0.9583,
+            "meanWidth80": 0.2721,
+            "meanWidth90": 0.2377
+          },
+          {
+            "band": 1,
+            "lower": 0.1,
+            "upper": 0.3,
+            "observations": 1567,
+            "coverage80": 0.9068,
+            "coverage90": 0.933,
+            "meanWidth80": 0.382,
+            "meanWidth90": 0.4132
+          },
+          {
+            "band": 2,
+            "lower": 0.3,
+            "upper": 0.5,
+            "observations": 1780,
+            "coverage80": 0.7624,
+            "coverage90": 0.9348,
+            "meanWidth80": 0.4049,
+            "meanWidth90": 0.596
+          },
+          {
+            "band": 3,
+            "lower": 0.5,
+            "upper": 0.7,
+            "observations": 1758,
+            "coverage80": 0.7765,
+            "coverage90": 0.9226,
+            "meanWidth80": 0.398,
+            "meanWidth90": 0.5878
+          },
+          {
+            "band": 4,
+            "lower": 0.7,
+            "upper": 0.9,
+            "observations": 1580,
+            "coverage80": 0.8823,
+            "coverage90": 0.9247,
+            "meanWidth80": 0.3773,
+            "meanWidth90": 0.431
+          },
+          {
+            "band": 5,
+            "lower": 0.9,
+            "upper": 1.0,
+            "observations": 286,
+            "coverage80": 0.9266,
+            "coverage90": 0.9021,
+            "meanWidth80": 0.2824,
+            "meanWidth90": 0.2002
+          }
+        ]
+      },
+      "widthReduction90": {
+        "development": 0.0173,
+        "stability": 0.0188
+      },
+      "gate": {
+        "passed": false,
+        "checks": {
+          "minimumCalibrationExamples": true,
+          "coverage": false,
+          "developmentWidthReduction": true,
+          "stabilityWidthReduction": true,
+          "eightyPercentBandUnchanged": true
+        }
+      }
+    }
+  ],
+  "selectedCandidate": {
+    "cuts": [
+      0.33,
+      0.67
+    ],
+    "blend": 0.75,
+    "minimumCalibrationExamples": 445,
+    "development": {
+      "pooled": {
+        "observations": 10351,
+        "coverage80": 0.8331,
+        "coverage90": 0.9253,
+        "meanWidth80": 0.3822,
+        "meanWidth90": 0.4905
+      },
+      "perCrop": [
+        {
+          "crop": "corn",
+          "observations": 4214,
+          "coverage80": 0.8448,
+          "coverage90": 0.9359,
+          "meanWidth80": 0.4013,
+          "meanWidth90": 0.5094
+        },
+        {
+          "crop": "soybean",
+          "observations": 3702,
+          "coverage80": 0.8441,
+          "coverage90": 0.9338,
+          "meanWidth80": 0.3858,
+          "meanWidth90": 0.4906
+        },
+        {
+          "crop": "wheat",
+          "observations": 2435,
+          "coverage80": 0.7959,
+          "coverage90": 0.894,
+          "meanWidth80": 0.3434,
+          "meanWidth90": 0.4578
+        }
+      ],
+      "perRegion": [
+        {
+          "region": "Northeast",
+          "observations": 469,
+          "coverage80": 0.7825,
+          "coverage90": 0.9019,
+          "meanWidth80": 0.4327,
+          "meanWidth90": 0.5442
+        },
+        {
+          "region": "Midwest",
+          "observations": 5859,
+          "coverage80": 0.8317,
+          "coverage90": 0.9249,
+          "meanWidth80": 0.3788,
+          "meanWidth90": 0.4844
+        },
+        {
+          "region": "South",
+          "observations": 3679,
+          "coverage80": 0.8328,
+          "coverage90": 0.9244,
+          "meanWidth80": 0.3752,
+          "meanWidth90": 0.4882
+        },
+        {
+          "region": "West",
+          "observations": 344,
+          "coverage80": 0.9273,
+          "coverage90": 0.9738,
+          "meanWidth80": 0.4445,
+          "meanWidth90": 0.546
+        }
+      ],
+      "perPredictionBand": [
+        {
+          "band": 0,
+          "lower": 0.0,
+          "upper": 0.33,
+          "observations": 2911,
+          "coverage80": 0.921,
+          "coverage90": 0.9502,
+          "meanWidth80": 0.3685,
+          "meanWidth90": 0.4182
+        },
+        {
+          "band": 1,
+          "lower": 0.33,
+          "upper": 0.67,
+          "observations": 4289,
+          "coverage80": 0.7533,
+          "coverage90": 0.9238,
+          "meanWidth80": 0.4037,
+          "meanWidth90": 0.5838
+        },
+        {
+          "band": 2,
+          "lower": 0.67,
+          "upper": 1.0,
+          "observations": 3151,
+          "coverage80": 0.8604,
+          "coverage90": 0.9045,
+          "meanWidth80": 0.3653,
+          "meanWidth90": 0.4303
+        }
+      ]
+    },
+    "stability": {
+      "pooled": {
+        "observations": 7331,
+        "coverage80": 0.84,
+        "coverage90": 0.9292,
+        "meanWidth80": 0.3811,
+        "meanWidth90": 0.4885
+      },
+      "perCrop": [
+        {
+          "crop": "corn",
+          "observations": 2948,
+          "coverage80": 0.8375,
+          "coverage90": 0.9206,
+          "meanWidth80": 0.3996,
+          "meanWidth90": 0.5048
+        },
+        {
+          "crop": "soybean",
+          "observations": 2674,
+          "coverage80": 0.8489,
+          "coverage90": 0.9308,
+          "meanWidth80": 0.3838,
+          "meanWidth90": 0.487
+        },
+        {
+          "crop": "wheat",
+          "observations": 1709,
+          "coverage80": 0.8303,
+          "coverage90": 0.9415,
+          "meanWidth80": 0.3449,
+          "meanWidth90": 0.4627
+        }
+      ],
+      "perRegion": [
+        {
+          "region": "Northeast",
+          "observations": 370,
+          "coverage80": 0.8189,
+          "coverage90": 0.9,
+          "meanWidth80": 0.4351,
+          "meanWidth90": 0.5451
+        },
+        {
+          "region": "Midwest",
+          "observations": 4136,
+          "coverage80": 0.8378,
+          "coverage90": 0.9292,
+          "meanWidth80": 0.3773,
+          "meanWidth90": 0.4818
+        },
+        {
+          "region": "South",
+          "observations": 2584,
+          "coverage80": 0.8495,
+          "coverage90": 0.9361,
+          "meanWidth80": 0.3754,
+          "meanWidth90": 0.4883
+        },
+        {
+          "region": "West",
+          "observations": 241,
+          "coverage80": 0.8091,
+          "coverage90": 0.9004,
+          "meanWidth80": 0.4232,
+          "meanWidth90": 0.5186
+        }
+      ],
+      "perPredictionBand": [
+        {
+          "band": 0,
+          "lower": 0.0,
+          "upper": 0.33,
+          "observations": 2187,
+          "coverage80": 0.9063,
+          "coverage90": 0.9488,
+          "meanWidth80": 0.3666,
+          "meanWidth90": 0.4155
+        },
+        {
+          "band": 1,
+          "lower": 0.33,
+          "upper": 0.67,
+          "observations": 3011,
+          "coverage80": 0.7642,
+          "coverage90": 0.9186,
+          "meanWidth80": 0.4016,
+          "meanWidth90": 0.5817
+        },
+        {
+          "band": 2,
+          "lower": 0.67,
+          "upper": 1.0,
+          "observations": 2133,
+          "coverage80": 0.879,
+          "coverage90": 0.9241,
+          "meanWidth80": 0.367,
+          "meanWidth90": 0.4317
+        }
+      ]
+    },
+    "widthReduction90": {
+      "development": 0.0139,
+      "stability": 0.0145
+    },
+    "gate": {
+      "passed": true,
+      "checks": {
+        "minimumCalibrationExamples": true,
+        "coverage": true,
+        "developmentWidthReduction": true,
+        "stabilityWidthReduction": true,
+        "eightyPercentBandUnchanged": true
+      }
+    }
+  },
+  "gate": {
+    "passed": true,
+    "passingCandidates": 1
+  },
+  "decision": "seal candidate for locked validation",
+  "interpretation": "Observed county-rank uncertainty; not parcel yield, revenue, or property value."
+}

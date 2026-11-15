@@ -30,6 +30,8 @@
     "ml:evaluate:interval-scaling": "PYTHONPATH=machine-learning machine-learning/.venv/bin/python -m cropfit.interval_scaling_validation",
     "ml:evaluate:interval-shrinkage": "PYTHONPATH=machine-learning machine-learning/.venv/bin/python -m cropfit.interval_shrinkage_validation",
     "ml:develop:asymmetric-intervals": "PYTHONPATH=machine-learning machine-learning/.venv/bin/python -m cropfit.asymmetric_interval_development",
+    "ml:develop:prediction-intervals": "PYTHONPATH=machine-learning machine-learning/.venv/bin/python -m cropfit.prediction_interval_development",
+    "ml:evaluate:prediction-intervals": "PYTHONPATH=machine-learning machine-learning/.venv/bin/python -m cropfit.prediction_interval_validation",
     "ml:evaluate:log-linear": "PYTHONPATH=machine-learning machine-learning/.venv/bin/python -m cropfit.log_linear_validation",
     "ml:evaluate:log-linear-floor": "PYTHONPATH=machine-learning machine-learning/.venv/bin/python -m cropfit.log_linear_floor_validation",
     "ml:evaluate:scenario-shift": "PYTHONPATH=machine-learning machine-learning/.venv/bin/python -m cropfit.scenario_shift_validation",

@@ -293,6 +293,13 @@ requirements. No 2023–2025 metric entered candidate selection or the
 advancement gate, and Atlas v11's symmetric intervals remain in production. See
 `evaluation/asymmetric-interval-development-v12.md`.
 
+A prediction-stratified follow-up retains v11's 80% intervals and conditions
+only the 90% radius on low, middle, or high predicted county percentile. A
+fixed pre-final grid selected 33%/67% cuts with a 75% conditional blend. The
+candidate preserved all development/stability crop and region coverage checks
+while narrowing mean 90% width by more than 1% in both blocks. Its candidate
+and locked 2023–2025 promotion gate are sealed in source before validation.
+
 Rebuilding the full forward-year atlas with the promoted prior improved pooled
 Spearman from 0.7871 to 0.7914. On identical 2019–2025 rows, 16-year-history
 Spearman improved from 0.8405 to 0.8465 and MAE from 0.1199 to 0.1168. Fresh

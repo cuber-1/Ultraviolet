@@ -325,6 +325,18 @@ def verify(artifact: Path, profiles: Path) -> None:
         assert asymmetric_report["selectedCandidate"] is None
         assert asymmetric_report["decision"] == "reject asymmetric intervals; retain atlas v11"
 
+    prediction_interval_development = artifact.parents[1] / "evaluation/prediction-interval-development-v12.json"
+    if prediction_interval_development.exists():
+        prediction_report = json.loads(prediction_interval_development.read_text())
+        assert prediction_report["gate"] == {"passed": True, "passingCandidates": 1}
+        assert prediction_report["protocol"]["finalYearsOpenedForSelection"] == []
+        assert prediction_report["selectedCandidate"]["cuts"] == [.33, .67]
+        assert prediction_report["selectedCandidate"]["blend"] == .75
+        assert prediction_report["selectedCandidate"]["widthReduction90"]["development"] >= .01
+        assert prediction_report["selectedCandidate"]["widthReduction90"]["stability"] >= .01
+        assert prediction_report["selectedCandidate"]["gate"]["passed"]
+        assert prediction_report["decision"] == "seal candidate for locked validation"
+
     trend_validation = artifact.parents[1] / "evaluation/trend-validation-v1.json"
     if trend_validation.exists():
         trend_report = json.loads(trend_validation.read_text())

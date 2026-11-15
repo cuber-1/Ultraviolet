@@ -313,6 +313,15 @@ npm run ml:develop:asymmetric-intervals
 See `evaluation/asymmetric-interval-development-v12.md` and its presentation
 PNG for the coverage/width tradeoff.
 
+A follow-up candidate conditions the 90% residual radius on low, middle, or
+high predicted county percentile while leaving the 80% interval unchanged.
+The fixed development grid selected 33%/67% cuts and a 75% conditional blend:
+it passes every crop and region pre-final coverage check and narrows mean 90%
+width by more than 1% on both development and stability. Its separate locked
+2023–2025 protocol is committed but has not yet been run. Reproduce selection
+with `npm run ml:develop:prediction-intervals`; the sealed validation command is
+`npm run ml:evaluate:prediction-intervals`.
+
 The builder uses the filtered USDA Quick Stats and Census county files from the
 national observed-validation download. It writes atlas v11, a forward-year
 validation report, and a presentation PNG under `evaluation/`. Atlas v11 uses
