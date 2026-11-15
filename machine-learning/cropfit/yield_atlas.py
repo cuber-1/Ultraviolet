@@ -909,7 +909,10 @@ def nearest_evidence(crop: str, latitude: float, longitude: float, path: Path, m
     )), None)
     if calibration and prior:
         interval_scales = production_calibration.get("selectedRegionalScales", {}).get(
-            STATE_TO_CENSUS_REGION[record["state"]], {"scale80": 1.0, "scale90": 1.0},
+            STATE_TO_CENSUS_REGION[record["state"]],
+            transfer.get("selectedRegionalScalesByCrop", {}).get(crop_key, {}).get(
+                STATE_TO_CENSUS_REGION[record["state"]], {"scale80": 1.0, "scale90": 1.0},
+            ),
         )
         prior.update({
             "expectedPercentile": round(expected, 4),

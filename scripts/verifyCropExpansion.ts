@@ -58,18 +58,27 @@ const subtypeAtlas = JSON.parse(readFileSync(
 )) as {
   crops: string[];
   records: Array<{ crop: string; yieldUnit: string; history: Array<{ yieldPerAcre: number }> }>;
-  spatialTransferValidation?: { selectedNeighborhoodByCrop?: Record<string, { maxNeighbors: number; distancePower: number; distanceOffsetKm: number }> };
-  validation: { acceptedCrops: string[]; gate: { passed: boolean }; selectedNeighborhoods: Record<string, { maxNeighbors: number; distancePower: number; distanceOffsetKm: number }>; perCrop: Array<{ crop: string; passed: boolean; spearmanGain: number; spearmanGainBootstrap95: [number, number]; maeReduction: number; pointValidation: Record<'development' | 'stability' | 'final', { spearmanGain: number; maeReduction: number }>; signal: { observations: number; spearman: number; bootstrap95: [number, number] }; development: { coverage80: number; coverage90: number }; stability: { coverage80: number; coverage90: number }; final: { coverage80: number; coverage90: number; meanWidth90: number } }> };
+  spatialTransferValidation?: { selectedNeighborhoodByCrop?: Record<string, { maxNeighbors: number; distancePower: number; distanceOffsetKm: number }>; selectedRegionalScalesByCrop?: Record<string, Record<string, { scale80: number; scale90: number }>>; supportedRegionsByCrop?: Record<string, string[]> };
+  validation: { acceptedCrops: string[]; gate: { passed: boolean }; selectedNeighborhoods: Record<string, { maxNeighbors: number; distancePower: number; distanceOffsetKm: number }>; selectedRegionalScales: Record<string, Record<string, { scale80: number; scale90: number }>>; supportedRegionsByCrop: Record<string, string[]>; perCrop: Array<{ crop: string; passed: boolean; spearmanGain: number; spearmanGainBootstrap95: [number, number]; maeReduction: number; pointValidation: Record<'development' | 'stability' | 'final', { spearmanGain: number; maeReduction: number }>; signal: { observations: number; spearman: number; bootstrap95: [number, number] }; development: { coverage80: number; coverage90: number }; stability: { coverage80: number; coverage90: number }; final: { coverage80: number; coverage90: number; meanWidth90: number }; perRegion: Array<{ region: string; final: { observations: number; coverage80: number; coverage90: number; meanWidth90: number } }> }> };
 };
 const expectedNeighborhoods = {
   'silage corn': { maxNeighbors: 5, distancePower: 1, distanceOffsetKm: 5 },
   'spring wheat': { maxNeighbors: 5, distancePower: 2, distanceOffsetKm: 5 },
 };
+const expectedRegionalScales = {
+  'silage corn': { Midwest: { scale80: 1.1, scale90: 1.05 }, Northeast: { scale80: 1.05, scale90: 1 } },
+  'spring wheat': { Midwest: { scale80: 1, scale90: 1 }, West: { scale80: 1.33, scale90: 1.33 } },
+};
+const expectedRegions = { 'silage corn': ['Midwest', 'Northeast'], 'spring wheat': ['Midwest', 'West'] };
 if (JSON.stringify(subtypeAtlas.crops) !== JSON.stringify(['silage corn', 'spring wheat'])
   || JSON.stringify(subtypeAtlas.validation.acceptedCrops) !== JSON.stringify(['silage corn', 'spring wheat'])
   || JSON.stringify(subtypeAtlas.validation.selectedNeighborhoods) !== JSON.stringify(expectedNeighborhoods)
   || JSON.stringify(subtypeAtlas.spatialTransferValidation?.selectedNeighborhoodByCrop) !== JSON.stringify(expectedNeighborhoods)
-  || !subtypeAtlas.validation.gate.passed || subtypeAtlas.records.length !== 721) {
+  || JSON.stringify(subtypeAtlas.validation.selectedRegionalScales) !== JSON.stringify(expectedRegionalScales)
+  || JSON.stringify(subtypeAtlas.spatialTransferValidation?.selectedRegionalScalesByCrop) !== JSON.stringify(expectedRegionalScales)
+  || JSON.stringify(subtypeAtlas.validation.supportedRegionsByCrop) !== JSON.stringify(expectedRegions)
+  || JSON.stringify(subtypeAtlas.spatialTransferValidation?.supportedRegionsByCrop) !== JSON.stringify(expectedRegions)
+  || !subtypeAtlas.validation.gate.passed || subtypeAtlas.records.length !== 690) {
   throw new Error('Crop-subtype production atlas identity or promotion gate changed unexpectedly.');
 }
 for (const item of subtypeAtlas.validation.perCrop) {
@@ -79,7 +88,9 @@ for (const item of subtypeAtlas.validation.perCrop) {
     && item.development.coverage80 >= .78 && item.development.coverage90 >= .88
     && item.stability.coverage80 >= .78 && item.stability.coverage90 >= .88
     && item.final.coverage80 >= .75 && item.final.coverage80 <= .9
-    && item.final.coverage90 >= .87 && item.final.coverage90 <= .96 && item.final.meanWidth90 <= .8;
+    && item.final.coverage90 >= .87 && item.final.coverage90 <= .96 && item.final.meanWidth90 <= .8
+    && item.perRegion.every((region) => region.final.observations >= 50 && region.final.coverage80 >= .7
+      && region.final.coverage90 >= .85 && region.final.coverage90 <= .98 && region.final.meanWidth90 <= .9);
   if (item.passed !== passes) {
     throw new Error(`Crop-subtype held-out contract failed: ${item.crop}`);
   }
@@ -89,4 +100,4 @@ if (subtypeAtlas.records.some((record) => !['bu/acre', 'tons/acre'].includes(rec
   throw new Error('Crop-subtype atlas lost explicit, finite yield units.');
 }
 
-console.log('Crop expansion policy verified: development-selected five-county priors improve locked spring-wheat and silage-corn transfer');
+console.log('Crop expansion policy verified: five-county subtype priors improve locked transfer with region-safe uncertainty');

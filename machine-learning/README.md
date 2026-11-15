@@ -32,7 +32,7 @@ artifact instead, use the full setup below. Because the repository is private,
 the installer uses an authenticated GitHub CLI session (`gh auth login`) or a
 `GITHUB_TOKEN`.
 
-Runtime API v0.11.0 keeps the validated v0.9.1 estimator and hardens every direct
+Runtime API v0.12.0 keeps the validated v0.9.1 estimator and hardens every direct
 and HTTP prediction path with the same finite coordinate, soil-pH, boolean,
 climate-shape, and 20-year history limits. Startup validates the artifact's
 internal model/metadata contract. `GET /health` returns the artifact SHA-256 and
@@ -255,10 +255,13 @@ silage and power 2 for spring wheat. On locked 2023–2025 outcomes, spring-whea
 Spearman improves from 0.594 to 0.710 and MAE falls from 0.170 to 0.154; silage
 improves from 0.434 to 0.503 and MAE from 0.218 to 0.204. Grouped-bootstrap
 lower bounds are 0.615 and 0.422; paired gain intervals are +0.047 to +0.194
-and +0.014 to +0.126. Calibrated 80% / 90% coverage is 83.7% / 90.3% for
-spring wheat and 78.6% / 90.1% for silage. The 721-record artifact
-keeps `bu/acre` and `tons/acre` explicit. Generic grain-corn and winter-wheat
-queries remain on atlas v9. See
+and +0.014 to +0.126. Region multipliers selected before the final test lift
+Western spring-wheat 80% / 90% coverage from 72.3% / 78.7% to 78.7% / 87.2%.
+Locked pooled coverage is 86.0% / 93.4% for spring wheat and 82.4% / 90.6% for
+silage. The 690-record artifact keeps `bu/acre` and `tons/acre` explicit and
+publishes only crop-region pairs with at least 50 examples in development,
+stability, and final blocks. Generic grain-corn and winter-wheat queries remain
+on atlas v9. See
 `evaluation/yield-atlas-subtypes-validation-v1.md`.
 
 ## Test recency weighting and atlas lookup
