@@ -85,7 +85,13 @@ def atomic_text_write(path: Path, value: str) -> None:
         temporary.unlink(missing_ok=True)
 
 
-def generate_examples(profiles, samples_per_crop: int, seed: int, include_interactions: bool = True):
+def generate_examples(
+    profiles,
+    samples_per_crop: int,
+    seed: int,
+    include_interactions: bool = True,
+    dtype=np.float32,
+):
     random = np.random.default_rng(seed)
     features, labels, groups = [], [], []
     for group, profile in enumerate(profiles):
@@ -99,7 +105,7 @@ def generate_examples(profiles, samples_per_crop: int, seed: int, include_intera
             features.append(feature_row(profile, temperature, precipitation, ph, solar, irrigated, include_interactions))
             labels.append(teacher_scores(profile, temperature, precipitation, ph, solar, irrigated)["suitability"])
             groups.append(group)
-    return np.asarray(features, dtype=np.float32), np.asarray(labels, dtype=np.float32), np.asarray(groups)
+    return np.asarray(features, dtype=dtype), np.asarray(labels, dtype=dtype), np.asarray(groups)
 
 
 def train_booster(x_train, y_train, x_validation, y_validation, rounds: int, seed: int):

@@ -85,6 +85,17 @@ shift calibration mismatch at numerical-error scale. Production remains
 v0.11. See `evaluation/log-linear-development-v0.12.md` and
 `evaluation/log-linear-validation-v0.12.md`.
 
+The v0.12.1 development follow-up identified the exact boundary mismatch: the
+teacher clamps every positive membership to at least `1e-6`, while v0.12
+logged smaller positive values directly. Applying that existing floor and
+retaining float64 precision for fitting reduces the exposed bad seed's maximum
+error from 0.000327 to 0.0000065. Three new development seeds stay below
+0.000006, retain nominal active coverage, and learn the same positive unit-sum
+elasticities. All 23,872 exposed runtime-shaped scores match the teacher after
+normal 0.1-point API rounding. A second fresh protocol, including an explicit
+measurement-floor policy, is committed with its seeds unopened. See
+`evaluation/log-linear-floor-development-v0.12.1.md`.
+
 Version 0.9 increases generated fitting coverage from 72 to 120 scenarios per
 training crop while preserving the exact v0.8 validation and held-out rows. The
 denser fitting data lets the ensemble shrink from 120 to 70 trees. Across two

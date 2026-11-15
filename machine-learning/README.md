@@ -164,6 +164,18 @@ npm run ml:develop:log-linear
 npm run ml:evaluate:log-linear  # expected to exit nonzero: promotion rejected
 ```
 
+The diagnosed v0.12.1 follow-up aligns positive memberships with the teacher's
+pre-existing `1e-6` numerical floor and keeps float64 precision only for its
+tiny fitting matrix. It fixes the exposed bad seed, stays below 0.000007
+maximum error on three new development seeds, and exactly matches all 23,872
+exposed runtime-shaped scores after normal 0.1-point API rounding. A second
+fresh protocol is committed in `cropfit/log_linear_floor_validation.py`; its
+new confirmation, final, and shift seeds remain unopened.
+
+```bash
+npm run ml:develop:log-linear-floor
+```
+
 Training refuses to replace the production artifact unless frozen MAE, p90,
 R², held-out-profile-count, and conformal-coverage thresholds all pass. The
 artifact and metadata are written atomically, so interruption cannot leave a

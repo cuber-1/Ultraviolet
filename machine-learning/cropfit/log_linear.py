@@ -12,8 +12,15 @@ class LogLinearCropFitRegressor(RegressorMixin, BaseEstimator):
     ordinary least squares without pre-specifying any elasticity.
     """
 
+    def __init__(self, membership_floor: float | None = None):
+        self.membership_floor = membership_floor
+
     def fit(self, x: np.ndarray, y: np.ndarray) -> LogLinearCropFitRegressor:
         values = self._matrix(x)
+        if self.membership_floor is not None and (
+            not np.isfinite(self.membership_floor) or self.membership_floor <= 0
+        ):
+            raise ValueError("Membership floor must be finite and positive.")
         targets = np.asarray(y, dtype=np.float64)
         if targets.ndim != 1 or len(targets) != len(values):
             raise ValueError("Targets must be a one-dimensional array aligned with features.")
@@ -22,7 +29,7 @@ class LogLinearCropFitRegressor(RegressorMixin, BaseEstimator):
         active = np.all(values > 0, axis=1)
         if not np.any(active) or np.any(targets[active] <= 0):
             raise ValueError("Positive feature rows require positive targets.")
-        log_features = np.log(values[active])
+        log_features = np.log(self._positive(values[active]))
         design = np.column_stack((np.ones(len(log_features)), log_features))
         solution, _, _, _ = np.linalg.lstsq(design, np.log(targets[active]), rcond=None)
         self.intercept_ = float(solution[0])
@@ -39,8 +46,11 @@ class LogLinearCropFitRegressor(RegressorMixin, BaseEstimator):
             raise ValueError(f"Expected {self.n_features_in_} features, received {values.shape[1]}.")
         predictions = np.zeros(len(values), dtype=np.float64)
         active = np.all(values > 0, axis=1)
-        predictions[active] = np.exp(self.intercept_ + np.log(values[active]) @ self.coef_)
+        predictions[active] = np.exp(self.intercept_ + np.log(self._positive(values[active])) @ self.coef_)
         return np.clip(predictions, 0.0, 100.0)
+
+    def _positive(self, values: np.ndarray) -> np.ndarray:
+        return values if self.membership_floor is None else np.maximum(values, self.membership_floor)
 
     @staticmethod
     def _matrix(x: np.ndarray) -> np.ndarray:

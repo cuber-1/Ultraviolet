@@ -59,7 +59,12 @@ def direct_calibrated_coverage(
     }
 
 
-def fit_pair(profiles: list, seed: int) -> tuple[dict, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+def fit_pair(
+    profiles: list,
+    seed: int,
+    candidate_factory=LogLinearCropFitRegressor,
+    candidate_dtype=np.float32,
+) -> tuple[dict, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     x, y, groups = generate_examples(profiles, EVALUATION_DENSITY, seed)
     train, validation, test = split_indices(x, y, groups, seed)
     training_x, training_y, training_groups = generate_examples(profiles, FITTING_DENSITY, seed)
@@ -68,9 +73,21 @@ def fit_pair(profiles: list, seed: int) -> tuple[dict, np.ndarray, np.ndarray, n
     champion_started = perf_counter()
     champion.fit(training_x[fitting][:, COMPACT_COLUMNS], training_y[fitting])
     champion_seconds = perf_counter() - champion_started
-    candidate = LogLinearCropFitRegressor()
+    candidate_training_x, candidate_training_y = training_x, training_y
+    candidate_fitting = fitting
+    if candidate_dtype != np.float32:
+        candidate_training_x, candidate_training_y, candidate_training_groups = generate_examples(
+            profiles, FITTING_DENSITY, seed, dtype=candidate_dtype,
+        )
+        candidate_fitting = np.flatnonzero(
+            np.isin(candidate_training_groups, np.unique(groups[train])),
+        )
+    candidate = candidate_factory()
     candidate_started = perf_counter()
-    candidate.fit(training_x[fitting][:, MEMBERSHIP_COLUMNS], training_y[fitting])
+    candidate.fit(
+        candidate_training_x[candidate_fitting][:, MEMBERSHIP_COLUMNS],
+        candidate_training_y[candidate_fitting],
+    )
     candidate_seconds = perf_counter() - candidate_started
     return {
         "championV011": {"model": champion, "columns": COMPACT_COLUMNS, "fitSeconds": champion_seconds},
@@ -93,8 +110,8 @@ def fidelity_metrics(actual: np.ndarray, predicted: np.ndarray) -> dict:
     }
 
 
-def seed_result(profiles: list, seed: int) -> tuple[dict, dict]:
-    models, x, y, _, indices = fit_pair(profiles, seed)
+def seed_result(profiles: list, seed: int, fit_pair_fn=fit_pair) -> tuple[dict, dict]:
+    models, x, y, _, indices = fit_pair_fn(profiles, seed)
     validation, test = indices
     item = {"seed": seed, "testExamples": len(test)}
     sizes = {}

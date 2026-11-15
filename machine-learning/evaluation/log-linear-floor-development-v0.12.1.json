@@ -1,0 +1,232 @@
+{
+  "name": "CropFit membership-floor log-linear development v0.12.1",
+  "protocol": {
+    "target": "EcoCrop mechanistic screening teacher; not observed yield",
+    "diagnosis": "The rejected v0.12 candidate logged positive memberships below the teacher's 1e-6 numerical floor, perturbing one fitted seed and making millionth-point calibration generator-dependent.",
+    "candidate": "v0.12 log-linear regression with the teacher's fixed 1e-6 positive-membership floor and float64 fitting rows",
+    "membershipFloor": 1e-06,
+    "selection": "The floor is copied from the pre-existing teacher definition, not tuned over candidates. Exposed seeds diagnose the prior rejection; only 20270521-20270523 are new development evidence.",
+    "exposedDiagnosticSeed": 20270519,
+    "developmentSeeds": [
+      20270521,
+      20270522,
+      20270523
+    ],
+    "exposedShiftDiagnosticSeed": 20270520,
+    "reservedSeedsOpened": false,
+    "reservedValidation": {
+      "confirmationSeeds": [
+        20270530,
+        20270531,
+        20270532,
+        20270533,
+        20270534
+      ],
+      "finalSeeds": [
+        20270535,
+        20270536,
+        20270537,
+        20270538,
+        20270539
+      ],
+      "shiftSeed": 20270540
+    },
+    "advanceRule": "The exposed bad seed must return below 0.00001 maximum error; every new development seed must improve MAE/p90 by >=99%, stay below 0.00001 maximum error, and preserve active random-row coverage within two points; coefficient spread <=0.000001; the exposed runtime-shaped shift must stay below 0.00001 maximum error with zero 0.1-point served-score mismatches."
+  },
+  "results": [
+    {
+      "seed": 20270519,
+      "testExamples": 26856,
+      "championV011": {
+        "mae": 0.01124542,
+        "p90AbsoluteError": 0.02923571,
+        "maximumAbsoluteError": 2.22199669,
+        "deployedMaximumAbsoluteError": 0.82273612,
+        "fitSeconds": 0.3784,
+        "apiBatchLatencyMs": 13.493
+      },
+      "logLinearCandidate": {
+        "mae": 3e-07,
+        "p90AbsoluteError": 1.22e-06,
+        "maximumAbsoluteError": 6.46e-06,
+        "deployedMaximumAbsoluteError": 6.46e-06,
+        "fitSeconds": 0.0294,
+        "apiBatchLatencyMs": 0.01,
+        "coefficients": {
+          "temperature_range_fit": 0.42,
+          "water_range_fit": 0.26,
+          "ph_range_fit": 0.18,
+          "solar_range_fit": 0.14
+        },
+        "intercept": 4.60517019,
+        "calibration": {
+          "method": "active absolute-residual split conformal",
+          "validationExamples": 3339,
+          "testExamples": 5769,
+          "absoluteErrorQuantiles": {
+            "p80": 2.39e-06,
+            "p90": 3.11e-06
+          },
+          "coverage80": 0.8055,
+          "coverage90": 0.9012,
+          "inactiveExact": true
+        }
+      },
+      "gains": {
+        "maePercent": 99.9973,
+        "p90Percent": 99.9958
+      },
+      "phase": "exposed-diagnostic"
+    },
+    {
+      "seed": 20270521,
+      "testExamples": 26856,
+      "championV011": {
+        "mae": 0.01051565,
+        "p90AbsoluteError": 0.02656698,
+        "maximumAbsoluteError": 1.60964259,
+        "deployedMaximumAbsoluteError": 0.97346799,
+        "fitSeconds": 0.3762,
+        "apiBatchLatencyMs": 12.847
+      },
+      "logLinearCandidate": {
+        "mae": 2.9e-07,
+        "p90AbsoluteError": 1.19e-06,
+        "maximumAbsoluteError": 5.52e-06,
+        "deployedMaximumAbsoluteError": 5.47e-06,
+        "fitSeconds": 0.0331,
+        "apiBatchLatencyMs": 0.01,
+        "coefficients": {
+          "temperature_range_fit": 0.42,
+          "water_range_fit": 0.26,
+          "ph_range_fit": 0.18,
+          "solar_range_fit": 0.14
+        },
+        "intercept": 4.60517019,
+        "calibration": {
+          "method": "active absolute-residual split conformal",
+          "validationExamples": 3559,
+          "testExamples": 5557,
+          "absoluteErrorQuantiles": {
+            "p80": 2.37e-06,
+            "p90": 3.09e-06
+          },
+          "coverage80": 0.8001,
+          "coverage90": 0.8965,
+          "inactiveExact": true
+        }
+      },
+      "gains": {
+        "maePercent": 99.9972,
+        "p90Percent": 99.9955
+      },
+      "phase": "development"
+    },
+    {
+      "seed": 20270522,
+      "testExamples": 26856,
+      "championV011": {
+        "mae": 0.0097839,
+        "p90AbsoluteError": 0.02499323,
+        "maximumAbsoluteError": 2.96865578,
+        "deployedMaximumAbsoluteError": 0.65099978,
+        "fitSeconds": 0.3476,
+        "apiBatchLatencyMs": 14.702
+      },
+      "logLinearCandidate": {
+        "mae": 3e-07,
+        "p90AbsoluteError": 1.25e-06,
+        "maximumAbsoluteError": 5.81e-06,
+        "deployedMaximumAbsoluteError": 5.22e-06,
+        "fitSeconds": 0.0342,
+        "apiBatchLatencyMs": 0.01,
+        "coefficients": {
+          "temperature_range_fit": 0.42,
+          "water_range_fit": 0.26,
+          "ph_range_fit": 0.18,
+          "solar_range_fit": 0.14
+        },
+        "intercept": 4.60517019,
+        "calibration": {
+          "method": "active absolute-residual split conformal",
+          "validationExamples": 3300,
+          "testExamples": 5723,
+          "absoluteErrorQuantiles": {
+            "p80": 2.3e-06,
+            "p90": 3.02e-06
+          },
+          "coverage80": 0.7861,
+          "coverage90": 0.8885,
+          "inactiveExact": true
+        }
+      },
+      "gains": {
+        "maePercent": 99.9969,
+        "p90Percent": 99.995
+      },
+      "phase": "development"
+    },
+    {
+      "seed": 20270523,
+      "testExamples": 26856,
+      "championV011": {
+        "mae": 0.0100951,
+        "p90AbsoluteError": 0.02731323,
+        "maximumAbsoluteError": 3.3933552,
+        "deployedMaximumAbsoluteError": 1.03045368,
+        "fitSeconds": 0.37,
+        "apiBatchLatencyMs": 13.193
+      },
+      "logLinearCandidate": {
+        "mae": 2.9e-07,
+        "p90AbsoluteError": 1.21e-06,
+        "maximumAbsoluteError": 5.63e-06,
+        "deployedMaximumAbsoluteError": 5.22e-06,
+        "fitSeconds": 0.0357,
+        "apiBatchLatencyMs": 0.01,
+        "coefficients": {
+          "temperature_range_fit": 0.42,
+          "water_range_fit": 0.26,
+          "ph_range_fit": 0.18,
+          "solar_range_fit": 0.14
+        },
+        "intercept": 4.60517019,
+        "calibration": {
+          "method": "active absolute-residual split conformal",
+          "validationExamples": 3385,
+          "testExamples": 5606,
+          "absoluteErrorQuantiles": {
+            "p80": 2.42e-06,
+            "p90": 3.18e-06
+          },
+          "coverage80": 0.8049,
+          "coverage90": 0.9076,
+          "inactiveExact": true
+        }
+      },
+      "gains": {
+        "maePercent": 99.9971,
+        "p90Percent": 99.9956
+      },
+      "phase": "development"
+    }
+  ],
+  "shiftDiagnostic": {
+    "seed": 20270520,
+    "examples": 23872,
+    "mae": 1e-07,
+    "p90AbsoluteError": 3.8e-07,
+    "maximumAbsoluteError": 2.28e-06,
+    "runtimeScoreMismatches": 0
+  },
+  "gate": {
+    "passed": true,
+    "checks": {
+      "exposedBoundaryFixed": true,
+      "developmentAccuracy": true,
+      "developmentCalibration": true,
+      "coefficientStability": true,
+      "runtimePrecisionShift": true
+    }
+  }
+}
