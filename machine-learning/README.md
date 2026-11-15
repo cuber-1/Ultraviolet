@@ -32,7 +32,7 @@ artifact instead, use the full setup below. Because the repository is private,
 the installer uses an authenticated GitHub CLI session (`gh auth login`) or a
 `GITHUB_TOKEN`.
 
-Runtime API v0.9.2 keeps the validated v0.9.1 estimator and hardens every direct
+Runtime API v0.13.0 keeps the validated v0.9.1 estimator and hardens every direct
 and HTTP prediction path with the same finite coordinate, soil-pH, boolean,
 climate-shape, and 20-year history limits. Startup validates the artifact's
 internal model/metadata contract. `GET /health` returns the artifact SHA-256 and
@@ -146,8 +146,10 @@ This reproduces the production-seed comparison, a frozen five-seed robustness
 sweep, their machine-readable report, and two presentation charts under
 `machine-learning/evaluation/`.
 
-For corn, soybeans, and wheat, the response may also include
-`observedYieldEvidence`: the nearest USDA reporting county within 100 km, its
+For grain corn, soybeans, winter wheat, silage corn, and non-durum spring wheat,
+the response may also include
+`observedYieldEvidence`: nearby USDA reporting counties within 100 km, the
+nearest county's
 2010–2025 within-crop/year percentile history, and an observed county prior
 with calibrated 80% and 90% uncertainty intervals. Atlas v9 uses the globally
 selected 15% regional share only in Census regions where it improves both
@@ -240,9 +242,33 @@ Spring wheat passes with 257 final observations, Spearman 0.762, and a
 and a 0.469–0.617 interval. Dry peas and durum wheat have promising rank signal
 but fail the final sample floor; beans, potatoes, and both sunflower definitions
 also remain rejected. Grain/silage corn and winter/spring/durum wheat are never
-pooled. This screen does not add the passing subtypes to atlas v9: production
-coverage remains grain corn, soybeans, and winter wheat pending a separately
-validated subtype lookup. See `evaluation/crop-expansion-validation-v2.md`.
+pooled. A second gate then tests whether those county signals transfer to a
+different nearby county before property lookup:
+
+```bash
+npm run ml:build:crop-subtype-atlas
+```
+
+It leaves each target county out and selects neighborhood aggregation using
+2018–2020 only. Both crops select five counties with inverse-distance power 2;
+silage additionally weights each county by its available history count, while
+spring wheat remains distance-only. On locked 2023–2025 outcomes, spring-wheat
+Spearman improves from 0.594 to 0.710 and MAE falls from 0.170 to 0.154; silage
+improves from 0.434 to 0.511 and MAE from 0.218 to 0.203. Against the previous
+distance-only silage prior, history weighting also improves rank and MAE in
+development, stability, and final blocks; the locked incremental rank interval
+is -0.010 to +0.027, so this small ablation gain is not presented as conclusive.
+Grouped-bootstrap lower bounds are 0.615 and 0.428; paired gains against one
+nearest county are +0.047 to +0.194 and +0.018 to +0.139. Region multipliers
+selected before the final test lift Western spring-wheat 80% / 90% coverage
+from 72.3% / 78.7% to 78.7% / 87.2%.
+Locked pooled coverage remains 86.0% / 93.4% for spring wheat. The
+history-weighted silage intervals achieve 80.7% / 90.1% coverage;
+their mean 90% width falls from 0.761 to 0.746. The 690-record artifact keeps
+`bu/acre` and `tons/acre` explicit and publishes only crop-region pairs with at
+least 50 examples in development, stability, and final blocks. Generic
+grain-corn and winter-wheat queries remain on atlas v9. See
+`evaluation/yield-atlas-subtypes-validation-v1.md`.
 
 ## Test recency weighting and atlas lookup
 

@@ -45,13 +45,14 @@ function YieldHistoryChart({ evidence }: { evidence: NonNullable<CropFitPredicti
   const chartHeight = height - top - bottom; const band = (width - left - right) / Math.max(1, evidence.history.length);
   const y = (percentile: number) => top + (1 - percentile) * chartHeight;
   const prior = evidence.observedYieldPrior;
+  const yieldUnit = evidence.yieldUnit || 'bu/acre';
   return <section className="cropfit-yield"><header><div><span>OBSERVED USDA LOCAL + REGIONAL PRIOR</span><strong>{prior?.neighborCount ?? 1} counties · nearest {evidence.county}, {evidence.state} at {evidence.distanceKm.toFixed(0)} km</strong></div><em>{prior ? `EXPECTED ${Math.round(prior.expectedPercentile * 100)}TH · 80% ${prior.intervalMethod?.includes('conformal') ? 'CALIBRATED ' : ''}BAND ${Math.round(prior.interval80[0] * 100)}–${Math.round(prior.interval80[1] * 100)}TH` : `${Math.round(evidence.p10Percentile * 100)}–${Math.round(evidence.p90Percentile * 100)}th historical range`}</em></header>
     <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label={`Published ${evidence.county} yield history`}>
       {prior && <><rect x={left} y={y(prior.interval80[1])} width={width - left - right} height={y(prior.interval80[0]) - y(prior.interval80[1])} className="yield-prior-band"><title>Calibrated 80% future county interval: {Math.round(prior.interval80[0] * 100)}th–{Math.round(prior.interval80[1] * 100)}th percentile</title></rect><line x1={left} x2={width - right} y1={y(prior.expectedPercentile)} y2={y(prior.expectedPercentile)} className="yield-prior-line" /></>}
       <line x1={left} x2={width - right} y1={y(.5)} y2={y(.5)} className="yield-midline" /><text x={left - 5} y={y(.5) + 3} textAnchor="end">50</text>
       {evidence.history.map((item, index) => { const x = left + index * band + band * .2; const barWidth = band * .6; const barTop = y(item.percentile); return <g key={item.year}>
-        <rect x={x} y={barTop} width={barWidth} height={top + chartHeight - barTop} className="yield-bar"><title>{item.year}: {item.yieldBushelsPerAcre.toFixed(1)} bu/acre · {Math.round(item.percentile * 100)}th percentile</title></rect>
-        <text x={x + barWidth / 2} y={Math.max(top - 5, barTop - 5)} textAnchor="middle" className="yield-value">{Math.round(item.yieldBushelsPerAcre)}</text><text x={x + barWidth / 2} y={height - 8} textAnchor="middle" className="yield-year">{String(item.year).slice(2)}</text>
+        <rect x={x} y={barTop} width={barWidth} height={top + chartHeight - barTop} className="yield-bar"><title>{item.year}: {item.yieldPerAcre.toFixed(1)} {yieldUnit} · {Math.round(item.percentile * 100)}th percentile</title></rect>
+        <text x={x + barWidth / 2} y={Math.max(top - 5, barTop - 5)} textAnchor="middle" className="yield-value">{Math.round(item.yieldPerAcre)}</text><text x={x + barWidth / 2} y={height - 8} textAnchor="middle" className="yield-year">{String(item.year).slice(2)}</text>
       </g>; })}
     </svg><footer><span>BAR = NEAREST-COUNTY HISTORY</span><span>PRIOR = 85% LOCAL + 15% REGIONAL · {prior?.neighborCount ?? 1} COUNTIES</span>{prior && <span>BAND = CALIBRATED 80% RANGE · {Math.round(prior.interval80[0] * 100)}–{Math.round(prior.interval80[1] * 100)}TH</span>}<p>{evidence.disclaimer}</p></footer>
   </section>;

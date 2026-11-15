@@ -16,7 +16,7 @@ from .features import FEATURE_NAMES, feature_row, teacher_scores
 from .bundle_validation import EXPECTED_MEMBERS, validate_bundle
 from .inference import CLIMATE_HISTORY_END_YEAR, CLIMATE_HISTORY_START_YEAR, CLIMATE_HISTORY_YEARS, MAX_CLIMATE_HISTORY_YEARS, MONTHS, CropFitPredictor, align_model_features, sha256_file
 from .profiles import resolve_profile
-from .yield_atlas import haversine_km, load_atlas, metric_summary, nearest_evidence
+from .yield_atlas import aggregate_neighbor_prior, haversine_km, load_atlas, metric_summary, nearest_evidence
 
 
 def climate(temperature: float) -> list[dict]:
@@ -131,6 +131,8 @@ def verify(artifact: Path, profiles: Path) -> None:
         "melon": "Cucumis melo",
         "onion": "Allium cepa",
         "sunflower": "Helianthus annuus",
+        "silage corn": "Zea mays",
+        "spring wheat": "Triticum aestivum",
     }
     for name, scientific_name in onboarding_profiles.items():
         assert resolve_profile(name, predictor.profiles).scientific_name == scientific_name
@@ -223,6 +225,30 @@ def verify(artifact: Path, profiles: Path) -> None:
                 key=lambda record: haversine_km(latitude, longitude, record["latitude"], record["longitude"]),
             )
             assert indexed and indexed["fips"] == brute["fips"], f"spatial index changed nearest county for {crop}"
+
+    subtype_atlas = artifact.parents[1] / "evaluation/yield-atlas-subtypes-v1.json"
+    if subtype_atlas.exists():
+        synthetic_neighbors = [
+            {"distanceKm": 10.0, "prediction": .2, "historyCount": 1},
+            {"distanceKm": 10.0, "prediction": .8, "historyCount": 4},
+        ]
+        distance_only = aggregate_neighbor_prior(synthetic_neighbors, 2, 1.0)
+        history_weighted = aggregate_neighbor_prior(synthetic_neighbors, 2, 1.0, 1.0)
+        assert distance_only[0] == .5 and distance_only[3] == [.5, .5]
+        assert math.isclose(history_weighted[0], .68) and history_weighted[3] == [.2, .8]
+        subtype_report = load_atlas(str(subtype_atlas.resolve()))
+        assert subtype_report["crops"] == ["silage corn", "spring wheat"]
+        assert subtype_report["validation"]["gate"]["passed"]
+        spring = nearest_evidence("spring wheat", 46.8, -100.8, subtype_atlas)
+        silage = nearest_evidence("silage corn", 43.0, -89.0, subtype_atlas)
+        assert spring and spring["yieldUnit"] == "bu/acre" and spring["history"][0]["yieldPerAcre"] > 0
+        assert silage and silage["yieldUnit"] == "tons/acre" and silage["history"][0]["yieldPerAcre"] > 0
+        assert spring["observedYieldPrior"]["intervalMethod"] == "spatial-neighborhood-conformal"
+        assert silage["observedYieldPrior"]["intervalMethod"] == "spatial-neighborhood-conformal"
+        assert spring["observedYieldPrior"]["neighborCount"] == 5
+        assert silage["observedYieldPrior"]["neighborCount"] == 5
+        assert abs(sum(item["weight"] for item in spring["regionalNeighbors"]) - 1) < .0001
+        assert abs(sum(item["weight"] for item in silage["regionalNeighbors"]) - 1) < .0001
 
     ranking_validation = artifact.parents[1] / "evaluation/ranking-validation-v1.json"
     if ranking_validation.exists():

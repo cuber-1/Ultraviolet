@@ -184,12 +184,19 @@ def distance_bucket(distance_km: float) -> str:
     return "0-25" if distance_km <= 25 else "25-50" if distance_km <= 50 else "50-100"
 
 
-def aggregate_neighbor_prior(neighbors: list[dict], max_neighbors: int, distance_power: float) -> tuple[float, int, int, list[float]]:
+def aggregate_neighbor_prior(
+    neighbors: list[dict], max_neighbors: int, distance_power: float, history_power: float = 0.0,
+) -> tuple[float, int, int, list[float]]:
     selected = neighbors[:max_neighbors]
     if not selected:
         raise ValueError("At least one regional neighbor is required.")
     distances = np.asarray([item["distanceKm"] for item in selected], dtype=float)
-    weights = np.ones(len(selected)) if distance_power == 0 else 1 / np.power(distances + SPATIAL_DISTANCE_OFFSET_KM, distance_power)
+    distance_weights = (
+        np.ones(len(selected)) if distance_power == 0
+        else 1 / np.power(distances + SPATIAL_DISTANCE_OFFSET_KM, distance_power)
+    )
+    history_weights = np.power([item["historyCount"] for item in selected], history_power)
+    weights = distance_weights * history_weights
     normalized = weights / np.sum(weights)
     prediction = float(np.average([item["prediction"] for item in selected], weights=weights))
     effective_history = round(float(np.average([item["historyCount"] for item in selected], weights=weights)))
@@ -861,7 +868,10 @@ def nearest_evidence(crop: str, latitude: float, longitude: float, path: Path, m
         return None
     records, tree = indexed
     transfer = atlas.get("spatialTransferValidation", {})
-    neighborhood = transfer.get("selectedNeighborhood", {"maxNeighbors": 1, "distancePower": 0.0, "distanceOffsetKm": SPATIAL_DISTANCE_OFFSET_KM})
+    neighborhood = transfer.get("selectedNeighborhoodByCrop", {}).get(
+        crop_key,
+        transfer.get("selectedNeighborhood", {"maxNeighbors": 1, "distancePower": 0.0, "distanceOffsetKm": SPATIAL_DISTANCE_OFFSET_KM}),
+    )
     max_neighbors = int(neighborhood["maxNeighbors"])
     production_blend = transfer.get("productionBlend", {})
     query_neighbors = max_neighbors + 1 if production_blend.get("gate", {}).get("passed") else max_neighbors
@@ -885,6 +895,7 @@ def nearest_evidence(crop: str, latitude: float, longitude: float, path: Path, m
             used_regional_blend = True
             regional_expected, regional_count, regional_history, regional_weights = aggregate_neighbor_prior(
                 regional, max_neighbors, float(neighborhood["distancePower"]),
+                float(neighborhood.get("historyPower", 0.0)),
             )
             expected = (1 - regional_weight) * primary["prediction"] + regional_weight * regional_expected
             weights = [1 - regional_weight, *[regional_weight * weight for weight in regional_weights]]
@@ -894,7 +905,10 @@ def nearest_evidence(crop: str, latitude: float, longitude: float, path: Path, m
             neighbors = [primary]
             expected, neighbor_count, effective_history, weights = primary["prediction"], 1, primary["historyCount"], [1.0]
     else:
-        expected, neighbor_count, effective_history, weights = aggregate_neighbor_prior(neighbors, max_neighbors, float(neighborhood["distancePower"]))
+        expected, neighbor_count, effective_history, weights = aggregate_neighbor_prior(
+            neighbors, max_neighbors, float(neighborhood["distancePower"]),
+            float(neighborhood.get("historyPower", 0.0)),
+        )
     record = neighbors[0]["record"]
     distance = neighbors[0]["distanceKm"]
     prior = dict(record.get("observedYieldPrior", {}))
@@ -906,7 +920,10 @@ def nearest_evidence(crop: str, latitude: float, longitude: float, path: Path, m
     )), None)
     if calibration and prior:
         interval_scales = production_calibration.get("selectedRegionalScales", {}).get(
-            STATE_TO_CENSUS_REGION[record["state"]], {"scale80": 1.0, "scale90": 1.0},
+            STATE_TO_CENSUS_REGION[record["state"]],
+            transfer.get("selectedRegionalScalesByCrop", {}).get(crop_key, {}).get(
+                STATE_TO_CENSUS_REGION[record["state"]], {"scale80": 1.0, "scale90": 1.0},
+            ),
         )
         prior.update({
             "expectedPercentile": round(expected, 4),
@@ -925,8 +942,16 @@ def nearest_evidence(crop: str, latitude: float, longitude: float, path: Path, m
         "distanceKm": round(item["distanceKm"], 1), "expectedPercentile": item["record"]["observedYieldPrior"]["expectedPercentile"],
         "weight": round(weight, 6),
     } for item, weight in zip(neighbors, weights, strict=True)]
+    normalized_record = dict(record)
+    if "meanYieldPerAcre" not in normalized_record and "meanYieldBushelsPerAcre" in normalized_record:
+        normalized_record["meanYieldPerAcre"] = normalized_record["meanYieldBushelsPerAcre"]
+        normalized_record["yieldUnit"] = "bu/acre"
+    normalized_record["history"] = [{
+        **item,
+        "yieldPerAcre": item.get("yieldPerAcre", item.get("yieldBushelsPerAcre")),
+    } for item in normalized_record.get("history", [])]
     return {
-        **record, "observedYieldPrior": prior, "regionalNeighbors": regional_neighbors,
+        **normalized_record, "observedYieldPrior": prior, "regionalNeighbors": regional_neighbors,
         "distanceKm": round(distance, 1), "evidenceGrade": atlas["evidenceGrade"],
         "source": atlas["source"], "disclaimer": atlas["disclaimer"],
     }

@@ -57,7 +57,7 @@ climate = [{"month": month, "temperatureC": 22, "precipitationMmDay": 3, "solarM
 payload = {"crop": "corn", "latitude": 29.76, "longitude": -95.37, "soilPh": 6.5, "irrigated": True, "climate": climate, "climateHistory": [climate] * 10}
 health = requests.get(f"{base}/health", timeout=10).json()
 assert health["status"] == "ok" and health["requestLimits"]["historyYearsMax"] == 20
-assert health["apiVersion"] == "0.9.2"
+assert health["apiVersion"] == "0.13.0"
 assert health["revision"].startswith(f'{health["apiVersion"]}:')
 assert health["model"] == "CropFit EcoCrop surrogate v0.9.1"
 assert len(health["artifactSha256"]) == 64
@@ -81,11 +81,22 @@ assert all(
 assert atlas["spatialTransferValidation"]["productionBlend"]["gate"]["passed"]
 assert atlas["spatialTransferValidation"]["productionBlend"]["intervalCalibration"]["meanWidth90Reduction"] >= .04
 assert atlas["spatialTransferValidation"]["productionBlend"]["intervalCalibration"]["selectedRegionalScales"]["West"] == {"scale80": 1.45, "scale90": 1.45}
+subtype_atlas = health["evidence"]["cropSubtypeYieldAtlas"]
+assert subtype_atlas["name"] == "USDA crop-subtype yield atlas v1"
+assert subtype_atlas["records"] == 690 and subtype_atlas["crops"] == ["silage corn", "spring wheat"]
+assert subtype_atlas["validation"]["gate"]["passed"]
+assert subtype_atlas["validation"]["selectedNeighborhoods"]["silage corn"] == {"maxNeighbors": 5, "distancePower": 2.0, "historyPower": 1.0, "distanceOffsetKm": 5.0}
+silage_validation = next(item for item in subtype_atlas["validation"]["perCrop"] if item["crop"] == "silage corn")
+assert all(silage_validation["historyReliabilityComparison"][block]["spearmanGain"] > 0 for block in ("development", "stability", "final"))
+assert subtype_atlas["validation"]["selectedRegionalScales"]["spring wheat"]["West"] == {"scale80": 1.33, "scale90": 1.33}
+assert subtype_atlas["validation"]["supportedRegionsByCrop"]["silage corn"] == ["Midwest", "Northeast"]
 assert health["climateHistory"] == {"source": "NASA POWER Agroclimatology", "startYear": 2016, "endYear": 2025, "years": 10}
 prediction = requests.post(f"{base}/predict", json=payload, timeout=30)
 prediction.raise_for_status()
 prediction_body = prediction.json()
 assert prediction_body["observedYieldEvidence"]["county"] == "Fort Bend County"
+assert prediction_body["observedYieldEvidence"]["yieldUnit"] == "bu/acre"
+assert prediction_body["observedYieldEvidence"]["history"][0]["yieldPerAcre"] > 0
 assert prediction_body["observedYieldEvidence"]["observedYieldPrior"]["intervalMethod"] == "local-regional-blend-conformal"
 assert prediction_body["observedYieldEvidence"]["observedYieldPrior"]["distanceBucket"] == "25-50"
 assert 1 <= prediction_body["observedYieldEvidence"]["observedYieldPrior"]["neighborCount"] <= 9
@@ -108,7 +119,26 @@ for crop, scientific_name in representatives.items():
     response = requests.post(f"{base}/predict", json={**payload, "crop": crop}, timeout=30)
     response.raise_for_status()
     assert response.json()["profile"]["scientific_name"] == scientific_name
+for crop, latitude, longitude, unit in (
+    ("spring wheat", 46.8, -100.8, "bu/acre"),
+    ("silage corn", 43.0, -89.0, "tons/acre"),
+):
+    response = requests.post(f"{base}/predict", json={**payload, "crop": crop, "latitude": latitude, "longitude": longitude}, timeout=30)
+    response.raise_for_status()
+    evidence = response.json()["observedYieldEvidence"]
+    assert evidence["yieldUnit"] == unit and evidence["meanYieldPerAcre"] > 0
+    assert evidence["observedYieldPrior"]["intervalMethod"] == "spatial-neighborhood-conformal"
+    assert evidence["observedYieldPrior"]["neighborCount"] == 5
+    assert abs(sum(item["weight"] for item in evidence["regionalNeighbors"]) - 1) < .0001
+western_wheat = requests.post(f"{base}/predict", json={**payload, "crop": "spring wheat", "latitude": 43.451477, "longitude": -116.244376}, timeout=30)
+western_wheat.raise_for_status()
+western_evidence = western_wheat.json()["observedYieldEvidence"]
+assert western_evidence["state"] == "ID"
+assert western_evidence["observedYieldPrior"]["intervalMethod"] == "spatial-neighborhood-conformal"
+unsupported_silage = requests.post(f"{base}/predict", json={**payload, "crop": "silage corn", "latitude": 43.451477, "longitude": -116.244376}, timeout=30)
+unsupported_silage.raise_for_status()
+assert unsupported_silage.json()["observedYieldEvidence"] is None
 invalid = requests.post(f"{base}/predict", json={**payload, "climate": climate[:11]}, timeout=10)
 assert invalid.status_code == 422
-print(f'CropFit HTTP verified: API {health["apiVersion"]}, model v0.9.1, artifact identity, active-case calibration, atlas v9 geographically stable uncertainty, seasonal boundary ceiling, 2016-2025 climate window, 16-choice coverage, USDA evidence, input bounds')
+print(f'CropFit HTTP verified: API {health["apiVersion"]}, model v0.9.1, artifact identity, atlas v9 plus unit-safe subtype atlas, seasonal boundary ceiling, 2016-2025 climate window, USDA evidence, input bounds')
 PY

@@ -9,10 +9,12 @@ from pathlib import Path
 ALIASES = {
     "corn": "Zea mays",
     "maize": "Zea mays",
+    "silage corn": "Zea mays",
     "sweet corn": "Zea mays ssp. saccharata",
     "soy": "Glycine max",
     "soybean": "Glycine max",
     "wheat": "Triticum aestivum",
+    "spring wheat": "Triticum aestivum",
     "rice": "Oryza sativa",
     "tomato": "Lycopersicon esculentum",
     "strawberry": "Fragaria x ananassa",
