@@ -64,6 +64,7 @@ PYTHONPATH="${repo_root}/machine-learning" "${repo_root}/machine-learning/.venv/
   --artifact "${staging_root}/machine-learning/artifacts/cropfit.joblib" \
   --profiles "${staging_root}/machine-learning/data/raw/ecocrop.csv"
 
+mkdir -p "${repo_root}/machine-learning/artifacts" "${repo_root}/machine-learning/data/raw"
 install -m 0644 "${staging_root}/machine-learning/artifacts/cropfit.joblib" "${artifact_next}"
 install -m 0644 "${staging_root}/machine-learning/artifacts/cropfit.metadata.json" "${metadata_next}"
 install -m 0644 "${staging_root}/machine-learning/data/raw/ecocrop.csv" "${profiles_next}"
