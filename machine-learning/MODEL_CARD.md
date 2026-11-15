@@ -99,12 +99,12 @@ below the predeclared 0.30 threshold. Corn and 2019 were negative. See
 
 ## Historical county evidence
 
-CropFit also returns a separate USDA observed county prior for corn, soybeans,
-and wheat when a published county centroid is within 100 km. This evidence does
-not alter CropFit suitability or ranking. Atlas v4 contains 5,562 county-crop
+CropFit also returns a separate USDA observed regional prior for corn, soybeans,
+and wheat when published county centroids are within 100 km. This evidence does
+not alter CropFit suitability. Atlas v5 contains 5,562 county-crop
 records from 2010–2025, uses a validated shrunken-recency prior, and includes
 crop/history-count conditional conformal uncertainty bands. Location-facing
-bands are separately calibrated for nearest-county spatial transfer.
+bands are separately calibrated for regional spatial transfer.
 
 On the same 21,908 2019–2025 county-year rows, extending the available history
 from 2018 back to 2010 improved pooled Spearman from 0.819 to 0.847 and reduced
@@ -112,7 +112,7 @@ percentile MAE from 0.126 to 0.117. Coverage increased from 21,908 to 23,311
 rows. Uncertainty was calibrated on 2011–2017 only; across 26,589 later
 2018–2025 outcomes, nominal 80% and 90% intervals covered 84.1% and 92.5%.
 This measures persistence of county yield ranks, not parcel yield forecasting.
-See `evaluation/yield-atlas-validation-v4.md`.
+See `evaluation/yield-atlas-validation-v5.md`.
 
 ## Rural regional ranking
 
@@ -145,7 +145,7 @@ soybeans, and wheat. See `evaluation/crop-expansion-validation-v1.md`.
 
 ## Recency experiment
 
-Atlas v4 shrinks an exponential recency estimate toward the stable long-history
+Atlas v5 shrinks an exponential recency estimate toward the stable long-history
 mean. The half-life and shrinkage weight were selected on 2018–2020 only: 80%
 three-year-half-life recency and 20% long-history mean. Confirmation Spearman
 improved from 0.8497 to 0.8513 while MAE fell from 0.1167 to 0.1150. On the
@@ -159,17 +159,19 @@ Rebuilding the full forward-year atlas with the promoted prior improved pooled
 Spearman from 0.7871 to 0.7914. On identical 2019–2025 rows, 16-year-history
 Spearman improved from 0.8405 to 0.8465 and MAE from 0.1199 to 0.1168. Fresh
 split-conformal calibration covered 84.1% and 92.5% at the nominal 80% and 90%
-levels. See `evaluation/yield-atlas-validation-v4.md`.
+levels. See `evaluation/yield-atlas-validation-v5.md`.
 
-The production API transfers the nearest reporting county prior to an arbitrary
-location, so atlas v4 also validates that operation directly. A leave-one-county-out
-test excludes each target county and uses only the nearest different county's
-earlier history. Within 100 km it covered 99.8% of eligible examples. On locked
-2023–2025 outcomes, transfer Spearman was 0.7580 over 8,921 rows (grouped 95%
-interval 0.7451–0.7696), with every supported crop above 0.74. Transfer-specific
-bands calibrated on 2011–2017 covered 83.5% and 92.2% on 2018–2025; all crop-level
-90% coverages were at least 89.7%. These wider bands replace same-county bands in
-API responses and are labeled `spatial-transfer-conformal`.
+The production API transfers nearby reporting-county priors to an arbitrary
+location, so atlas v5 validates that operation directly. A leave-one-county-out
+test excludes each target county. Development years selected up to eight
+neighbors with inverse-square distance weighting. On locked 2023–2025 outcomes,
+regional Spearman reached 0.8060 versus 0.7580 for one nearest county (delta
++0.0480; paired grouped-bootstrap 95% interval +0.0409 to +0.0551), while
+percentile MAE fell from 0.1453 to 0.1330. Every supported crop and final-test
+year improved both metrics. Regional bands calibrated on 2011–2017 covered
+83.4% and 92.4% on 2018–2025 and narrowed mean 90% width from 0.595 to 0.545.
+API responses expose all contributing counties and label bands
+`spatial-neighborhood-conformal`.
 
 Atlas lookup now uses a cached exact haversine spatial index instead of scanning
 all 5,562 records per request. The reproducible benchmark and exact-identity
@@ -212,7 +214,7 @@ reuse a stale prediction. The cache is a bounded 2,048-entry LRU, and CI checks
 key sensitivity, revision invalidation, model isolation, expiry, and
 least-recently-used eviction.
 
-API v0.6.4 exposes its API+training-run revision through `/health`. The browser
+API v0.6.5 exposes its API+training-run revision through `/health`. The browser
 proxy reads it once per prediction request. If revision health is unavailable,
 model predictions continue but bypass the cache until provenance is verified.
 

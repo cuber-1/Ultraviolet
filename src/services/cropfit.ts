@@ -22,7 +22,7 @@ export type CropFitPrediction = {
   bestPlantingMonth: string;
   bestReliablePlantingMonth: string;
   plantingReliability: { years: number; successRate: number; p10Score: number; medianScore: number; p90Score: number; threshold: number } | null;
-  observedYieldEvidence: { county: string; state: string; distanceKm: number; years: number[]; observations: number; meanPercentile: number; p10Percentile: number; p90Percentile: number; meanYieldBushelsPerAcre: number; observedYieldPrior: { expectedPercentile: number; interval80: [number, number]; interval90: [number, number]; historyBucket: string; calibrationExamples: number; intervalMethod?: string; distanceBucket?: string }; history: Array<{ year: number; yieldBushelsPerAcre: number; percentile: number }>; evidenceGrade: string; source: string; disclaimer: string } | null;
+  observedYieldEvidence: { county: string; state: string; distanceKm: number; years: number[]; observations: number; meanPercentile: number; p10Percentile: number; p90Percentile: number; meanYieldBushelsPerAcre: number; observedYieldPrior: { expectedPercentile: number; interval80: [number, number]; interval90: [number, number]; historyBucket: string; calibrationExamples: number; intervalMethod?: string; distanceBucket?: string; neighborCount?: number; effectiveHistoryBucket?: string }; regionalNeighbors?: Array<{ county: string; state: string; fips: string; distanceKm: number; expectedPercentile: number; weight: number }>; history: Array<{ year: number; yieldBushelsPerAcre: number; percentile: number }>; evidenceGrade: string; source: string; disclaimer: string } | null;
   suitableMonths: string[];
   growingDays: { min: number; max: number };
   limitingFactors: Array<{ factor: string; score: number }>;

@@ -81,7 +81,7 @@ def verify(artifact: Path, profiles: Path) -> None:
     else:
         raise AssertionError("invalid second-year climate was accepted")
 
-    atlas = artifact.parents[1] / "evaluation/yield-atlas-v4.json"
+    atlas = artifact.parents[1] / "evaluation/yield-atlas-v5.json"
     if atlas.exists():
         atlas_report = load_atlas(str(atlas.resolve()))
         assert atlas_report["years"] == list(range(2010, 2026))
@@ -94,8 +94,12 @@ def verify(artifact: Path, profiles: Path) -> None:
         assert [item["year"] for item in evidence["history"]][-3:] == [2023, 2024, 2025]
         expected = evidence["observedYieldPrior"]["expectedPercentile"]
         assert evidence["observedYieldPrior"]["interval80"][0] <= expected <= evidence["observedYieldPrior"]["interval80"][1]
-        assert evidence["observedYieldPrior"]["intervalMethod"] == "spatial-transfer-conformal"
+        assert evidence["observedYieldPrior"]["intervalMethod"] == "spatial-neighborhood-conformal"
         assert evidence["observedYieldPrior"]["distanceBucket"] == "25-50"
+        assert 1 <= evidence["observedYieldPrior"]["neighborCount"] <= 8
+        assert len(evidence["regionalNeighbors"]) == evidence["observedYieldPrior"]["neighborCount"] == 6
+        assert evidence["observedYieldPrior"]["expectedPercentile"] != evidence["regionalNeighbors"][0]["expectedPercentile"]
+        assert abs(sum(item["weight"] for item in evidence["regionalNeighbors"]) - 1) < .0001
         assert atlas_report["predictionMethod"] == {"name": "shrunken exponential recency prior", "forecastYear": 2026, "halfLifeYears": 3.0, "recencyWeight": .8, "longHistoryWeight": .2}
         assert evidence["observedYieldPrior"]["interval90"][0] <= evidence["observedYieldPrior"]["interval80"][0]
         assert evidence["observedYieldPrior"]["interval90"][1] >= evidence["observedYieldPrior"]["interval80"][1]

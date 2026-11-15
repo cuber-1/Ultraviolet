@@ -24,7 +24,8 @@ const cropFitResponse = {
   observedYieldEvidence: {
     county: 'Fort Bend County', state: 'TX', distanceKm: 46.7, years: [2024, 2025], observations: 2,
     meanPercentile: .4, p10Percentile: .3, p90Percentile: .5, meanYieldBushelsPerAcre: 140,
-    observedYieldPrior: { expectedPercentile: .4, interval80: [.2, .6], interval90: [.1, .7], historyBucket: '2-3', calibrationExamples: 100 },
+    observedYieldPrior: { expectedPercentile: .4, interval80: [.2, .6], interval90: [.1, .7], historyBucket: '2-3', calibrationExamples: 100, intervalMethod: 'spatial-neighborhood-conformal', neighborCount: 2, effectiveHistoryBucket: '2-3' },
+    regionalNeighbors: [{ county: 'Fort Bend County', state: 'TX', fips: '48157', distanceKm: 46.7, expectedPercentile: .35, weight: .6 }, { county: 'Waller County', state: 'TX', fips: '48473', distanceKm: 65.4, expectedPercentile: .48, weight: .4 }],
     history: [{ year: 2024, yieldBushelsPerAcre: 140, percentile: .4 }], evidenceGrade: 'observed-county-prior', source: 'USDA', disclaimer: 'County prior.',
   },
 };
@@ -85,7 +86,7 @@ try {
   const backupResult = await predictCropSuitability(request);
   const health = await mlModelHealth();
   const herbs = backupResult.predictions.find(({ cropId }) => cropId === 'herbs');
-  if (backupResult.model.name !== 'CropFit backup' || backupResult.model.source !== 'ml' || health.role !== 'backup' || !receivedClimate || backupResult.predictions[0]?.observedYieldEvidence?.observedYieldPrior?.interval90[1] !== .7 || !herbs?.notes?.includes('Representative EcoCrop profile for Herbs: basil.')) {
+  if (backupResult.model.name !== 'CropFit backup' || backupResult.model.source !== 'ml' || health.role !== 'backup' || !receivedClimate || backupResult.predictions[0]?.observedYieldEvidence?.observedYieldPrior?.interval90[1] !== .7 || backupResult.predictions[0]?.observedYieldEvidence?.observedYieldPrior?.neighborCount !== 2 || backupResult.predictions[0]?.observedYieldEvidence?.regionalNeighbors?.[1]?.county !== 'Waller County' || !herbs?.notes?.includes('Representative EcoCrop profile for Herbs: basil.')) {
     throw new Error('Primary-to-backup failover did not select the backup model.');
   }
   const cachedBackup = await predictCropSuitability(request);
