@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-release_url="https://github.com/cuber-1/Ultraviolet/releases/download/cropfit-v0.10.0/ultraviolet-cropfit-v0.10.0.tar.gz"
-expected_sha256="f0d20a4e8d6869c1b7599098e882d9a6d02491771b022cb8e9f7f751b17295ad"
+release_url="https://github.com/cuber-1/Ultraviolet/releases/download/cropfit-v0.11.0/ultraviolet-cropfit-v0.11.0.tar.gz"
+expected_sha256="cb089ab44e7aae5cae95a44102e9f831a27eb95d16249baff0adc39fca556067"
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 bundle_tmp="$(mktemp -d)"
 artifact_next="${repo_root}/machine-learning/artifacts/.cropfit.joblib.next.$$"
@@ -24,9 +24,9 @@ if ! "${python_bin}" -c 'import sys; raise SystemExit(0 if sys.version_info >= (
   exit 1
 fi
 
-echo "Downloading CropFit v0.10.0 model bundle..."
+echo "Downloading CropFit v0.11.0 model bundle..."
 if command -v gh >/dev/null 2>&1; then
-  gh release download cropfit-v0.10.0 --repo cuber-1/Ultraviolet --pattern ultraviolet-cropfit-v0.10.0.tar.gz --output "${bundle_tmp}/cropfit.tar.gz"
+  gh release download cropfit-v0.11.0 --repo cuber-1/Ultraviolet --pattern ultraviolet-cropfit-v0.11.0.tar.gz --output "${bundle_tmp}/cropfit.tar.gz"
 elif [[ -n "${GITHUB_TOKEN:-}" ]]; then
   curl --fail --location --retry 3 --header "Authorization: Bearer ${GITHUB_TOKEN}" --output "${bundle_tmp}/cropfit.tar.gz" "${release_url}"
 else
@@ -74,6 +74,6 @@ mv -f "${artifact_next}" "${repo_root}/machine-learning/artifacts/cropfit.joblib
 
 PYTHONPATH="${repo_root}/machine-learning" "${repo_root}/machine-learning/.venv/bin/python" -m cropfit.verify_inference
 
-echo "CropFit v0.10.0 is installed and verified."
+echo "CropFit v0.11.0 is installed and verified."
 echo "Local Mac fallback: npm run ml:serve:local"
 echo "Tailscale/LAN service: npm run ml:serve"

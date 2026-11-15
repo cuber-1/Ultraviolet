@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.model_selection import GroupShuffleSplit
 
-from .features import feature_row, teacher_scores
+from .features import FEATURE_NAMES, feature_row, teacher_scores
 from .profiles import load_profiles
 from .training import generate_examples
 
@@ -22,10 +22,30 @@ def metrics(errors: np.ndarray) -> dict:
     }
 
 
+def model_matrix(values: np.ndarray, model, metadata: dict) -> np.ndarray:
+    """Apply the artifact's named feature contract, including legacy 23-feature models."""
+    expected = int(model.n_features_in_)
+    names = metadata.get("featureNames")
+    if names and len(names) == expected:
+        positions = {name: index for index, name in enumerate(FEATURE_NAMES)}
+        unknown = set(names) - set(positions)
+        if unknown:
+            raise RuntimeError(f"Artifact requests unknown OOD features: {sorted(unknown)}")
+        return values[:, [positions[name] for name in names]]
+    if names and len(names) == expected + 2 and values.shape[1] == len(names):
+        return values[:, :expected]
+    if values.shape[1] == expected:
+        return values
+    raise RuntimeError(
+        f"OOD feature contract is inconsistent: matrix={values.shape[1]}, model={expected}, metadata={len(names or [])}"
+    )
+
+
 def held_out(model, metadata: dict, profiles: list, samples_per_crop: int, seed: int) -> dict:
     x, y, groups = generate_examples(profiles, samples_per_crop, seed)
     _, test = next(GroupShuffleSplit(n_splits=1, test_size=.2, random_state=seed).split(x, y, groups))
-    trees = np.asarray([tree.predict(x[test]) for tree in model.estimators_])
+    model_x = model_matrix(x, model, metadata)
+    trees = np.asarray([tree.predict(model_x[test]) for tree in model.estimators_])
     raw = trees.mean(axis=0)
     raw_errors = np.abs(raw - y[test])
     ceiling_errors = np.abs(np.minimum(raw, y[test]) - y[test])
@@ -55,7 +75,7 @@ def held_out(model, metadata: dict, profiles: list, samples_per_crop: int, seed:
     }
 
 
-def boundary_stress(model, profiles: list) -> dict:
+def boundary_stress(model, metadata: dict, profiles: list) -> dict:
     cases = {"solarAbsoluteMin": [], "solarAbsoluteMax": [], "temperatureAbsoluteMin": [], "temperatureAbsoluteMax": []}
     targets = {name: [] for name in cases}
     for profile in profiles:
@@ -74,7 +94,8 @@ def boundary_stress(model, profiles: list) -> dict:
     results = {}
     for name, rows in cases.items():
         truth = np.asarray(targets[name])
-        predicted = model.predict(np.asarray(rows, dtype=np.float32))
+        matrix = model_matrix(np.asarray(rows, dtype=np.float32), model, metadata)
+        predicted = model.predict(matrix)
         raw_errors = np.abs(predicted - truth)
         ceiling_errors = np.abs(np.minimum(predicted, truth) - truth)
         results[name] = {
@@ -88,7 +109,7 @@ def evaluate(artifact: Path, profiles_path: Path, samples_per_crop: int, seed: i
     bundle = joblib.load(artifact)
     profiles = load_profiles(profiles_path)
     heldout = held_out(bundle["model"], bundle["metadata"], profiles, samples_per_crop, seed)
-    boundaries = boundary_stress(bundle["model"], profiles)
+    boundaries = boundary_stress(bundle["model"], bundle["metadata"], profiles)
     gate = {
         "passed": heldout["errorNeverIncreased"]
         and heldout["seasonalCeiling"]["mae"] < heldout["rawSurrogate"]["mae"]
@@ -144,8 +165,8 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--artifact", type=Path, default=root / "artifacts/cropfit.joblib")
     parser.add_argument("--profiles", type=Path, default=root / "data/raw/ecocrop.csv")
-    parser.add_argument("--output", type=Path, default=root / "evaluation/ood-validation-v0.10.0.json")
-    parser.add_argument("--plot", type=Path, default=root / "evaluation/ood-validation-v0.10.0.png")
+    parser.add_argument("--output", type=Path, default=root / "evaluation/ood-validation-v0.11.0.json")
+    parser.add_argument("--plot", type=Path, default=root / "evaluation/ood-validation-v0.11.0.png")
     parser.add_argument("--samples-per-crop", type=int, default=72)
     parser.add_argument("--seed", type=int, default=20261114)
     args = parser.parse_args()

@@ -12,7 +12,7 @@ from unittest.mock import patch
 from fastapi import HTTPException
 from pydantic import ValidationError
 
-from .features import FEATURE_NAMES, feature_row, teacher_scores
+from .features import COMPACT_FEATURE_NAMES, FEATURE_NAMES, feature_row, teacher_scores
 from .bundle_validation import EXPECTED_MEMBERS, validate_bundle
 from .inference import CLIMATE_HISTORY_END_YEAR, CLIMATE_HISTORY_START_YEAR, CLIMATE_HISTORY_YEARS, MAX_CLIMATE_HISTORY_YEARS, MONTHS, CropFitPredictor, align_model_features, sha256_file
 from .profiles import resolve_profile
@@ -74,10 +74,14 @@ def verify(artifact: Path, profiles: Path) -> None:
     predictor = CropFitPredictor(artifact, profiles)
     assert predictor.artifact_sha256 == sha256_file(artifact)
     assert len(predictor.artifact_sha256) == 64
-    assert predictor.model.n_features_in_ == len(FEATURE_NAMES), "artifact and feature code disagree"
-    assert predictor.model_features(list(range(len(FEATURE_NAMES)))) == list(range(len(FEATURE_NAMES)))
+    assert predictor.model.n_features_in_ == len(predictor.metadata["featureNames"]), "artifact and feature metadata disagree"
+    expected_positions = [FEATURE_NAMES.index(name) for name in predictor.metadata["featureNames"]]
+    assert predictor.model_features(list(range(len(FEATURE_NAMES)))) == expected_positions
     assert align_model_features(list(range(len(FEATURE_NAMES))), len(FEATURE_NAMES) - 2) == list(range(len(FEATURE_NAMES) - 2))
-    if predictor.metadata["model"].endswith(("v0.6", "v0.7", "v0.8", "v0.9", "v0.9.1", "v0.10.0")):
+    assert align_model_features(
+        list(range(len(FEATURE_NAMES))), len(COMPACT_FEATURE_NAMES), COMPACT_FEATURE_NAMES,
+    ) == [FEATURE_NAMES.index(name) for name in COMPACT_FEATURE_NAMES]
+    if predictor.metadata["model"].endswith(("v0.6", "v0.7", "v0.8", "v0.9", "v0.9.1", "v0.10.0", "v0.11.0")):
         assert predictor.metadata["selectedModel"] == "extraTrees"
     if predictor.metadata["model"].endswith(("v0.9", "v0.9.1")):
         assert predictor.metadata["modelParameters"]["nEstimators"] == 70
@@ -87,6 +91,14 @@ def verify(artifact: Path, profiles: Path) -> None:
         assert predictor.metadata["modelParameters"]["nEstimators"] == 40
         assert predictor.metadata["trainingExamples"] == 253_000
         assert predictor.metadata["evaluationExamples"] == 134_064
+    if predictor.metadata["model"].endswith("v0.11.0"):
+        assert predictor.metadata["modelParameters"]["nEstimators"] == 40
+        assert predictor.metadata["modelParameters"]["inputFeatures"] == 6
+        assert predictor.metadata["featureNames"] == COMPACT_FEATURE_NAMES
+        assert predictor.metadata["trainingExamples"] == 253_000
+        assert predictor.metadata["evaluationExamples"] == 134_064
+        assert predictor.metadata["metrics"]["mae"] <= .02
+        assert predictor.metadata["metrics"]["p90AbsoluteError"] <= .05
     if predictor.metadata.get("promotionGate"):
         assert predictor.metadata["promotionGate"]["passed"]
         assert all(predictor.metadata["promotionGate"]["checks"].values())
@@ -402,6 +414,24 @@ def verify(artifact: Path, profiles: Path) -> None:
         assert current_ood_report["heldOut"]["errorNeverIncreased"]
         assert current_ood_report["heldOut"]["seasonalCeiling"]["mae"] < .006
 
+    feature_compaction_validation = artifact.parents[1] / "evaluation/feature-compaction-v2-validation-v0.11.json"
+    if feature_compaction_validation.exists():
+        feature_compaction_report = json.loads(feature_compaction_validation.read_text())
+        assert feature_compaction_report["gate"]["passed"]
+        assert feature_compaction_report["summary"]["seedWins"] == feature_compaction_report["summary"]["seeds"] == 10
+        assert feature_compaction_report["summary"]["allMeanMaeImprovementPercent"] >= 20
+        assert feature_compaction_report["summary"]["allMeanP90ImprovementPercent"] >= 20
+        assert feature_compaction_report["summary"]["compactSerializedSizeBytes"] <= 64_000_000
+        assert feature_compaction_report["independentShift"]["passed"]
+
+    compact_ood_validation = artifact.parents[1] / "evaluation/ood-validation-v0.11.0.json"
+    if compact_ood_validation.exists():
+        compact_ood_report = json.loads(compact_ood_validation.read_text())
+        assert compact_ood_report["model"].endswith("v0.11.0")
+        assert compact_ood_report["gate"]["passed"]
+        assert compact_ood_report["heldOut"]["rawSurrogate"]["mae"] <= .011
+        assert compact_ood_report["heldOut"]["seasonalCeiling"]["mae"] <= .004
+
     from .trained_api import PredictionRequest, predict as api_predict
 
     valid_climate = climate(20.0)
@@ -432,7 +462,11 @@ def verify(artifact: Path, profiles: Path) -> None:
         else:
             raise AssertionError("invalid caller climate was not mapped to HTTP 422")
 
-    print(f"CropFit inference verified: {predictor.metadata['model']} ({len(FEATURE_NAMES)} features, batched 10-year reliability, county evidence)")
+    print(
+        f"CropFit inference verified: {predictor.metadata['model']} "
+        f"({predictor.model.n_features_in_} selected of {len(FEATURE_NAMES)} engineered features, "
+        "batched 10-year reliability, county evidence)"
+    )
 
 
 def main() -> None:

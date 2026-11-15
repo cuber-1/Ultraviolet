@@ -1,0 +1,10 @@
+{
+  "trainingSamplesPerCrop": 200,
+  "evaluationSamplesPerCrop": 72,
+  "seed": 20261114,
+  "requestedBoostingRounds": 500,
+  "learningRate": "cosine 0.08 to 0.005",
+  "split": "68% train / 12% validation / 20% held-out crop profiles (approximate)",
+  "densityPolicy": "Denser generated scenarios are fitting-only; validation and held-out rows remain frozen.",
+  "featurePolicy": "Train only on the six locked range-relative and interaction features selected by the v0.11 compaction gate."
+}

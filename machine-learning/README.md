@@ -7,7 +7,7 @@ revenue, or a buy/sell recommendation.
 
 ## Run the trained model
 
-On macOS or Linux, install the released v0.10.0 artifact, EcoCrop profiles, and
+On macOS or Linux, install the released v0.11.0 artifact, EcoCrop profiles, and
 inference dependencies without access to the Spark:
 
 ```bash
@@ -32,7 +32,7 @@ artifact instead, use the full setup below. Because the repository is private,
 the installer uses an authenticated GitHub CLI session (`gh auth login`) or a
 `GITHUB_TOKEN`.
 
-Runtime API v0.18.0 serves the validated v0.10.0 estimator and hardens every direct
+Runtime API v0.19.0 serves the validated v0.11.0 estimator and hardens every direct
 and HTTP prediction path with the same finite coordinate, soil-pH, boolean,
 climate-shape, and 20-year history limits. Startup validates the artifact's
 internal model/metadata contract. `GET /health` returns the artifact SHA-256 and
@@ -92,14 +92,23 @@ learning-rate schedule, error distribution, and feature importance to
 `machine-learning/runs/<run-id>/`. A candidate is only promoted when it improves held-out
 crop-profile error.
 
-CropFit v0.10.0 fits 200 scenarios per training crop with 40 Extra Trees. Its
-promotion report compares the candidate with v0.9.1 on ten newly reserved
-grouped crop-profile splits plus a fresh independent Latin-hypercube shift,
-including active uncertainty, artifact size, and API-sized latency:
+CropFit v0.11.0 fits 200 scenarios per training crop with 40 Extra Trees, but
+selects only six transparent range-relative and interaction features from the
+25 engineered inputs. Its promotion report compares the candidate with v0.10
+on ten newly reserved grouped crop-profile splits plus a fresh independent
+Latin-hypercube shift, including API-served active uncertainty, artifact size,
+deployed worst-case error, and API-sized latency:
 
 ```bash
-npm run ml:evaluate:density-refinement-v2
+npm run ml:evaluate:feature-compaction
 ```
+
+The first compact-feature report remains committed as a failed gate: one
+pooled 80% interval covered 83.1% against an 83.0% ceiling. That pooled check
+mixes active predictions with deterministic zero-score cases and is not the
+conditional interval served by the API. The v2 gate was declared before ten
+new seeds were opened; it reports pooled coverage but gates active intervals
+and deterministic inactive behavior separately.
 
 Its independent scenario-shift report uses a separately seeded Latin-hypercube
 generator and verifies active-case conditional coverage rather than allowing

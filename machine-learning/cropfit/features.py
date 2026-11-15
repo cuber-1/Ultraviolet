@@ -15,6 +15,13 @@ FEATURE_NAMES = [
     "temperature_water_interaction", "ph_solar_interaction",
 ]
 
+# These six input-derived features won the locked v0.11 compaction gate. They
+# contain no crop identity or target value: the four memberships locate current
+# conditions inside published EcoCrop ranges and the two interactions preserve
+# the mechanistic relationships between those memberships.
+COMPACT_FEATURE_NAMES = FEATURE_NAMES[-6:]
+COMPACT_FEATURE_COLUMNS = [FEATURE_NAMES.index(name) for name in COMPACT_FEATURE_NAMES]
+
 
 def trapezoid(value: float, absolute_min: float, optimum_min: float, optimum_max: float, absolute_max: float) -> float:
     if value <= absolute_min or value >= absolute_max:

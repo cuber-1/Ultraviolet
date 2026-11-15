@@ -58,12 +58,12 @@ climate = [{"month": month, "temperatureC": 22, "precipitationMmDay": 3, "solarM
 payload = {"crop": "corn", "latitude": 29.76, "longitude": -95.37, "soilPh": 6.5, "irrigated": True, "climate": climate, "climateHistory": [climate] * 10}
 health = requests.get(f"{base}/health", timeout=10).json()
 assert health["status"] == "ok" and health["requestLimits"]["historyYearsMax"] == 20
-assert health["apiVersion"] == "0.18.0"
+assert health["apiVersion"] == "0.19.0"
 assert health["revision"].startswith(f'{health["apiVersion"]}:')
-assert health["model"] == "CropFit EcoCrop surrogate v0.10.0"
+assert health["model"] == "CropFit EcoCrop surrogate v0.11.0"
 assert len(health["artifactSha256"]) == 64
 assert health["revision"].endswith(health["artifactSha256"][:12])
-assert health["metrics"]["mae"] == .0135
+assert health["metrics"]["mae"] == .0106
 atlas = health["evidence"]["historicalYieldAtlas"]
 assert atlas["name"] == "USDA county yield atlas v9"
 assert atlas["predictionMethod"]["halfLifeYears"] == 3.0 and atlas["predictionMethod"]["recencyWeight"] == .8
@@ -173,5 +173,5 @@ unsupported_silage.raise_for_status()
 assert unsupported_silage.json()["observedYieldEvidence"] is None
 invalid = requests.post(f"{base}/predict", json={**payload, "climate": climate[:11]}, timeout=10)
 assert invalid.status_code == 422
-print(f'CropFit HTTP verified: API {health["apiVersion"]}, model v0.10.0, artifact identity, atlas v9 plus unit-safe subtype atlas, seasonal boundary ceiling, 2016-2025 climate window, USDA evidence, input bounds')
+print(f'CropFit HTTP verified: API {health["apiVersion"]}, model v0.11.0, six-feature artifact identity, atlas v9 plus unit-safe subtype atlas, seasonal boundary ceiling, 2016-2025 climate window, USDA evidence, input bounds')
 PY

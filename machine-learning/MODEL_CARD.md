@@ -1,4 +1,4 @@
-# CropFit EcoCrop surrogate v0.10.0
+# CropFit EcoCrop surrogate v0.11.0
 
 - Trained: 2026-11-15
 - Source: FAO EcoCrop environmental requirement profiles via OpenCLIM
@@ -7,11 +7,32 @@
 - Frozen validation/test scenarios: 134,064 before profile splitting
 - Evaluation: entire crop profiles held out (373 profiles)
 - Selected production estimator: Extra Trees
-- Raw estimator MAE: 0.0135 suitability points
-- Deployed score MAE after deterministic seasonal ceiling: 0.00576 points
+- Selected model inputs: 6 of 25 engineered features
+- Raw estimator MAE: 0.0106 suitability points
+- Deployed score MAE after deterministic seasonal ceiling: 0.00385 points
 - R²: 1.0000
-- Raw estimator 90th percentile absolute error: 0.0384 points
-- Deployed score 90th percentile absolute error: 0.00034 points
+- Raw estimator 90th percentile absolute error: 0.0284 points
+- Deployed score 90th percentile absolute error: 0.00000 points
+
+Version 0.11 keeps the v0.10 training density and 40-tree capacity but removes
+19 redundant raw/profile inputs from the fitted forest. The retained inputs are
+temperature, water, pH, and solar range fit plus temperature-water and pH-solar
+interactions. They are derived only from current conditions and published crop
+ranges; they contain no crop identity, held-out label, or observed yield. On
+ten fresh grouped-profile seeds, the compact model wins 10/10 with mean MAE
+down 24.81% and p90 error down 29.58%; final-only gains remain 23.95%/28.45%.
+On a separately reserved shift, raw MAE/p90 improve 22.19%/24.81%, deployed MAE
+improves 32.92%, and deployed maximum error falls 28.7%. The forest is 3.7%
+smaller with 0.959× batch latency. See
+`evaluation/feature-compaction-v2-validation-v0.11.md`.
+
+The first compact-feature gate is preserved as a rejection rather than erased:
+it passed every accuracy and active-coverage requirement but one pooled 80%
+coverage result was 83.1% against an 83.0% ceiling. Pooled coverage mixes
+conditionally calibrated active cases with deterministic zero-score cases. A
+v2 protocol declared before opening ten new seeds reports that diagnostic but
+gates the active intervals actually served by the API and zero-radius inactive
+policy separately. See `evaluation/feature-compaction-validation-v0.11.md`.
 
 Version 0.9 increases generated fitting coverage from 72 to 120 scenarios per
 training crop while preserving the exact v0.8 validation and held-out rows. The
@@ -60,19 +81,19 @@ rejected; that experiment did not replace the 120-tree v0.6 champion. See
 
 ## Out-of-distribution ceiling
 
-API v0.18.0 retains the v0.6.1 safety ceiling that caps the ML score by the exact
+API v0.19.0 retains the v0.6.1 safety ceiling that caps the ML score by the exact
 seasonal and establishment EcoCrop suitability already computed for
 limiting-factor explanations. This is a one-sided safety constraint: the
 ensemble still determines underprediction but cannot claim suitability above
 the mechanistic target it approximates.
 
-On the production held-out split, the ceiling reduces MAE from 0.01351 to
-0.00576 and p90 error from 0.03839 to 0.00034 without increasing any example's
-error. Existing intervals remain conservative at 98.0%/99.0% coverage after
+On the production held-out split, the ceiling reduces MAE from 0.01058 to
+0.00385 and p90 error from 0.02844 to 0 without increasing any example's
+error. Existing intervals remain conservative at 98.3%/99.2% coverage after
 the ceiling. It also
 eliminates errors at the tested exact hard solar and temperature boundaries,
 where continuous random training samples do not land. See
-`evaluation/ood-validation-v0.10.0.md`.
+`evaluation/ood-validation-v0.11.0.md`.
 
 Version 0.5 adds four crop-relative features: temperature, water, pH, and solar
 membership within each crop's absolute and optimum ranges. The 120-tree Random
@@ -82,20 +103,20 @@ feature design, it improved held-out MAE on all five robustness seeds from
 reproducible protocol and per-seed results are in
 `evaluation/feature-validation-v0.5.md`.
 
-Version 0.10.0 fits its active-case tree-disagreement-normalized split-conformal
+Version 0.11.0 fits its active-case tree-disagreement-normalized split-conformal
 calibrator using 3,395 active examples from 224 validation crop profiles. On
 5,628 active held-out examples from the 373 test profiles, nominal 80% and 90%
-bands cover 78.0% and 89.4%; mean radii are 0.092 and 0.123 suitability points.
+bands cover 78.2% and 89.5%; mean radii are 0.068 and 0.094 suitability points.
 Hard-zero deployed scores receive zero radius because the deterministic ceiling
 fixes their value. These are conditional EcoCrop-teacher fidelity bands, not
 per-species or observed-yield guarantees.
 
 The CUDA XGBoost candidate completed 500 rounds with a cosine learning-rate
 schedule from 0.08 to 0.005. It was not promoted because held-out-profile MAE
-was worse (0.0872). The committed diagnostics are
-`evaluation/training-curves-v0.10.0.png`,
-`evaluation/selected-feature-importance-v0.10.0.png`, and
-`evaluation/training-history-v0.10.0.csv`.
+was worse (0.0845). The committed diagnostics are
+`evaluation/training-curves-v0.11.0.png`,
+`evaluation/selected-feature-importance-v0.11.0.png`, and
+`evaluation/training-history-v0.11.0.csv`.
 
 ## Intended use
 
@@ -245,7 +266,7 @@ crop-region pairs without at least 50 examples in every validation block. See
 
 ## Inference request safety
 
-API v0.18.0 bounds caller-supplied climate to 12 or 24 ordered months and at
+API v0.19.0 bounds caller-supplied climate to 12 or 24 ordered months and at
 most 20 complete history years. Temperature, precipitation, and solar inputs
 must be finite and remain within documented physical limits. Invalid caller
 data returns HTTP 422 instead of being mislabeled as a model/upstream failure;
@@ -279,7 +300,7 @@ reuse a stale prediction. The cache is a bounded 2,048-entry LRU, and CI checks
 key sensitivity, revision invalidation, model isolation, expiry, and
 least-recently-used eviction.
 
-API v0.18.0 exposes its API+training-run+artifact-hash revision and the full
+API v0.19.0 exposes its API+training-run+artifact-hash revision and the full
 artifact SHA-256 through `/health`. The browser proxy reads the revision once
 per prediction request. Startup rejects artifacts missing the fitted ensemble,
 model identity, or a consistent feature contract. Direct and HTTP inference

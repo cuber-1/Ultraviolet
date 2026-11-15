@@ -10,7 +10,7 @@ import numpy as np
 import requests
 import certifi
 
-from .features import feature_row, teacher_scores
+from .features import FEATURE_NAMES, feature_row, teacher_scores
 from .profiles import load_profiles, resolve_profile
 
 
@@ -29,7 +29,22 @@ def sha256_file(path: Path) -> str:
     return digest.hexdigest()
 
 
-def align_model_features(row: list[float], expected: int) -> list[float]:
+def align_model_features(
+    row: list[float],
+    expected: int,
+    model_feature_names: list[str] | None = None,
+) -> list[float]:
+    if model_feature_names and len(model_feature_names) == expected:
+        if len(row) == expected:
+            return row
+        if len(row) == len(FEATURE_NAMES):
+            unknown = set(model_feature_names) - set(FEATURE_NAMES)
+            if unknown:
+                raise RuntimeError(f"Artifact requests unknown features: {sorted(unknown)}")
+            if len(set(model_feature_names)) != len(model_feature_names):
+                raise RuntimeError("Artifact feature contract contains duplicate names")
+            positions = {name: index for index, name in enumerate(FEATURE_NAMES)}
+            return [row[positions[name]] for name in model_feature_names]
     if len(row) == expected:
         return row
     if len(row) == expected + 2:
@@ -55,14 +70,24 @@ class CropFitPredictor:
             raise RuntimeError(
                 f"CropFit artifact feature contract is inconsistent: model={expected_features}, metadata={len(metadata_features)}."
             )
+        if metadata_features and len(metadata_features) == expected_features:
+            unknown = set(metadata_features) - set(FEATURE_NAMES)
+            if unknown:
+                raise RuntimeError(f"CropFit artifact requests unknown features: {sorted(unknown)}")
+            if len(set(metadata_features)) != len(metadata_features):
+                raise RuntimeError("CropFit artifact feature contract contains duplicate names.")
         if not getattr(self.model, "estimators_", None):
             raise RuntimeError("CropFit artifact does not contain fitted ensemble estimators.")
         self.artifact_sha256 = sha256_file(artifact)
         self.profiles = load_profiles(profiles_path)
 
     def model_features(self, row: list[float]) -> list[float]:
-        """Keep inference usable while an older 23-feature artifact is upgraded."""
-        return align_model_features(row, int(self.model.n_features_in_))
+        """Select named compact features while retaining older 23/25-feature artifacts."""
+        return align_model_features(
+            row,
+            int(self.model.n_features_in_),
+            self.metadata.get("featureNames"),
+        )
 
     def calibrated_error(self, tree_std: float, active: bool = True) -> tuple[float, float]:
         conditional = self.metadata.get("conditionalUncertaintyCalibration", {})

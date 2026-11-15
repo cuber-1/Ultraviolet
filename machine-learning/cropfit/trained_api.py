@@ -17,7 +17,7 @@ ROOT = Path(__file__).resolve().parents[1]
 YIELD_ATLAS = ROOT / "evaluation/yield-atlas-v9.json"
 SUBTYPE_YIELD_ATLAS = ROOT / "evaluation/yield-atlas-subtypes-v1.json"
 SUBTYPE_CROPS = {"silage corn", "spring wheat"}
-app = FastAPI(title="Ultraviolet CropFit", version="0.18.0")
+app = FastAPI(title="Ultraviolet CropFit", version="0.19.0")
 
 ClimateSeries = Annotated[list[dict], Field(min_length=12, max_length=24)]
 ClimateYear = Annotated[list[dict], Field(min_length=12, max_length=12)]

@@ -17,14 +17,14 @@ from sklearn.ensemble import ExtraTreesRegressor
 from sklearn.metrics import mean_absolute_error, r2_score
 from sklearn.model_selection import GroupShuffleSplit
 
-from .features import FEATURE_NAMES, feature_row, teacher_scores
+from .features import COMPACT_FEATURE_COLUMNS, COMPACT_FEATURE_NAMES, FEATURE_NAMES, feature_row, teacher_scores
 from .profiles import load_profiles
 
 
 TREE_STD_FLOOR = 0.01
 PRODUCTION_THRESHOLDS = {
-    "maximumMae": .10,
-    "maximumP90AbsoluteError": .27,
+    "maximumMae": .02,
+    "maximumP90AbsoluteError": .05,
     "minimumR2": .9997,
     "minimumHeldOutProfiles": 350,
     "maximumCoverageDeviation": .02,
@@ -148,7 +148,7 @@ def save_run(run_dir: Path, metadata: dict, config: dict, history: dict, learnin
     importance = booster.get_score(importance_type="gain")
     ranked = sorted(importance.items(), key=lambda item: item[1])[-12:]
     figure, axis = plt.subplots(figsize=(8, 5)); axis.barh([item[0] for item in ranked], [item[1] for item in ranked], color="#6f9551"); axis.set(title="XGBoost candidate feature importance (gain)", xlabel="gain"); figure.tight_layout(); figure.savefig(run_dir / "feature-importance.png", dpi=180); plt.close(figure)
-    forest_importance = sorted(zip(FEATURE_NAMES, model.feature_importances_, strict=True), key=lambda item: item[1])[-12:]
+    forest_importance = sorted(zip(COMPACT_FEATURE_NAMES, model.feature_importances_, strict=True), key=lambda item: item[1])[-12:]
     figure, axis = plt.subplots(figsize=(8, 5)); axis.barh([item[0] for item in forest_importance], [item[1] for item in forest_importance], color="#315d49"); axis.set(title="Selected Extra Trees feature importance", xlabel="mean decrease in impurity"); figure.tight_layout(); figure.savefig(run_dir / "selected-feature-importance.png", dpi=180); plt.close(figure)
 
 
@@ -182,12 +182,13 @@ def train(
         n_jobs=-1,
         random_state=seed,
     )
-    model.fit(training_x[fitting_indices], training_y[fitting_indices])
+    model.fit(training_x[fitting_indices][:, COMPACT_FEATURE_COLUMNS], training_y[fitting_indices])
     booster, history, learning_rates, device = train_booster(training_x[fitting_indices], training_y[fitting_indices], x[validation_indices], y[validation_indices], rounds, seed)
     boosted_predictions = booster.predict(xgb.DMatrix(x[test_indices], feature_names=FEATURE_NAMES))
-    baseline_predictions = model.predict(x[test_indices])
-    validation_predictions = model.predict(x[validation_indices])
-    validation_tree_predictions = np.asarray([tree.predict(x[validation_indices]) for tree in model.estimators_])
+    compact_x = x[:, COMPACT_FEATURE_COLUMNS]
+    baseline_predictions = model.predict(compact_x[test_indices])
+    validation_predictions = model.predict(compact_x[validation_indices])
+    validation_tree_predictions = np.asarray([tree.predict(compact_x[validation_indices]) for tree in model.estimators_])
     validation_tree_std = validation_tree_predictions.std(axis=0)
     validation_residuals = np.abs(validation_predictions - y[validation_indices])
     normalized_validation_errors = validation_residuals / (validation_tree_std + TREE_STD_FLOOR)
@@ -199,7 +200,7 @@ def train(
     active_normalized_error_p90 = conformal_quantile(active_normalized_validation_errors, .9)
     residuals = np.abs(baseline_predictions - y[test_indices])
     boosted_residuals = np.abs(boosted_predictions - y[test_indices])
-    test_tree_predictions = np.asarray([tree.predict(x[test_indices]) for tree in model.estimators_])
+    test_tree_predictions = np.asarray([tree.predict(compact_x[test_indices]) for tree in model.estimators_])
     test_tree_std = test_tree_predictions.std(axis=0)
     test_p80 = normalized_error_p80 * (test_tree_std + TREE_STD_FLOOR)
     test_p90 = normalized_error_p90 * (test_tree_std + TREE_STD_FLOOR)
@@ -223,7 +224,7 @@ def train(
         active_held_out_p80_coverage, active_held_out_p90_coverage,
     )
     metadata = {
-        "model": "CropFit EcoCrop surrogate v0.10.0",
+        "model": "CropFit EcoCrop surrogate v0.11.0",
         "selectedModel": "extraTrees",
         "createdAt": created.isoformat(),
         "runId": run_id,
@@ -246,6 +247,7 @@ def train(
             "nEstimators": 40,
             "minSamplesLeaf": 1,
             "maxFeatures": 1.0,
+            "inputFeatures": len(COMPACT_FEATURE_NAMES),
         },
         "uncertaintyCalibration": {
             "source": "validation crop profiles only",
@@ -292,7 +294,7 @@ def train(
                 "rule": "Active held-out coverage must be within 2 percentage points of both nominal levels.",
             },
         },
-        "selectionEvidence": "Fitting 200 scenarios per training crop with 40 Extra Trees improved MAE and p90 on all ten fresh grouped crop-profile seeds and a separately seeded Latin-hypercube shift while reducing artifact size and latency; see evaluation/density-refinement-v2-validation-v0.10.json.",
+        "selectionEvidence": "Using only six transparent range-relative and interaction features improved MAE and p90 on all ten fresh grouped crop-profile seeds plus a separately seeded Latin-hypercube shift, tightened calibrated intervals, and reduced size and latency; see evaluation/feature-compaction-v2-validation-v0.11.json.",
         "boostedCandidate": {
             "mae": round(float(mean_absolute_error(y[test_indices], boosted_predictions)), 4),
             "r2": round(float(r2_score(y[test_indices], boosted_predictions)), 4),
@@ -300,7 +302,7 @@ def train(
             "promoted": False,
             "reason": "Held-out crop-profile MAE was worse than the selected Extra Trees estimator.",
         },
-        "featureNames": FEATURE_NAMES,
+        "featureNames": COMPACT_FEATURE_NAMES,
         "seed": seed,
         "promotionGate": promotion,
     }
@@ -312,6 +314,7 @@ def train(
         "learningRate": "cosine 0.08 to 0.005",
         "split": "68% train / 12% validation / 20% held-out crop profiles (approximate)",
         "densityPolicy": "Denser generated scenarios are fitting-only; validation and held-out rows remain frozen.",
+        "featurePolicy": "Train only on the six locked range-relative and interaction features selected by the v0.11 compaction gate.",
     }
     if not promotion["passed"]:
         failed = ", ".join(name for name, passed in promotion["checks"].items() if not passed)
