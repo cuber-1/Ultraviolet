@@ -19,7 +19,12 @@ DEVELOPMENT_YEARS = (2018, 2019, 2020)
 STABILITY_YEARS = (2021, 2022)
 FINAL_YEARS = (2023, 2024, 2025)
 SCALE_CANDIDATES = (1.0, 1.05, 1.1, 1.15, 1.2, 1.25, 1.33, 1.4, 1.5)
-NEIGHBOR_CANDIDATES = tuple((count, power) for count in (1, 2, 3, 5, 8) for power in (0.0, .5, 1.0, 2.0))
+NEIGHBOR_CANDIDATES = tuple(
+    (count, distance_power, history_power)
+    for count in (1, 2, 3, 5, 8)
+    for distance_power in (0.0, .5, 1.0, 2.0)
+    for history_power in (0.0, .5, 1.0)
+)
 CROP_METADATA = {
     "silage corn": {"yieldUnit": "tons/acre", "usdaUnit": "TONS / ACRE"},
     "spring wheat": {"yieldUnit": "bu/acre", "usdaUnit": "BU / ACRE"},
@@ -60,7 +65,7 @@ def spatial_transfer_examples(rows: list[dict]) -> list[dict]:
             tree = BallTree(np.radians([[item["latitude"], item["longitude"]] for item in sources]), metric="haversine")
             distances, indices = tree.query(
                 np.radians([[item["latitude"], item["longitude"]] for item in targets]),
-                k=min(max(count for count, _ in NEIGHBOR_CANDIDATES) + 1, len(sources)),
+                k=min(max(count for count, _, _ in NEIGHBOR_CANDIDATES) + 1, len(sources)),
             )
             for target, target_distances, target_indices in zip(targets, distances, indices, strict=True):
                 neighbors = [
@@ -75,11 +80,13 @@ def spatial_transfer_examples(rows: list[dict]) -> list[dict]:
     return examples
 
 
-def apply_neighborhood(items: list[dict], max_neighbors: int, distance_power: float) -> list[dict]:
+def apply_neighborhood(
+    items: list[dict], max_neighbors: int, distance_power: float, history_power: float = 0.0,
+) -> list[dict]:
     scored = []
     for item in items:
         prediction, neighbor_count, effective_history, weights = aggregate_neighbor_prior(
-            item["neighbors"], max_neighbors, distance_power,
+            item["neighbors"], max_neighbors, distance_power, history_power,
         )
         scored.append({
             **item, "prediction": prediction, "historyCount": effective_history,
@@ -108,6 +115,16 @@ def point_comparison(nearest: list[dict], selected: list[dict], years: tuple[int
         "nearestCounty": baseline, "selectedNeighborhood": candidate,
         "spearmanGain": round(candidate["spearman"] - baseline["spearman"], 4),
         "maeReduction": round(baseline["maePercentile"] - candidate["maePercentile"], 4),
+    }
+
+
+def candidate_comparison(baseline: list[dict], selected: list[dict], years: tuple[int, ...]) -> dict:
+    baseline_summary = signal_summary([item for item in baseline if item["year"] in years])
+    selected_summary = signal_summary([item for item in selected if item["year"] in years])
+    return {
+        "distanceOnly": baseline_summary, "selected": selected_summary,
+        "spearmanGain": round(selected_summary["spearman"] - baseline_summary["spearman"], 4),
+        "maeReduction": round(baseline_summary["maePercentile"] - selected_summary["maePercentile"], 4),
     }
 
 
@@ -164,33 +181,47 @@ def build(data: Path) -> tuple[dict, dict]:
     raw_examples = spatial_transfer_examples(rows)
     neighborhood_selection = []
     selected_neighborhoods = {}
+    distance_only_neighborhoods = {}
     examples = []
     for crop in CROP_METADATA:
         crop_raw = [item for item in raw_examples if item["crop"] == crop]
         development_raw = [item for item in crop_raw if item["year"] in DEVELOPMENT_YEARS]
         candidates = []
         candidate_scores = []
-        for max_neighbors, distance_power in NEIGHBOR_CANDIDATES:
-            scored = apply_neighborhood(development_raw, max_neighbors, distance_power)
+        for max_neighbors, distance_power, history_power in NEIGHBOR_CANDIDATES:
+            scored = apply_neighborhood(development_raw, max_neighbors, distance_power, history_power)
             candidates.append({
-                "maxNeighbors": max_neighbors, "distancePower": distance_power,
+                "maxNeighbors": max_neighbors, "distancePower": distance_power, "historyPower": history_power,
                 "development": signal_summary(scored),
             })
             candidate_scores.append({
-                "maxNeighbors": max_neighbors, "distancePower": distance_power,
+                "maxNeighbors": max_neighbors, "distancePower": distance_power, "historyPower": history_power,
                 "development": signal_summary(scored, rounded=False),
             })
         selected = max(candidate_scores, key=lambda item: (
             item["development"]["spearman"], -item["development"]["maePercentile"],
         ))
+        distance_only = max(
+            (item for item in candidate_scores if item["historyPower"] == 0),
+            key=lambda item: (item["development"]["spearman"], -item["development"]["maePercentile"]),
+        )
         config = {
             "maxNeighbors": selected["maxNeighbors"], "distancePower": selected["distancePower"],
-            "distanceOffsetKm": 5.0,
+            "historyPower": selected["historyPower"], "distanceOffsetKm": 5.0,
+        }
+        distance_only_neighborhoods[crop] = {
+            "maxNeighbors": distance_only["maxNeighbors"], "distancePower": distance_only["distancePower"],
+            "historyPower": 0.0, "distanceOffsetKm": 5.0,
         }
         selected_neighborhoods[crop] = config
-        crop_examples = apply_neighborhood(crop_raw, config["maxNeighbors"], config["distancePower"])
+        crop_examples = apply_neighborhood(
+            crop_raw, config["maxNeighbors"], config["distancePower"], config["historyPower"],
+        )
         examples.extend(crop_examples)
-        neighborhood_selection.append({"crop": crop, "candidates": candidates, "selected": config})
+        neighborhood_selection.append({
+            "crop": crop, "candidates": candidates,
+            "distanceOnlyBaseline": distance_only_neighborhoods[crop], "selected": config,
+        })
     calibration_examples = [item for item in examples if item["year"] in CALIBRATION_YEARS]
     grouped: dict[tuple[str, str], list[float]] = defaultdict(list)
     for item in calibration_examples:
@@ -265,6 +296,10 @@ def build(data: Path) -> tuple[dict, dict]:
         crop_raw = [item for item in raw_examples if item["crop"] == crop]
         baseline_examples = apply_neighborhood(crop_raw, 1, 0.0)
         baseline_final = [item for item in baseline_examples if item["year"] in FINAL_YEARS]
+        distance_only = distance_only_neighborhoods[crop]
+        distance_only_examples = apply_neighborhood(
+            crop_raw, distance_only["maxNeighbors"], distance_only["distancePower"], distance_only["historyPower"],
+        )
         published = sum(1 for row in rows if row["crop"] == crop and row["year"] in FINAL_YEARS)
         signal = metric_summary(final_examples, published)
         baseline_signal = metric_summary(baseline_final, published)
@@ -273,6 +308,14 @@ def build(data: Path) -> tuple[dict, dict]:
             "development": point_comparison(baseline_examples, crop_examples, DEVELOPMENT_YEARS),
             "stability": point_comparison(baseline_examples, crop_examples, STABILITY_YEARS),
             "final": point_comparison(baseline_examples, crop_examples, FINAL_YEARS),
+        }
+        history_reliability_comparison = {
+            "development": candidate_comparison(distance_only_examples, crop_examples, DEVELOPMENT_YEARS),
+            "stability": candidate_comparison(distance_only_examples, crop_examples, STABILITY_YEARS),
+            "final": candidate_comparison(distance_only_examples, crop_examples, FINAL_YEARS),
+            "finalSpearmanGainBootstrap95": paired_rank_gain_interval(
+                [item for item in distance_only_examples if item["year"] in FINAL_YEARS], final_examples,
+            ),
         }
         per_region = []
         for region in sorted(selected_regional_scales[crop]):
@@ -290,6 +333,7 @@ def build(data: Path) -> tuple[dict, dict]:
             "spearmanGainBootstrap95": gain_interval,
             "maeReduction": round(baseline_signal["maePercentile"] - signal["maePercentile"], 4),
             "pointValidation": point_validation,
+            "historyReliabilityComparison": history_reliability_comparison,
             "development": interval_metrics([item for item in crop_examples if item["year"] in DEVELOPMENT_YEARS], table, unit_scales, selected_regional_scales),
             "stability": interval_metrics([item for item in crop_examples if item["year"] in STABILITY_YEARS], table, unit_scales, selected_regional_scales),
             "final": interval_metrics(final_examples, table, unit_scales, selected_regional_scales),
@@ -303,6 +347,10 @@ def build(data: Path) -> tuple[dict, dict]:
             and all(
                 block["spearmanGain"] > 0 and block["maeReduction"] > 0
                 for block in item["pointValidation"].values()
+            )
+            and all(
+                block["spearmanGain"] >= 0 and block["maeReduction"] >= 0
+                for key, block in item["historyReliabilityComparison"].items() if key != "finalSpearmanGainBootstrap95"
             )
             and item["development"]["coverage80"] >= .78 and item["development"]["coverage90"] >= .88
             and item["stability"]["coverage80"] >= .78 and item["stability"]["coverage90"] >= .88
@@ -328,6 +376,7 @@ def build(data: Path) -> tuple[dict, dict]:
         "calibrationGroups": [table[key] for key in sorted(table)],
         "neighborhoodSelection": neighborhood_selection,
         "selectedNeighborhoods": selected_neighborhoods,
+        "distanceOnlyNeighborhoods": distance_only_neighborhoods,
         "scaleSelection": selection, "selectedScales": unit_scales, "perCrop": per_crop,
         "regionalScaleSelection": regional_scale_selection,
         "selectedRegionalScales": selected_regional_scales,
@@ -335,7 +384,7 @@ def build(data: Path) -> tuple[dict, dict]:
         "acceptedCrops": accepted_crops,
         "gate": {
             "passed": gate_passed,
-            "rule": "Select neighborhood size and distance power on 2018-2020 only. Leave-one-county-out transfer within 100 km then needs final N >=100, Spearman >=0.50 with grouped-bootstrap lower >0.30; paired-bootstrap rank-gain lower >0; positive rank gain and MAE reduction over one nearest county in development, stability, and locked final blocks. Regional interval multipliers selected on development/stability must reach 80%/90%; locked pooled coverage must be 75-90%/87-96%, and every region needs final N >=50, 80% coverage >=70%, 90% coverage 85-98%, and mean 90% width <=0.90.",
+            "rule": "Select neighborhood size, distance power, and history-reliability power on 2018-2020 only. Leave-one-county-out transfer within 100 km then needs final N >=100, Spearman >=0.50 with grouped-bootstrap lower >0.30; paired-bootstrap rank-gain lower >0; positive rank gain and MAE reduction over one nearest county in development, stability, and locked final blocks; no rank or MAE regression versus the best development-selected distance-only candidate in any block. Regional interval multipliers selected on development/stability must reach 80%/90%; locked pooled coverage must be 75-90%/87-96%, and every region needs final N >=50, 80% coverage >=70%, 90% coverage 85-98%, and mean 90% width <=0.90.",
         },
         "interpretation": "Nearby-county subtype ordering and uncertainty only; not parcel yield, revenue, or purchase returns.",
     }
@@ -387,6 +436,7 @@ def build(data: Path) -> tuple[dict, dict]:
         "spatialTransferValidation": {
             "method": "Leave one reporting county out and aggregate the development-selected nearby counties with earlier history within 100 km.",
             "selectedNeighborhoodByCrop": selected_neighborhoods,
+            "distanceOnlyNeighborhoodByCrop": distance_only_neighborhoods,
             "selectedRegionalScalesByCrop": selected_regional_scales,
             "supportedRegionsByCrop": supported_regions,
             "groups": [{
@@ -416,6 +466,21 @@ def markdown(report: dict, records: int) -> str:
     lines += [
         "", f'Promotion gate: **{"PASS" if report["gate"]["passed"] else "NOT PASSED"}**. Atlas records: **{records:,}**.', "",
         "Neighborhoods were selected on 2018-2020 development only; interval scales also had to hold on 2021-2022 stability. The 2023-2025 outcomes remained locked until final evaluation.", "",
+        "## History-reliability ablation", "",
+        "History-count weighting is retained only when the development-selected candidate does not regress rank or MAE against the best distance-only candidate in development, stability, or final blocks.", "",
+        "| Crop subtype | History power | Locked Δρ | 95% CI | Locked MAE reduction |",
+        "|---|---:|---:|---:|---:|",
+    ]
+    for item in report["perCrop"]:
+        comparison = item["historyReliabilityComparison"]
+        interval = comparison["finalSpearmanGainBootstrap95"]
+        lines.append(
+            f'| {item["crop"]} | {report["selectedNeighborhoods"][item["crop"]]["historyPower"]:.1f} | '
+            f'{comparison["final"]["spearmanGain"]:+.4f} | {interval[0]:+.4f} to {interval[1]:+.4f} | '
+            f'{comparison["final"]["maeReduction"]:+.4f} |'
+        )
+    lines += [
+        "",
         "## Region-safe uncertainty", "",
         "Only crop-region pairs with at least 50 examples in development, stability, and final blocks are published. Multipliers were selected before opening the final block.", "",
         "| Crop subtype | Region | 80% scale | 90% scale | Locked N | 80% coverage | 90% coverage | Mean 90% width |",

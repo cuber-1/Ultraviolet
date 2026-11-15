@@ -184,12 +184,19 @@ def distance_bucket(distance_km: float) -> str:
     return "0-25" if distance_km <= 25 else "25-50" if distance_km <= 50 else "50-100"
 
 
-def aggregate_neighbor_prior(neighbors: list[dict], max_neighbors: int, distance_power: float) -> tuple[float, int, int, list[float]]:
+def aggregate_neighbor_prior(
+    neighbors: list[dict], max_neighbors: int, distance_power: float, history_power: float = 0.0,
+) -> tuple[float, int, int, list[float]]:
     selected = neighbors[:max_neighbors]
     if not selected:
         raise ValueError("At least one regional neighbor is required.")
     distances = np.asarray([item["distanceKm"] for item in selected], dtype=float)
-    weights = np.ones(len(selected)) if distance_power == 0 else 1 / np.power(distances + SPATIAL_DISTANCE_OFFSET_KM, distance_power)
+    distance_weights = (
+        np.ones(len(selected)) if distance_power == 0
+        else 1 / np.power(distances + SPATIAL_DISTANCE_OFFSET_KM, distance_power)
+    )
+    history_weights = np.power([item["historyCount"] for item in selected], history_power)
+    weights = distance_weights * history_weights
     normalized = weights / np.sum(weights)
     prediction = float(np.average([item["prediction"] for item in selected], weights=weights))
     effective_history = round(float(np.average([item["historyCount"] for item in selected], weights=weights)))
@@ -888,6 +895,7 @@ def nearest_evidence(crop: str, latitude: float, longitude: float, path: Path, m
             used_regional_blend = True
             regional_expected, regional_count, regional_history, regional_weights = aggregate_neighbor_prior(
                 regional, max_neighbors, float(neighborhood["distancePower"]),
+                float(neighborhood.get("historyPower", 0.0)),
             )
             expected = (1 - regional_weight) * primary["prediction"] + regional_weight * regional_expected
             weights = [1 - regional_weight, *[regional_weight * weight for weight in regional_weights]]
@@ -897,7 +905,10 @@ def nearest_evidence(crop: str, latitude: float, longitude: float, path: Path, m
             neighbors = [primary]
             expected, neighbor_count, effective_history, weights = primary["prediction"], 1, primary["historyCount"], [1.0]
     else:
-        expected, neighbor_count, effective_history, weights = aggregate_neighbor_prior(neighbors, max_neighbors, float(neighborhood["distancePower"]))
+        expected, neighbor_count, effective_history, weights = aggregate_neighbor_prior(
+            neighbors, max_neighbors, float(neighborhood["distancePower"]),
+            float(neighborhood.get("historyPower", 0.0)),
+        )
     record = neighbors[0]["record"]
     distance = neighbors[0]["distanceKm"]
     prior = dict(record.get("observedYieldPrior", {}))

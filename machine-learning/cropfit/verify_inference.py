@@ -16,7 +16,7 @@ from .features import FEATURE_NAMES, feature_row, teacher_scores
 from .bundle_validation import EXPECTED_MEMBERS, validate_bundle
 from .inference import CLIMATE_HISTORY_END_YEAR, CLIMATE_HISTORY_START_YEAR, CLIMATE_HISTORY_YEARS, MAX_CLIMATE_HISTORY_YEARS, MONTHS, CropFitPredictor, align_model_features, sha256_file
 from .profiles import resolve_profile
-from .yield_atlas import haversine_km, load_atlas, metric_summary, nearest_evidence
+from .yield_atlas import aggregate_neighbor_prior, haversine_km, load_atlas, metric_summary, nearest_evidence
 
 
 def climate(temperature: float) -> list[dict]:
@@ -228,6 +228,14 @@ def verify(artifact: Path, profiles: Path) -> None:
 
     subtype_atlas = artifact.parents[1] / "evaluation/yield-atlas-subtypes-v1.json"
     if subtype_atlas.exists():
+        synthetic_neighbors = [
+            {"distanceKm": 10.0, "prediction": .2, "historyCount": 1},
+            {"distanceKm": 10.0, "prediction": .8, "historyCount": 4},
+        ]
+        distance_only = aggregate_neighbor_prior(synthetic_neighbors, 2, 1.0)
+        history_weighted = aggregate_neighbor_prior(synthetic_neighbors, 2, 1.0, 1.0)
+        assert distance_only[0] == .5 and distance_only[3] == [.5, .5]
+        assert math.isclose(history_weighted[0], .68) and history_weighted[3] == [.2, .8]
         subtype_report = load_atlas(str(subtype_atlas.resolve()))
         assert subtype_report["crops"] == ["silage corn", "spring wheat"]
         assert subtype_report["validation"]["gate"]["passed"]

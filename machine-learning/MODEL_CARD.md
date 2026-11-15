@@ -46,7 +46,7 @@ rejected; that experiment did not replace the 120-tree v0.6 champion. See
 
 ## Out-of-distribution ceiling
 
-API v0.12.0 retains the v0.6.1 safety ceiling that caps the ML score by the exact
+API v0.13.0 retains the v0.6.1 safety ceiling that caps the ML score by the exact
 seasonal and establishment EcoCrop suitability already computed for
 limiting-factor explanations. This is a one-sided safety constraint: the
 ensemble still determines underprediction but cannot claim suitability above
@@ -201,18 +201,23 @@ recent sample floor despite positive rank signal. The accepted subtypes remain
 outside atlas v9. A development-selected five-county aggregation passes the
 leave-one-county-out transfer gate for both. On locked 2023–2025 outcomes,
 spring-wheat Spearman improves from 0.594 to 0.710 and silage from 0.434 to
-0.503, while both reduce MAE. Grouped-bootstrap lower bounds are 0.615 and
-0.422, and paired rank-gain intervals stay above zero (+0.047 to +0.194 and
-+0.014 to +0.126). Pre-final regional multipliers lift Western spring-wheat
+0.511, while both reduce MAE. Silage weights neighbors by history count because
+that development-selected candidate also improves rank and MAE in stability and
+final blocks versus the previous distance-only method. Its incremental final
+rank interval is -0.010 to +0.027, so the ablation gain is not conclusive.
+Grouped-bootstrap lower bounds are 0.615 and 0.428, and paired rank-gain
+intervals against one nearest county stay above zero (+0.047 to +0.194 and
++0.018 to +0.139). Pre-final regional multipliers lift Western spring-wheat
 80% / 90% coverage from 72.3% / 78.7% to 78.7% / 87.2%. Locked pooled coverage
-is 86.0% / 93.4% for spring wheat and 82.4% / 90.6% for silage. The separate
+is 86.0% / 93.4% for spring wheat; history-weighted silage reaches 80.7% / 90.1%
+while narrowing mean 90% width from 0.761 to 0.746. The separate
 690-record atlas preserves explicit `bu/acre` and `tons/acre` units and excludes
 crop-region pairs without at least 50 examples in every validation block. See
 `evaluation/yield-atlas-subtypes-validation-v1.md`.
 
 ## Inference request safety
 
-API v0.12.0 bounds caller-supplied climate to 12 or 24 ordered months and at
+API v0.13.0 bounds caller-supplied climate to 12 or 24 ordered months and at
 most 20 complete history years. Temperature, precipitation, and solar inputs
 must be finite and remain within documented physical limits. Invalid caller
 data returns HTTP 422 instead of being mislabeled as a model/upstream failure;
@@ -246,7 +251,7 @@ reuse a stale prediction. The cache is a bounded 2,048-entry LRU, and CI checks
 key sensitivity, revision invalidation, model isolation, expiry, and
 least-recently-used eviction.
 
-API v0.12.0 exposes its API+training-run+artifact-hash revision and the full
+API v0.13.0 exposes its API+training-run+artifact-hash revision and the full
 artifact SHA-256 through `/health`. The browser proxy reads the revision once
 per prediction request. Startup rejects artifacts missing the fitted ensemble,
 model identity, or a consistent feature contract. Direct and HTTP inference
