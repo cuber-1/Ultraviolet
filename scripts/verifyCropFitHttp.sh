@@ -58,23 +58,28 @@ climate = [{"month": month, "temperatureC": 22, "precipitationMmDay": 3, "solarM
 payload = {"crop": "corn", "latitude": 29.76, "longitude": -95.37, "soilPh": 6.5, "irrigated": True, "climate": climate, "climateHistory": [climate] * 10}
 health = requests.get(f"{base}/health", timeout=10).json()
 assert health["status"] == "ok" and health["requestLimits"]["historyYearsMax"] == 20
-assert health["apiVersion"] == "0.19.0"
+assert health["apiVersion"] == "0.20.0"
 assert health["revision"].startswith(f'{health["apiVersion"]}:')
 assert health["model"] == "CropFit EcoCrop surrogate v0.11.0"
 assert len(health["artifactSha256"]) == 64
 assert health["revision"].endswith(health["artifactSha256"][:12])
 assert health["metrics"]["mae"] == .0106
 atlas = health["evidence"]["historicalYieldAtlas"]
-assert atlas["name"] == "USDA county yield atlas v9"
+assert atlas["name"] == "USDA county yield atlas v10"
 assert atlas["predictionMethod"]["halfLifeYears"] == 3.0 and atlas["predictionMethod"]["recencyWeight"] == .8
 assert atlas["validation"]["spearman"] == .7914 and atlas["uncertaintyValidation"]["gate"]["passed"]
 assert atlas["spatialTransferValidation"]["gate"]["passed"]
 assert atlas["spatialTransferValidation"]["selectedNeighborhood"] == {"maxNeighbors": 8, "distancePower": 2.0, "distanceOffsetKm": 5.0}
 assert atlas["spatialTransferValidation"]["finalSignal"]["regionalNeighborhood"]["spearman"] == .806
 production_blend = atlas["spatialTransferValidation"]["productionBlend"]
-assert production_blend["selectedWeights"] == {"regionalNeighborhoodByRegion": {
-    "Northeast": 0.0, "Midwest": .15, "South": .15, "West": 0.0,
-}}
+assert production_blend["selectedWeights"]["regionalNeighborhoodByCropRegion"] == {
+    "corn": {"Northeast": 0.0, "Midwest": .15, "South": .15, "West": 0.0},
+    "soybean": {"Northeast": 0.0, "Midwest": .15, "South": .15, "West": 0.0},
+    "wheat": {"Northeast": 0.0, "Midwest": .2, "South": .2, "West": 0.0},
+}
+assert {item["crop"]: item["enabled"] for item in production_blend["cropStabilityVeto"]} == {
+    "corn": False, "soybean": False, "wheat": True,
+}
 assert all(
     item["spearmanDelta"] >= 0 and item["maeDelta"] <= 0
     for item in (*production_blend["perRegionConfirmation"], *production_blend["perRegionFinalSignal"])
@@ -173,5 +178,5 @@ unsupported_silage.raise_for_status()
 assert unsupported_silage.json()["observedYieldEvidence"] is None
 invalid = requests.post(f"{base}/predict", json={**payload, "climate": climate[:11]}, timeout=10)
 assert invalid.status_code == 422
-print(f'CropFit HTTP verified: API {health["apiVersion"]}, model v0.11.0, six-feature artifact identity, atlas v9 plus unit-safe subtype atlas, seasonal boundary ceiling, 2016-2025 climate window, USDA evidence, input bounds')
+print(f'CropFit HTTP verified: API {health["apiVersion"]}, model v0.11.0, six-feature artifact identity, atlas v10 plus unit-safe subtype atlas, seasonal boundary ceiling, 2016-2025 climate window, USDA evidence, input bounds')
 PY

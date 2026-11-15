@@ -187,18 +187,24 @@ def verify(artifact: Path, profiles: Path) -> None:
         else:
             raise AssertionError("malformed artifact contract was accepted")
 
-    atlas = artifact.parents[1] / "evaluation/yield-atlas-v9.json"
+    atlas = artifact.parents[1] / "evaluation/yield-atlas-v10.json"
     if atlas.exists():
         atlas_report = load_atlas(str(atlas.resolve()))
+        assert atlas_report["name"] == "USDA county yield atlas v10"
         assert atlas_report["years"] == list(range(2010, 2026))
         assert atlas_report["historyWindowComparison"]["gate"]["passed"]
         assert atlas_report["uncertaintyValidation"]["gate"]["passed"]
         assert atlas_report["spatialTransferValidation"]["gate"]["passed"]
         assert atlas_report["spatialTransferValidation"]["productionBlend"]["gate"]["passed"]
         production_blend = atlas_report["spatialTransferValidation"]["productionBlend"]
-        assert production_blend["selectedWeights"] == {"regionalNeighborhoodByRegion": {
-            "Northeast": 0.0, "Midwest": .15, "South": .15, "West": 0.0,
-        }}
+        expected_crop_weights = {
+            "corn": {"Northeast": 0.0, "Midwest": .15, "South": .15, "West": 0.0},
+            "soybean": {"Northeast": 0.0, "Midwest": .15, "South": .15, "West": 0.0},
+            "wheat": {"Northeast": 0.0, "Midwest": .2, "South": .2, "West": 0.0},
+        }
+        assert production_blend["selectedWeights"]["regionalNeighborhoodByCropRegion"] == expected_crop_weights
+        stability_veto = {item["crop"]: item["enabled"] for item in production_blend["cropStabilityVeto"]}
+        assert stability_veto == {"corn": False, "soybean": False, "wheat": True}
         assert all(
             item["spearmanDelta"] >= 0 and item["maeDelta"] <= 0
             for item in (*production_blend["perRegionConfirmation"], *production_blend["perRegionFinalSignal"])
@@ -223,6 +229,26 @@ def verify(artifact: Path, profiles: Path) -> None:
         assert evidence["observedYieldPrior"]["distanceBucket"] == "25-50"
         assert 1 <= evidence["observedYieldPrior"]["neighborCount"] <= 9
         assert len(evidence["regionalNeighbors"]) == evidence["observedYieldPrior"]["neighborCount"] == 6
+        assert evidence["regionalNeighbors"][0]["weight"] == .85
+        wheat_evidence = nearest_evidence("wheat", 46.8, -100.8, atlas)
+        assert wheat_evidence and wheat_evidence["state"] == "ND"
+        assert wheat_evidence["observedYieldPrior"]["intervalMethod"] == "local-regional-blend-conformal"
+        assert wheat_evidence["regionalNeighbors"][0]["weight"] == .8
+        assert abs(sum(item["weight"] for item in wheat_evidence["regionalNeighbors"]) - 1) < .0001
+
+    production_blend_v2_validation = artifact.parents[1] / "evaluation/production-blend-v2-validation-v10.json"
+    if production_blend_v2_validation.exists():
+        blend_report = json.loads(production_blend_v2_validation.read_text())
+        assert blend_report["gate"] == {"passed": True, "pointPassed": True, "intervalPassed": True}
+        assert blend_report["final"]["spearmanGain"] > 0
+        assert blend_report["final"]["maeReduction"] > 0
+        assert blend_report["final"]["spearmanGainBootstrap95"][0] > 0
+        assert [
+            item["crop"] for item in blend_report["selection"]["stabilityVeto"] if item["enabled"]
+        ] == ["wheat"]
+        assert all(item["spearmanGain"] >= 0 and item["maeReduction"] >= 0 for item in blend_report["perYearFinal"])
+
+    if atlas.exists():
         assert evidence["observedYieldPrior"]["expectedPercentile"] != evidence["regionalNeighbors"][0]["expectedPercentile"]
         assert abs(sum(item["weight"] for item in evidence["regionalNeighbors"]) - 1) < .0001
         western_evidence = nearest_evidence("wheat", 39.7392, -104.9903, atlas)

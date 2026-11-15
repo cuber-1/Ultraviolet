@@ -1,0 +1,1544 @@
+{
+  "name": "USDA county yield atlas crop-specific production-blend v2 candidate",
+  "protocol": {
+    "champion": "atlas v9 global development-selected weight with region gating",
+    "candidate": "crop-specific development weights with crop stability veto and region gating",
+    "developmentYears": [
+      2018,
+      2019,
+      2020
+    ],
+    "stabilityYears": [
+      2021,
+      2022
+    ],
+    "finalYears": [
+      2023,
+      2024,
+      2025
+    ],
+    "rule": "Select per-crop weights on 2018-2020, enable crop-region probes only when rank and MAE both improve there, veto each crop unless 2021-2022 rank and MAE both improve, then require positive locked pooled rank/MAE gains with grouped-bootstrap rank lower >0; no crop, year, or region may regress. Recalibrated intervals must retain all v9 coverage gates and mean 90% width within 0.002 of v9."
+  },
+  "selection": {
+    "weightCandidates": [
+      {
+        "crop": "corn",
+        "candidates": [
+          {
+            "regionalWeight": 0.0,
+            "observations": 4214,
+            "spearman": 0.84663,
+            "maePercentile": 0.11745
+          },
+          {
+            "regionalWeight": 0.05,
+            "observations": 4214,
+            "spearman": 0.84818,
+            "maePercentile": 0.11716
+          },
+          {
+            "regionalWeight": 0.1,
+            "observations": 4214,
+            "spearman": 0.84947,
+            "maePercentile": 0.11703
+          },
+          {
+            "regionalWeight": 0.15,
+            "observations": 4214,
+            "spearman": 0.8505,
+            "maePercentile": 0.11707
+          },
+          {
+            "regionalWeight": 0.2,
+            "observations": 4214,
+            "spearman": 0.85127,
+            "maePercentile": 0.11724
+          },
+          {
+            "regionalWeight": 0.25,
+            "observations": 4214,
+            "spearman": 0.85168,
+            "maePercentile": 0.11753
+          },
+          {
+            "regionalWeight": 0.33,
+            "observations": 4214,
+            "spearman": 0.85173,
+            "maePercentile": 0.11818
+          },
+          {
+            "regionalWeight": 0.5,
+            "observations": 4214,
+            "spearman": 0.84876,
+            "maePercentile": 0.12054
+          }
+        ],
+        "selected": 0.1
+      },
+      {
+        "crop": "soybean",
+        "candidates": [
+          {
+            "regionalWeight": 0.0,
+            "observations": 3702,
+            "spearman": 0.85443,
+            "maePercentile": 0.11535
+          },
+          {
+            "regionalWeight": 0.05,
+            "observations": 3702,
+            "spearman": 0.85606,
+            "maePercentile": 0.11509
+          },
+          {
+            "regionalWeight": 0.1,
+            "observations": 3702,
+            "spearman": 0.85739,
+            "maePercentile": 0.11496
+          },
+          {
+            "regionalWeight": 0.15,
+            "observations": 3702,
+            "spearman": 0.85858,
+            "maePercentile": 0.11492
+          },
+          {
+            "regionalWeight": 0.2,
+            "observations": 3702,
+            "spearman": 0.85951,
+            "maePercentile": 0.11497
+          },
+          {
+            "regionalWeight": 0.25,
+            "observations": 3702,
+            "spearman": 0.86009,
+            "maePercentile": 0.11513
+          },
+          {
+            "regionalWeight": 0.33,
+            "observations": 3702,
+            "spearman": 0.86044,
+            "maePercentile": 0.11556
+          },
+          {
+            "regionalWeight": 0.5,
+            "observations": 3702,
+            "spearman": 0.85846,
+            "maePercentile": 0.11722
+          }
+        ],
+        "selected": 0.15
+      },
+      {
+        "crop": "wheat",
+        "candidates": [
+          {
+            "regionalWeight": 0.0,
+            "observations": 2435,
+            "spearman": 0.83619,
+            "maePercentile": 0.11753
+          },
+          {
+            "regionalWeight": 0.05,
+            "observations": 2435,
+            "spearman": 0.83719,
+            "maePercentile": 0.11717
+          },
+          {
+            "regionalWeight": 0.1,
+            "observations": 2435,
+            "spearman": 0.8379,
+            "maePercentile": 0.11695
+          },
+          {
+            "regionalWeight": 0.15,
+            "observations": 2435,
+            "spearman": 0.83837,
+            "maePercentile": 0.11681
+          },
+          {
+            "regionalWeight": 0.2,
+            "observations": 2435,
+            "spearman": 0.83881,
+            "maePercentile": 0.11673
+          },
+          {
+            "regionalWeight": 0.25,
+            "observations": 2435,
+            "spearman": 0.83892,
+            "maePercentile": 0.11676
+          },
+          {
+            "regionalWeight": 0.33,
+            "observations": 2435,
+            "spearman": 0.83868,
+            "maePercentile": 0.11704
+          },
+          {
+            "regionalWeight": 0.5,
+            "observations": 2435,
+            "spearman": 0.83575,
+            "maePercentile": 0.11853
+          }
+        ],
+        "selected": 0.2
+      }
+    ],
+    "developmentRegionChecks": [
+      {
+        "crop": "corn",
+        "region": "Northeast",
+        "observations": 241,
+        "regionalWeight": 0.0,
+        "enabled": false
+      },
+      {
+        "crop": "corn",
+        "region": "Midwest",
+        "observations": 2346,
+        "regionalWeight": 0.1,
+        "enabled": true
+      },
+      {
+        "crop": "corn",
+        "region": "South",
+        "observations": 1551,
+        "regionalWeight": 0.1,
+        "enabled": true
+      },
+      {
+        "crop": "corn",
+        "region": "West",
+        "observations": 76,
+        "regionalWeight": 0.1,
+        "enabled": true
+      },
+      {
+        "crop": "soybean",
+        "region": "Northeast",
+        "observations": 228,
+        "regionalWeight": 0.0,
+        "enabled": false
+      },
+      {
+        "crop": "soybean",
+        "region": "Midwest",
+        "observations": 2216,
+        "regionalWeight": 0.15,
+        "enabled": true
+      },
+      {
+        "crop": "soybean",
+        "region": "South",
+        "observations": 1258,
+        "regionalWeight": 0.15,
+        "enabled": true
+      },
+      {
+        "crop": "soybean",
+        "region": "West",
+        "observations": 0,
+        "regionalWeight": 0.0,
+        "enabled": false
+      },
+      {
+        "crop": "wheat",
+        "region": "Northeast",
+        "observations": 0,
+        "regionalWeight": 0.0,
+        "enabled": false
+      },
+      {
+        "crop": "wheat",
+        "region": "Midwest",
+        "observations": 1297,
+        "regionalWeight": 0.2,
+        "enabled": true
+      },
+      {
+        "crop": "wheat",
+        "region": "South",
+        "observations": 870,
+        "regionalWeight": 0.2,
+        "enabled": true
+      },
+      {
+        "crop": "wheat",
+        "region": "West",
+        "observations": 268,
+        "regionalWeight": 0.0,
+        "enabled": false
+      }
+    ],
+    "stabilityVeto": [
+      {
+        "crop": "corn",
+        "championV9": {
+          "observations": 2948,
+          "spearman": 0.84194,
+          "maePercentile": 0.11913
+        },
+        "probe": {
+          "observations": 2948,
+          "spearman": 0.84112,
+          "maePercentile": 0.11931
+        },
+        "spearmanGain": -0.00082,
+        "maeReduction": -0.00018,
+        "enabled": false
+      },
+      {
+        "crop": "soybean",
+        "championV9": {
+          "observations": 2674,
+          "spearman": 0.86042,
+          "maePercentile": 0.11322
+        },
+        "probe": {
+          "observations": 2674,
+          "spearman": 0.86042,
+          "maePercentile": 0.11322
+        },
+        "spearmanGain": 0.0,
+        "maeReduction": 0.0,
+        "enabled": false
+      },
+      {
+        "crop": "wheat",
+        "championV9": {
+          "observations": 1709,
+          "spearman": 0.86777,
+          "maePercentile": 0.10687
+        },
+        "probe": {
+          "observations": 1709,
+          "spearman": 0.86907,
+          "maePercentile": 0.10664
+        },
+        "spearmanGain": 0.0013,
+        "maeReduction": 0.00023,
+        "enabled": true
+      }
+    ],
+    "selectedWeights": {
+      "corn": {
+        "Northeast": 0.0,
+        "Midwest": 0.15,
+        "South": 0.15,
+        "West": 0.0
+      },
+      "soybean": {
+        "Northeast": 0.0,
+        "Midwest": 0.15,
+        "South": 0.15,
+        "West": 0.0
+      },
+      "wheat": {
+        "Northeast": 0.0,
+        "Midwest": 0.2,
+        "South": 0.2,
+        "West": 0.0
+      }
+    }
+  },
+  "stability": {
+    "observations": 7331,
+    "championV9": {
+      "observations": 7331,
+      "spearman": 0.85496,
+      "maePercentile": 0.11412
+    },
+    "cropSpecificCandidate": {
+      "observations": 7331,
+      "spearman": 0.85524,
+      "maePercentile": 0.11406
+    },
+    "spearmanGain": 0.00028028,
+    "maeReduction": 5.326e-05
+  },
+  "final": {
+    "observations": 8881,
+    "championV9": {
+      "observations": 8881,
+      "spearman": 0.83764,
+      "maePercentile": 0.12039
+    },
+    "cropSpecificCandidate": {
+      "observations": 8881,
+      "spearman": 0.83786,
+      "maePercentile": 0.12034
+    },
+    "spearmanGain": 0.00021671,
+    "maeReduction": 5.814e-05,
+    "spearmanGainBootstrap95": [
+      0.000128,
+      0.000315
+    ]
+  },
+  "perCropFinal": [
+    {
+      "crop": "corn",
+      "observations": 3884,
+      "championV9": {
+        "observations": 3884,
+        "spearman": 0.84757,
+        "maePercentile": 0.11857
+      },
+      "cropSpecificCandidate": {
+        "observations": 3884,
+        "spearman": 0.84757,
+        "maePercentile": 0.11857
+      },
+      "spearmanGain": 0.0,
+      "maeReduction": 0.0
+    },
+    {
+      "crop": "soybean",
+      "observations": 3454,
+      "championV9": {
+        "observations": 3454,
+        "spearman": 0.82988,
+        "maePercentile": 0.12222
+      },
+      "cropSpecificCandidate": {
+        "observations": 3454,
+        "spearman": 0.82988,
+        "maePercentile": 0.12222
+      },
+      "spearmanGain": 0.0,
+      "maeReduction": 0.0
+    },
+    {
+      "crop": "wheat",
+      "observations": 1543,
+      "championV9": {
+        "observations": 1543,
+        "spearman": 0.83303,
+        "maePercentile": 0.1209
+      },
+      "cropSpecificCandidate": {
+        "observations": 1543,
+        "spearman": 0.83406,
+        "maePercentile": 0.12056
+      },
+      "spearmanGain": 0.00102953,
+      "maeReduction": 0.00033466
+    }
+  ],
+  "perYearFinal": [
+    {
+      "year": 2023,
+      "observations": 3481,
+      "championV9": {
+        "observations": 3481,
+        "spearman": 0.85469,
+        "maePercentile": 0.11562
+      },
+      "cropSpecificCandidate": {
+        "observations": 3481,
+        "spearman": 0.85503,
+        "maePercentile": 0.11553
+      },
+      "spearmanGain": 0.00034962,
+      "maeReduction": 9.111e-05
+    },
+    {
+      "year": 2024,
+      "observations": 2431,
+      "championV9": {
+        "observations": 2431,
+        "spearman": 0.81487,
+        "maePercentile": 0.12736
+      },
+      "cropSpecificCandidate": {
+        "observations": 2431,
+        "spearman": 0.8149,
+        "maePercentile": 0.12735
+      },
+      "spearmanGain": 2.605e-05,
+      "maeReduction": 1.087e-05
+    },
+    {
+      "year": 2025,
+      "observations": 2969,
+      "championV9": {
+        "observations": 2969,
+        "spearman": 0.83702,
+        "maePercentile": 0.12028
+      },
+      "cropSpecificCandidate": {
+        "observations": 2969,
+        "spearman": 0.83726,
+        "maePercentile": 0.12023
+      },
+      "spearmanGain": 0.00023781,
+      "maeReduction": 5.821e-05
+    }
+  ],
+  "perRegionStability": [
+    {
+      "region": "Northeast",
+      "observations": 370,
+      "championV9": {
+        "observations": 370,
+        "spearman": 0.4922,
+        "maePercentile": 0.13705
+      },
+      "cropSpecificCandidate": {
+        "observations": 370,
+        "spearman": 0.4922,
+        "maePercentile": 0.13705
+      },
+      "spearmanGain": 0.0,
+      "maeReduction": 0.0
+    },
+    {
+      "region": "Midwest",
+      "observations": 4136,
+      "championV9": {
+        "observations": 4136,
+        "spearman": 0.86496,
+        "maePercentile": 0.11484
+      },
+      "cropSpecificCandidate": {
+        "observations": 4136,
+        "spearman": 0.86536,
+        "maePercentile": 0.11479
+      },
+      "spearmanGain": 0.00039739,
+      "maeReduction": 4.886e-05
+    },
+    {
+      "region": "South",
+      "observations": 2584,
+      "championV9": {
+        "observations": 2584,
+        "spearman": 0.82868,
+        "maePercentile": 0.10717
+      },
+      "cropSpecificCandidate": {
+        "observations": 2584,
+        "spearman": 0.82888,
+        "maePercentile": 0.1071
+      },
+      "spearmanGain": 0.00019879,
+      "maeReduction": 7.29e-05
+    },
+    {
+      "region": "West",
+      "observations": 241,
+      "championV9": {
+        "observations": 241,
+        "spearman": 0.8845,
+        "maePercentile": 0.14097
+      },
+      "cropSpecificCandidate": {
+        "observations": 241,
+        "spearman": 0.8845,
+        "maePercentile": 0.14097
+      },
+      "spearmanGain": 0.0,
+      "maeReduction": 0.0
+    }
+  ],
+  "perRegionFinal": [
+    {
+      "region": "Northeast",
+      "observations": 545,
+      "championV9": {
+        "observations": 545,
+        "spearman": 0.59211,
+        "maePercentile": 0.13299
+      },
+      "cropSpecificCandidate": {
+        "observations": 545,
+        "spearman": 0.59211,
+        "maePercentile": 0.13299
+      },
+      "spearmanGain": 0.0,
+      "maeReduction": 0.0
+    },
+    {
+      "region": "Midwest",
+      "observations": 5030,
+      "championV9": {
+        "observations": 5030,
+        "spearman": 0.84048,
+        "maePercentile": 0.11656
+      },
+      "cropSpecificCandidate": {
+        "observations": 5030,
+        "spearman": 0.84081,
+        "maePercentile": 0.11647
+      },
+      "spearmanGain": 0.00033085,
+      "maeReduction": 9.003e-05
+    },
+    {
+      "region": "South",
+      "observations": 3051,
+      "championV9": {
+        "observations": 3051,
+        "spearman": 0.78128,
+        "maePercentile": 0.12611
+      },
+      "cropSpecificCandidate": {
+        "observations": 3051,
+        "spearman": 0.78133,
+        "maePercentile": 0.12609
+      },
+      "spearmanGain": 5.932e-05,
+      "maeReduction": 2.082e-05
+    },
+    {
+      "region": "West",
+      "observations": 255,
+      "championV9": {
+        "observations": 255,
+        "spearman": 0.91419,
+        "maePercentile": 0.10076
+      },
+      "cropSpecificCandidate": {
+        "observations": 255,
+        "spearman": 0.91419,
+        "maePercentile": 0.10076
+      },
+      "spearmanGain": 0.0,
+      "maeReduction": 0.0
+    }
+  ],
+  "intervalCalibration": {
+    "calibrationYears": [
+      2011,
+      2012,
+      2013,
+      2014,
+      2015,
+      2016,
+      2017
+    ],
+    "groups": [
+      {
+        "crop": "corn",
+        "historyBucket": "1",
+        "examples": 1866,
+        "absoluteErrorP80": 0.2451,
+        "absoluteErrorP90": 0.3255
+      },
+      {
+        "crop": "corn",
+        "historyBucket": "2-3",
+        "examples": 3509,
+        "absoluteErrorP80": 0.3243,
+        "absoluteErrorP90": 0.418
+      },
+      {
+        "crop": "corn",
+        "historyBucket": "4+",
+        "examples": 5102,
+        "absoluteErrorP80": 0.2163,
+        "absoluteErrorP90": 0.2908
+      },
+      {
+        "crop": "soybean",
+        "historyBucket": "1",
+        "examples": 1632,
+        "absoluteErrorP80": 0.248,
+        "absoluteErrorP90": 0.334
+      },
+      {
+        "crop": "soybean",
+        "historyBucket": "2-3",
+        "examples": 3075,
+        "absoluteErrorP80": 0.3096,
+        "absoluteErrorP90": 0.3923
+      },
+      {
+        "crop": "soybean",
+        "historyBucket": "4+",
+        "examples": 4733,
+        "absoluteErrorP80": 0.2117,
+        "absoluteErrorP90": 0.2829
+      },
+      {
+        "crop": "wheat",
+        "historyBucket": "1",
+        "examples": 1450,
+        "absoluteErrorP80": 0.3003,
+        "absoluteErrorP90": 0.4041
+      },
+      {
+        "crop": "wheat",
+        "historyBucket": "2-3",
+        "examples": 2574,
+        "absoluteErrorP80": 0.2083,
+        "absoluteErrorP90": 0.2713
+      },
+      {
+        "crop": "wheat",
+        "historyBucket": "4+",
+        "examples": 3093,
+        "absoluteErrorP80": 0.1739,
+        "absoluteErrorP90": 0.2371
+      }
+    ],
+    "selectedRegionalScales": {
+      "Northeast": {
+        "scale80": 1.05,
+        "scale90": 1.0
+      },
+      "Midwest": {
+        "scale80": 1.0,
+        "scale90": 1.0
+      },
+      "South": {
+        "scale80": 1.0,
+        "scale90": 1.0
+      },
+      "West": {
+        "scale80": 1.45,
+        "scale90": 1.45
+      }
+    },
+    "scaleSelection": [
+      {
+        "region": "Northeast",
+        "candidates": [
+          {
+            "scale": 1.0,
+            "development": {
+              "observations": 469,
+              "coverage80": 0.7825,
+              "coverage90": 0.9104,
+              "meanWidth80": 0.4292,
+              "meanWidth90": 0.5657
+            },
+            "stability": {
+              "observations": 370,
+              "coverage80": 0.8135,
+              "coverage90": 0.9108,
+              "meanWidth80": 0.4314,
+              "meanWidth90": 0.5668
+            }
+          },
+          {
+            "scale": 1.05,
+            "development": {
+              "observations": 469,
+              "coverage80": 0.8017,
+              "coverage90": 0.9254,
+              "meanWidth80": 0.4499,
+              "meanWidth90": 0.5914
+            },
+            "stability": {
+              "observations": 370,
+              "coverage80": 0.8324,
+              "coverage90": 0.9243,
+              "meanWidth80": 0.4521,
+              "meanWidth90": 0.5916
+            }
+          },
+          {
+            "scale": 1.1,
+            "development": {
+              "observations": 469,
+              "coverage80": 0.8209,
+              "coverage90": 0.9382,
+              "meanWidth80": 0.4704,
+              "meanWidth90": 0.6162
+            },
+            "stability": {
+              "observations": 370,
+              "coverage80": 0.8486,
+              "coverage90": 0.9378,
+              "meanWidth80": 0.4726,
+              "meanWidth90": 0.6158
+            }
+          },
+          {
+            "scale": 1.15,
+            "development": {
+              "observations": 469,
+              "coverage80": 0.8401,
+              "coverage90": 0.9446,
+              "meanWidth80": 0.4907,
+              "meanWidth90": 0.6401
+            },
+            "stability": {
+              "observations": 370,
+              "coverage80": 0.8649,
+              "coverage90": 0.9486,
+              "meanWidth80": 0.493,
+              "meanWidth90": 0.6393
+            }
+          },
+          {
+            "scale": 1.2,
+            "development": {
+              "observations": 469,
+              "coverage80": 0.8678,
+              "coverage90": 0.9552,
+              "meanWidth80": 0.5108,
+              "meanWidth90": 0.6632
+            },
+            "stability": {
+              "observations": 370,
+              "coverage80": 0.873,
+              "coverage90": 0.9568,
+              "meanWidth80": 0.5131,
+              "meanWidth90": 0.6621
+            }
+          },
+          {
+            "scale": 1.25,
+            "development": {
+              "observations": 469,
+              "coverage80": 0.8955,
+              "coverage90": 0.9595,
+              "meanWidth80": 0.5308,
+              "meanWidth90": 0.6856
+            },
+            "stability": {
+              "observations": 370,
+              "coverage80": 0.8892,
+              "coverage90": 0.9622,
+              "meanWidth80": 0.5328,
+              "meanWidth90": 0.6842
+            }
+          },
+          {
+            "scale": 1.33,
+            "development": {
+              "observations": 469,
+              "coverage80": 0.9083,
+              "coverage90": 0.9765,
+              "meanWidth80": 0.5623,
+              "meanWidth90": 0.72
+            },
+            "stability": {
+              "observations": 370,
+              "coverage80": 0.9054,
+              "coverage90": 0.973,
+              "meanWidth80": 0.5637,
+              "meanWidth90": 0.718
+            }
+          },
+          {
+            "scale": 1.4,
+            "development": {
+              "observations": 469,
+              "coverage80": 0.9232,
+              "coverage90": 0.9808,
+              "meanWidth80": 0.5892,
+              "meanWidth90": 0.749
+            },
+            "stability": {
+              "observations": 370,
+              "coverage80": 0.9243,
+              "coverage90": 0.973,
+              "meanWidth80": 0.5896,
+              "meanWidth90": 0.7455
+            }
+          },
+          {
+            "scale": 1.45,
+            "development": {
+              "observations": 469,
+              "coverage80": 0.9318,
+              "coverage90": 0.9829,
+              "meanWidth80": 0.6079,
+              "meanWidth90": 0.7687
+            },
+            "stability": {
+              "observations": 370,
+              "coverage80": 0.9324,
+              "coverage90": 0.9784,
+              "meanWidth80": 0.6078,
+              "meanWidth90": 0.7641
+            }
+          },
+          {
+            "scale": 1.5,
+            "development": {
+              "observations": 469,
+              "coverage80": 0.9424,
+              "coverage90": 0.9829,
+              "meanWidth80": 0.626,
+              "meanWidth90": 0.7875
+            },
+            "stability": {
+              "observations": 370,
+              "coverage80": 0.9432,
+              "coverage90": 0.9784,
+              "meanWidth80": 0.6256,
+              "meanWidth90": 0.782
+            }
+          }
+        ],
+        "selected": {
+          "scale80": 1.05,
+          "scale90": 1.0
+        }
+      },
+      {
+        "region": "Midwest",
+        "candidates": [
+          {
+            "scale": 1.0,
+            "development": {
+              "observations": 5859,
+              "coverage80": 0.845,
+              "coverage90": 0.9355,
+              "meanWidth80": 0.3929,
+              "meanWidth90": 0.5085
+            },
+            "stability": {
+              "observations": 4136,
+              "coverage80": 0.8513,
+              "coverage90": 0.9396,
+              "meanWidth80": 0.3913,
+              "meanWidth90": 0.5061
+            }
+          },
+          {
+            "scale": 1.05,
+            "development": {
+              "observations": 5859,
+              "coverage80": 0.8636,
+              "coverage90": 0.9437,
+              "meanWidth80": 0.4105,
+              "meanWidth90": 0.5297
+            },
+            "stability": {
+              "observations": 4136,
+              "coverage80": 0.8714,
+              "coverage90": 0.9497,
+              "meanWidth80": 0.4087,
+              "meanWidth90": 0.5271
+            }
+          },
+          {
+            "scale": 1.1,
+            "development": {
+              "observations": 5859,
+              "coverage80": 0.8793,
+              "coverage90": 0.951,
+              "meanWidth80": 0.4279,
+              "meanWidth90": 0.5503
+            },
+            "stability": {
+              "observations": 4136,
+              "coverage80": 0.8861,
+              "coverage90": 0.9562,
+              "meanWidth80": 0.4259,
+              "meanWidth90": 0.5477
+            }
+          },
+          {
+            "scale": 1.15,
+            "development": {
+              "observations": 5859,
+              "coverage80": 0.8894,
+              "coverage90": 0.9584,
+              "meanWidth80": 0.445,
+              "meanWidth90": 0.5705
+            },
+            "stability": {
+              "observations": 4136,
+              "coverage80": 0.8999,
+              "coverage90": 0.9652,
+              "meanWidth80": 0.4428,
+              "meanWidth90": 0.5678
+            }
+          },
+          {
+            "scale": 1.2,
+            "development": {
+              "observations": 5859,
+              "coverage80": 0.9031,
+              "coverage90": 0.9635,
+              "meanWidth80": 0.4618,
+              "meanWidth90": 0.5901
+            },
+            "stability": {
+              "observations": 4136,
+              "coverage80": 0.9142,
+              "coverage90": 0.9691,
+              "meanWidth80": 0.4594,
+              "meanWidth90": 0.5875
+            }
+          },
+          {
+            "scale": 1.25,
+            "development": {
+              "observations": 5859,
+              "coverage80": 0.9162,
+              "coverage90": 0.9688,
+              "meanWidth80": 0.4783,
+              "meanWidth90": 0.6093
+            },
+            "stability": {
+              "observations": 4136,
+              "coverage80": 0.9236,
+              "coverage90": 0.9739,
+              "meanWidth80": 0.4759,
+              "meanWidth90": 0.6067
+            }
+          },
+          {
+            "scale": 1.33,
+            "development": {
+              "observations": 5859,
+              "coverage80": 0.9322,
+              "coverage90": 0.9747,
+              "meanWidth80": 0.5042,
+              "meanWidth90": 0.639
+            },
+            "stability": {
+              "observations": 4136,
+              "coverage80": 0.9362,
+              "coverage90": 0.9821,
+              "meanWidth80": 0.5016,
+              "meanWidth90": 0.6366
+            }
+          },
+          {
+            "scale": 1.4,
+            "development": {
+              "observations": 5859,
+              "coverage80": 0.9425,
+              "coverage90": 0.98,
+              "meanWidth80": 0.5263,
+              "meanWidth90": 0.664
+            },
+            "stability": {
+              "observations": 4136,
+              "coverage80": 0.9485,
+              "coverage90": 0.9865,
+              "meanWidth80": 0.5236,
+              "meanWidth90": 0.6617
+            }
+          },
+          {
+            "scale": 1.45,
+            "development": {
+              "observations": 5859,
+              "coverage80": 0.9471,
+              "coverage90": 0.9809,
+              "meanWidth80": 0.5417,
+              "meanWidth90": 0.6813
+            },
+            "stability": {
+              "observations": 4136,
+              "coverage80": 0.9538,
+              "coverage90": 0.9889,
+              "meanWidth80": 0.5391,
+              "meanWidth90": 0.6792
+            }
+          },
+          {
+            "scale": 1.5,
+            "development": {
+              "observations": 5859,
+              "coverage80": 0.9527,
+              "coverage90": 0.9843,
+              "meanWidth80": 0.557,
+              "meanWidth90": 0.6982
+            },
+            "stability": {
+              "observations": 4136,
+              "coverage80": 0.9591,
+              "coverage90": 0.9908,
+              "meanWidth80": 0.5542,
+              "meanWidth90": 0.696
+            }
+          }
+        ],
+        "selected": {
+          "scale80": 1.0,
+          "scale90": 1.0
+        }
+      },
+      {
+        "region": "South",
+        "candidates": [
+          {
+            "scale": 1.0,
+            "development": {
+              "observations": 3679,
+              "coverage80": 0.847,
+              "coverage90": 0.9285,
+              "meanWidth80": 0.3903,
+              "meanWidth90": 0.5046
+            },
+            "stability": {
+              "observations": 2584,
+              "coverage80": 0.8638,
+              "coverage90": 0.9408,
+              "meanWidth80": 0.3906,
+              "meanWidth90": 0.5048
+            }
+          },
+          {
+            "scale": 1.05,
+            "development": {
+              "observations": 3679,
+              "coverage80": 0.8611,
+              "coverage90": 0.9418,
+              "meanWidth80": 0.4076,
+              "meanWidth90": 0.5258
+            },
+            "stability": {
+              "observations": 2584,
+              "coverage80": 0.8758,
+              "coverage90": 0.952,
+              "meanWidth80": 0.4079,
+              "meanWidth90": 0.526
+            }
+          },
+          {
+            "scale": 1.1,
+            "development": {
+              "observations": 3679,
+              "coverage80": 0.8731,
+              "coverage90": 0.9511,
+              "meanWidth80": 0.4246,
+              "meanWidth90": 0.5467
+            },
+            "stability": {
+              "observations": 2584,
+              "coverage80": 0.8928,
+              "coverage90": 0.9578,
+              "meanWidth80": 0.4249,
+              "meanWidth90": 0.5467
+            }
+          },
+          {
+            "scale": 1.15,
+            "development": {
+              "observations": 3679,
+              "coverage80": 0.8867,
+              "coverage90": 0.9571,
+              "meanWidth80": 0.4415,
+              "meanWidth90": 0.5671
+            },
+            "stability": {
+              "observations": 2584,
+              "coverage80": 0.9044,
+              "coverage90": 0.9648,
+              "meanWidth80": 0.4418,
+              "meanWidth90": 0.5669
+            }
+          },
+          {
+            "scale": 1.2,
+            "development": {
+              "observations": 3679,
+              "coverage80": 0.8989,
+              "coverage90": 0.9633,
+              "meanWidth80": 0.4582,
+              "meanWidth90": 0.5869
+            },
+            "stability": {
+              "observations": 2584,
+              "coverage80": 0.9172,
+              "coverage90": 0.9683,
+              "meanWidth80": 0.4585,
+              "meanWidth90": 0.5867
+            }
+          },
+          {
+            "scale": 1.25,
+            "development": {
+              "observations": 3679,
+              "coverage80": 0.9076,
+              "coverage90": 0.9709,
+              "meanWidth80": 0.4747,
+              "meanWidth90": 0.6063
+            },
+            "stability": {
+              "observations": 2584,
+              "coverage80": 0.9311,
+              "coverage90": 0.9752,
+              "meanWidth80": 0.475,
+              "meanWidth90": 0.6061
+            }
+          },
+          {
+            "scale": 1.33,
+            "development": {
+              "observations": 3679,
+              "coverage80": 0.9258,
+              "coverage90": 0.9783,
+              "meanWidth80": 0.5007,
+              "meanWidth90": 0.6362
+            },
+            "stability": {
+              "observations": 2584,
+              "coverage80": 0.9392,
+              "coverage90": 0.9826,
+              "meanWidth80": 0.5009,
+              "meanWidth90": 0.6361
+            }
+          },
+          {
+            "scale": 1.4,
+            "development": {
+              "observations": 3679,
+              "coverage80": 0.941,
+              "coverage90": 0.9829,
+              "meanWidth80": 0.5229,
+              "meanWidth90": 0.6615
+            },
+            "stability": {
+              "observations": 2584,
+              "coverage80": 0.9509,
+              "coverage90": 0.9892,
+              "meanWidth80": 0.523,
+              "meanWidth90": 0.6613
+            }
+          },
+          {
+            "scale": 1.45,
+            "development": {
+              "observations": 3679,
+              "coverage80": 0.9481,
+              "coverage90": 0.9856,
+              "meanWidth80": 0.5385,
+              "meanWidth90": 0.6789
+            },
+            "stability": {
+              "observations": 2584,
+              "coverage80": 0.9563,
+              "coverage90": 0.9907,
+              "meanWidth80": 0.5385,
+              "meanWidth90": 0.6788
+            }
+          },
+          {
+            "scale": 1.5,
+            "development": {
+              "observations": 3679,
+              "coverage80": 0.9535,
+              "coverage90": 0.988,
+              "meanWidth80": 0.5538,
+              "meanWidth90": 0.6958
+            },
+            "stability": {
+              "observations": 2584,
+              "coverage80": 0.9598,
+              "coverage90": 0.9915,
+              "meanWidth80": 0.5537,
+              "meanWidth90": 0.6957
+            }
+          }
+        ],
+        "selected": {
+          "scale80": 1.0,
+          "scale90": 1.0
+        }
+      },
+      {
+        "region": "West",
+        "candidates": [
+          {
+            "scale": 1.0,
+            "development": {
+              "observations": 344,
+              "coverage80": 0.814,
+              "coverage90": 0.907,
+              "meanWidth80": 0.3237,
+              "meanWidth90": 0.4197
+            },
+            "stability": {
+              "observations": 241,
+              "coverage80": 0.722,
+              "coverage90": 0.7967,
+              "meanWidth80": 0.3088,
+              "meanWidth90": 0.3999
+            }
+          },
+          {
+            "scale": 1.05,
+            "development": {
+              "observations": 344,
+              "coverage80": 0.8343,
+              "coverage90": 0.9215,
+              "meanWidth80": 0.3379,
+              "meanWidth90": 0.4369
+            },
+            "stability": {
+              "observations": 241,
+              "coverage80": 0.7344,
+              "coverage90": 0.805,
+              "meanWidth80": 0.3222,
+              "meanWidth90": 0.4164
+            }
+          },
+          {
+            "scale": 1.1,
+            "development": {
+              "observations": 344,
+              "coverage80": 0.8401,
+              "coverage90": 0.9302,
+              "meanWidth80": 0.352,
+              "meanWidth90": 0.4538
+            },
+            "stability": {
+              "observations": 241,
+              "coverage80": 0.7552,
+              "coverage90": 0.8174,
+              "meanWidth80": 0.3354,
+              "meanWidth90": 0.4326
+            }
+          },
+          {
+            "scale": 1.15,
+            "development": {
+              "observations": 344,
+              "coverage80": 0.8576,
+              "coverage90": 0.939,
+              "meanWidth80": 0.3658,
+              "meanWidth90": 0.4702
+            },
+            "stability": {
+              "observations": 241,
+              "coverage80": 0.7718,
+              "coverage90": 0.8423,
+              "meanWidth80": 0.3485,
+              "meanWidth90": 0.4486
+            }
+          },
+          {
+            "scale": 1.2,
+            "development": {
+              "observations": 344,
+              "coverage80": 0.8779,
+              "coverage90": 0.9448,
+              "meanWidth80": 0.3794,
+              "meanWidth90": 0.4863
+            },
+            "stability": {
+              "observations": 241,
+              "coverage80": 0.7718,
+              "coverage90": 0.8631,
+              "meanWidth80": 0.3614,
+              "meanWidth90": 0.4644
+            }
+          },
+          {
+            "scale": 1.25,
+            "development": {
+              "observations": 344,
+              "coverage80": 0.8924,
+              "coverage90": 0.9622,
+              "meanWidth80": 0.3929,
+              "meanWidth90": 0.5021
+            },
+            "stability": {
+              "observations": 241,
+              "coverage80": 0.7759,
+              "coverage90": 0.8714,
+              "meanWidth80": 0.3741,
+              "meanWidth90": 0.4798
+            }
+          },
+          {
+            "scale": 1.33,
+            "development": {
+              "observations": 344,
+              "coverage80": 0.9041,
+              "coverage90": 0.9651,
+              "meanWidth80": 0.4139,
+              "meanWidth90": 0.5269
+            },
+            "stability": {
+              "observations": 241,
+              "coverage80": 0.7884,
+              "coverage90": 0.8921,
+              "meanWidth80": 0.3941,
+              "meanWidth90": 0.5039
+            }
+          },
+          {
+            "scale": 1.4,
+            "development": {
+              "observations": 344,
+              "coverage80": 0.9215,
+              "coverage90": 0.9709,
+              "meanWidth80": 0.4319,
+              "meanWidth90": 0.548
+            },
+            "stability": {
+              "observations": 241,
+              "coverage80": 0.7967,
+              "coverage90": 0.8921,
+              "meanWidth80": 0.4111,
+              "meanWidth90": 0.5243
+            }
+          },
+          {
+            "scale": 1.45,
+            "development": {
+              "observations": 344,
+              "coverage80": 0.9273,
+              "coverage90": 0.9709,
+              "meanWidth80": 0.4445,
+              "meanWidth90": 0.5629
+            },
+            "stability": {
+              "observations": 241,
+              "coverage80": 0.8091,
+              "coverage90": 0.9004,
+              "meanWidth80": 0.4232,
+              "meanWidth90": 0.5386
+            }
+          },
+          {
+            "scale": 1.5,
+            "development": {
+              "observations": 344,
+              "coverage80": 0.9302,
+              "coverage90": 0.9767,
+              "meanWidth80": 0.4569,
+              "meanWidth90": 0.5774
+            },
+            "stability": {
+              "observations": 241,
+              "coverage80": 0.8174,
+              "coverage90": 0.9004,
+              "meanWidth80": 0.4352,
+              "meanWidth90": 0.5528
+            }
+          }
+        ],
+        "selected": {
+          "scale80": 1.45,
+          "scale90": 1.45
+        }
+      }
+    ],
+    "championMeanWidth90": 0.5112,
+    "pooled": {
+      "observations": 26563,
+      "coverage80": 0.8445,
+      "coverage90": 0.9298,
+      "meanWidth80": 0.3965,
+      "meanWidth90": 0.5113
+    },
+    "stability": {
+      "observations": 7331,
+      "coverage80": 0.8534,
+      "coverage90": 0.9373,
+      "meanWidth80": 0.3952,
+      "meanWidth90": 0.5098
+    },
+    "final": {
+      "observations": 8881,
+      "coverage80": 0.8348,
+      "coverage90": 0.9198,
+      "meanWidth80": 0.3977,
+      "meanWidth90": 0.5123
+    },
+    "perCrop": [
+      {
+        "crop": "corn",
+        "observations": 11046,
+        "coverage80": 0.8571,
+        "coverage90": 0.9402,
+        "meanWidth80": 0.4149,
+        "meanWidth90": 0.5339
+      },
+      {
+        "crop": "soybean",
+        "observations": 9830,
+        "coverage80": 0.8547,
+        "coverage90": 0.934,
+        "meanWidth80": 0.4045,
+        "meanWidth90": 0.5179
+      },
+      {
+        "crop": "wheat",
+        "observations": 5687,
+        "coverage80": 0.8022,
+        "coverage90": 0.9022,
+        "meanWidth80": 0.3468,
+        "meanWidth90": 0.4561
+      }
+    ],
+    "perRegionStability": [
+      {
+        "region": "Northeast",
+        "observations": 370,
+        "coverage80": 0.8324,
+        "coverage90": 0.9108,
+        "meanWidth80": 0.4521,
+        "meanWidth90": 0.5668
+      },
+      {
+        "region": "Midwest",
+        "observations": 4136,
+        "coverage80": 0.8513,
+        "coverage90": 0.9396,
+        "meanWidth80": 0.3913,
+        "meanWidth90": 0.5061
+      },
+      {
+        "region": "South",
+        "observations": 2584,
+        "coverage80": 0.8638,
+        "coverage90": 0.9408,
+        "meanWidth80": 0.3906,
+        "meanWidth90": 0.5048
+      },
+      {
+        "region": "West",
+        "observations": 241,
+        "coverage80": 0.8091,
+        "coverage90": 0.9004,
+        "meanWidth80": 0.4232,
+        "meanWidth90": 0.5386
+      }
+    ],
+    "perRegionFinal": [
+      {
+        "region": "Northeast",
+        "observations": 545,
+        "coverage80": 0.8349,
+        "coverage90": 0.9211,
+        "meanWidth80": 0.4462,
+        "meanWidth90": 0.5602
+      },
+      {
+        "region": "Midwest",
+        "observations": 5030,
+        "coverage80": 0.8435,
+        "coverage90": 0.9288,
+        "meanWidth80": 0.3914,
+        "meanWidth90": 0.5045
+      },
+      {
+        "region": "South",
+        "observations": 3051,
+        "coverage80": 0.8138,
+        "coverage90": 0.9017,
+        "meanWidth80": 0.3964,
+        "meanWidth90": 0.5132
+      },
+      {
+        "region": "West",
+        "observations": 255,
+        "coverage80": 0.9137,
+        "coverage90": 0.9569,
+        "meanWidth80": 0.4344,
+        "meanWidth90": 0.5531
+      }
+    ]
+  },
+  "gate": {
+    "passed": true,
+    "pointPassed": true,
+    "intervalPassed": true
+  },
+  "interpretation": "Observed county-rank prior; not parcel yield, revenue, or a property-purchase forecast."
+}

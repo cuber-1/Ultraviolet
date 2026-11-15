@@ -280,7 +280,8 @@ def uncertainty_calibration(rows: list[dict]) -> tuple[dict, dict[tuple[str, str
     return report, table
 
 
-def spatial_transfer_validation(rows: list[dict]) -> tuple[dict, dict[tuple[str, str], dict]]:
+def spatial_transfer_examples(rows: list[dict]) -> tuple[list[dict], int]:
+    """Build leave-one-county-out examples once for production-blend experiments."""
     histories: dict[tuple[str, str], list[dict]] = defaultdict(list)
     for row in rows:
         histories[(row["crop"], row["fips"])].append(row)
@@ -329,6 +330,14 @@ def spatial_transfer_validation(rows: list[dict]) -> tuple[dict, dict[tuple[str,
                     "ownPrediction": own["prediction"] if own else None,
                     "ownHistoryCount": own["historyCount"] if own else None,
                 })
+    return examples, eligible
+
+
+def spatial_transfer_validation(
+    rows: list[dict], prepared_examples: tuple[list[dict], int] | None = None,
+    production_blend_version: int = 10,
+) -> tuple[dict, dict[tuple[str, str], dict]]:
+    examples, eligible = prepared_examples or spatial_transfer_examples(rows)
 
     def basic_summary(items: list[dict], prediction_key: str = "prediction", rounded: bool = True) -> dict:
         actual = np.asarray([item["yieldPercentileWithinCropYear"] for item in items])
@@ -420,6 +429,112 @@ def spatial_transfer_validation(rows: list[dict]) -> tuple[dict, dict[tuple[str,
         item["productionEffectiveHistoryCount"] = round(
             (1 - regional_weight) * item["ownHistoryCount"] + regional_weight * item["effectiveHistoryCount"]
         )
+
+    crop_weight_selection = []
+    crop_region_checks = []
+    crop_stability_veto = []
+    production_selected_by_crop_region = {
+        crop: dict(production_selected_by_region) for crop in sorted(CROP_NAMES.values())
+    }
+    if production_blend_version >= 10:
+        probe_weights = {}
+        for crop in sorted(CROP_NAMES.values()):
+            crop_development = [item for item in production_development if item["crop"] == crop]
+            crop_candidates = []
+            crop_candidate_scores = []
+            for regional_weight in PRODUCTION_REGIONAL_WEIGHT_CANDIDATES:
+                candidate_items = [{
+                    **item,
+                    "cropProbePrediction": (
+                        (1 - regional_weight) * item["ownPrediction"]
+                        + regional_weight * item["prediction"]
+                    ),
+                } for item in crop_development]
+                crop_candidates.append({
+                    "regionalWeight": regional_weight,
+                    **basic_summary(candidate_items, "cropProbePrediction"),
+                })
+                crop_candidate_scores.append({
+                    "regionalWeight": regional_weight,
+                    **basic_summary(candidate_items, "cropProbePrediction", rounded=False),
+                })
+            crop_selected = min(
+                crop_candidate_scores,
+                key=lambda item: (item["maePercentile"], -item["spearman"]),
+            )
+            crop_weight_selection.append({
+                "crop": crop, "candidates": crop_candidates,
+                "selected": crop_selected["regionalWeight"],
+            })
+            for region in CENSUS_REGIONS:
+                region_items = [
+                    item for item in crop_development
+                    if STATE_TO_CENSUS_REGION[item["state"]] == region
+                ]
+                if not region_items:
+                    probe_weights[(crop, region)] = 0.0
+                    crop_region_checks.append({
+                        "crop": crop, "region": region, "observations": 0,
+                        "regionalWeight": 0.0, "enabled": False,
+                    })
+                    continue
+                baseline = basic_summary(region_items, "ownPrediction", rounded=False)
+                candidate_items = [{
+                    **item,
+                    "cropProbePrediction": (
+                        (1 - crop_selected["regionalWeight"]) * item["ownPrediction"]
+                        + crop_selected["regionalWeight"] * item["prediction"]
+                    ),
+                } for item in region_items]
+                candidate = basic_summary(candidate_items, "cropProbePrediction", rounded=False)
+                enabled = (
+                    candidate["spearman"] > baseline["spearman"]
+                    and candidate["maePercentile"] < baseline["maePercentile"]
+                )
+                probe_weights[(crop, region)] = crop_selected["regionalWeight"] if enabled else 0.0
+                crop_region_checks.append({
+                    "crop": crop, "region": region, "observations": len(region_items),
+                    "regionalWeight": probe_weights[(crop, region)], "enabled": enabled,
+                })
+        for item in production_examples:
+            probe_weight = probe_weights[(item["crop"], STATE_TO_CENSUS_REGION[item["state"]])]
+            item["cropProbePrediction"] = (
+                (1 - probe_weight) * item["ownPrediction"] + probe_weight * item["prediction"]
+            )
+            item["cropProbeEffectiveHistoryCount"] = round(
+                (1 - probe_weight) * item["ownHistoryCount"]
+                + probe_weight * item["effectiveHistoryCount"]
+            )
+        for crop in sorted(CROP_NAMES.values()):
+            crop_stability = [
+                item for item in production_examples
+                if item["crop"] == crop and item["year"] in (2021, 2022)
+            ]
+            champion = basic_summary(crop_stability, "productionPrediction", rounded=False)
+            candidate = basic_summary(crop_stability, "cropProbePrediction", rounded=False)
+            enabled = (
+                candidate["spearman"] > champion["spearman"]
+                and candidate["maePercentile"] < champion["maePercentile"]
+            )
+            crop_stability_veto.append({
+                "crop": crop,
+                "championV9": basic_summary(crop_stability, "productionPrediction"),
+                "probe": basic_summary(crop_stability, "cropProbePrediction"),
+                "spearmanGain": round(candidate["spearman"] - champion["spearman"], 5),
+                "maeReduction": round(champion["maePercentile"] - candidate["maePercentile"], 5),
+                "enabled": enabled,
+            })
+            if enabled:
+                production_selected_by_crop_region[crop] = {
+                    region: probe_weights[(crop, region)] for region in CENSUS_REGIONS
+                }
+        for item in production_examples:
+            crop_enabled = next(
+                check["enabled"] for check in crop_stability_veto if check["crop"] == item["crop"]
+            )
+            if crop_enabled:
+                item["productionPrediction"] = item["cropProbePrediction"]
+                item["productionEffectiveHistoryCount"] = item["cropProbeEffectiveHistoryCount"]
 
     def production_comparison(items: list[dict]) -> dict:
         baseline = basic_summary([{**item, "prediction": item["ownPrediction"]} for item in items])
@@ -639,14 +754,27 @@ def spatial_transfer_validation(rows: list[dict]) -> tuple[dict, dict[tuple[str,
         "finalTestYears": [2023, 2024, 2025], "finalSignal": final_comparison,
         "perCropFinalSignal": per_crop_signal, "perYearFinalSignal": per_year_signal,
         "productionBlend": {
-            "method": "Use the globally development-selected regional share only in Census regions where it improves both development rank and MAE; otherwise use the local prior.",
+            "method": (
+                "Select crop-specific regional shares on development, require crop-region development gains, "
+                "and retain a crop-specific deviation only after both rank and MAE improve on the stability block."
+                if production_blend_version >= 10 else
+                "Use the globally development-selected regional share only in Census regions where it improves both development rank and MAE; otherwise use the local prior."
+            ),
             "candidateSelection": production_candidates,
             "regionDevelopmentChecks": production_region_checks,
-            "selectedWeights": {
+            "cropWeightSelection": crop_weight_selection,
+            "cropRegionDevelopmentChecks": crop_region_checks,
+            "cropStabilityVeto": crop_stability_veto,
+            "selectedWeights": ({
+                "regionalNeighborhoodByCropRegion": production_selected_by_crop_region,
+                "championV9RegionalNeighborhoodByRegion": {
+                    region: production_selected_by_region[region] for region in CENSUS_REGIONS
+                },
+            } if production_blend_version >= 10 else {
                 "regionalNeighborhoodByRegion": {
                     region: production_selected_by_region[region] for region in CENSUS_REGIONS
                 },
-            },
+            }),
             "confirmation": production_confirmation_comparison, "finalSignal": production_final_comparison,
             "perCropFinalSignal": production_per_crop, "perYearFinalSignal": production_per_year,
             "perRegionConfirmation": production_confirmation_per_region,
@@ -725,7 +853,7 @@ def build_atlas(rows: list[dict], validation: dict, comparison: dict, uncertaint
             "latest": {"year": last["year"], "yieldBushelsPerAcre": last["yieldBushelsPerAcre"]},
         })
     return {
-        "name": "USDA county yield atlas v9", "evidenceGrade": "observed-region-gated-calibrated-blend",
+        "name": "USDA county yield atlas v10", "evidenceGrade": "observed-crop-region-gated-calibrated-blend",
         "scope": "contiguous U.S. counties excluding California; corn, soybean, and wheat; 2010–2025",
         "source": "USDA NASS Quick Stats published county yields",
         "predictionMethod": {
@@ -746,7 +874,7 @@ def build_atlas(rows: list[dict], validation: dict, comparison: dict, uncertaint
 
 def markdown(validation: dict, comparison: dict, uncertainty: dict, spatial_transfer: dict, atlas: dict) -> str:
     lines = [
-        "# USDA county yield atlas v9 validation", "",
+        "# USDA county yield atlas v10 validation", "",
         "The atlas stores each county's historical percentile within crop and year. Its production prior blends 80% three-year-half-life recency weighting with 20% of the stable long-history mean. The retrospective forward-year test predicts each year using only earlier years for that county.", "",
         "| Test year | Covered / published | Coverage | Spearman | Grouped 95% interval | Percentile MAE |",
         "|---:|---:|---:|---:|---:|---:|",
@@ -763,7 +891,7 @@ def markdown(validation: dict, comparison: dict, uncertainty: dict, spatial_tran
         f'The interval calibrator uses only 2011–2017 forward errors. On 2018–2025, the nominal 80% interval covered **{intervals["coverage80"]:.1%}** and the nominal 90% interval covered **{intervals["coverage90"]:.1%}** of {intervals["observations"]:,} later outcomes. Mean 90% interval width was {intervals["meanWidth90"]:.3f} percentile units. Gate: **{"PASS" if uncertainty["gate"]["passed"] else "NOT PASSED"}**.',
         "", "## Spatial transfer", "",
         f'In the leave-one-county-out test, {spatial_transfer["coveredExamples"]:,} of {spatial_transfer["eligibleExamples"]:,} target county-years had reporting neighbors within 100 km ({spatial_transfer["coverage"]:.1%}). Development selection chose up to {spatial_transfer["selectedNeighborhood"]["maxNeighbors"]} counties with inverse-distance power {spatial_transfer["selectedNeighborhood"]["distancePower"]:.0f}. On locked 2023–2025 outcomes, regional aggregation reached Spearman **{spatial_transfer["finalSignal"]["regionalNeighborhood"]["spearman"]:.3f}** versus {spatial_transfer["finalSignal"]["nearestCounty"]["spearman"]:.3f} for one nearest county (delta {spatial_transfer["finalSignal"]["spearmanDelta"]:+.3f}; paired 95% interval {spatial_transfer["finalSignal"]["spearmanDeltaBootstrap95"][0]:+.3f} to {spatial_transfer["finalSignal"]["spearmanDeltaBootstrap95"][1]:+.3f}).',
-        "", f'For production queries, the globally selected regional share is enabled only where it improves both development rank and MAE: {spatial_transfer["productionBlend"]["selectedWeights"]["regionalNeighborhoodByRegion"]}. On locked outcomes, Spearman changed from {spatial_transfer["productionBlend"]["finalSignal"]["ownCountyPrior"]["spearman"]:.4f} to **{spatial_transfer["productionBlend"]["finalSignal"]["blendedPrior"]["spearman"]:.4f}** (delta {spatial_transfer["productionBlend"]["finalSignal"]["spearmanDelta"]:+.4f}; grouped-bootstrap 95% interval {spatial_transfer["productionBlend"]["finalSignal"]["spearmanDeltaBootstrap95"][0]:+.4f} to {spatial_transfer["productionBlend"]["finalSignal"]["spearmanDeltaBootstrap95"][1]:+.4f}).',
+        "", f'For production queries, crop-specific regional shares must pass development region checks and a crop-level stability veto: {spatial_transfer["productionBlend"]["selectedWeights"]["regionalNeighborhoodByCropRegion"]}. On locked outcomes, Spearman changed from {spatial_transfer["productionBlend"]["finalSignal"]["ownCountyPrior"]["spearman"]:.4f} to **{spatial_transfer["productionBlend"]["finalSignal"]["blendedPrior"]["spearman"]:.4f}** (delta {spatial_transfer["productionBlend"]["finalSignal"]["spearmanDelta"]:+.4f}; grouped-bootstrap 95% interval {spatial_transfer["productionBlend"]["finalSignal"]["spearmanDeltaBootstrap95"][0]:+.4f} to {spatial_transfer["productionBlend"]["finalSignal"]["spearmanDeltaBootstrap95"][1]:+.4f}).',
         f'The production-specific conformal calibrator uses {spatial_transfer["productionBlend"]["intervalCalibration"]["calibrationExamples"]:,} pre-2018 errors, then selects the smallest regional safety scales that meet nominal coverage in both 2018–2020 and 2021–2022. Across 2018–2025, coverage is **{spatial_transfer["productionBlend"]["intervalCalibration"]["productionBlendRadii"]["coverage80"]:.1%}** / **{spatial_transfer["productionBlend"]["intervalCalibration"]["productionBlendRadii"]["coverage90"]:.1%}**, while mean 90% width falls from {spatial_transfer["productionBlend"]["intervalCalibration"]["regionalTransferRadii"]["meanWidth90"]:.3f} to **{spatial_transfer["productionBlend"]["intervalCalibration"]["productionBlendRadii"]["meanWidth90"]:.3f}** ({spatial_transfer["productionBlend"]["intervalCalibration"]["meanWidth90Reduction"]:.1%} narrower).',
         "", "### Regional interval reliability", "",
         "| Census region | 80% scale | 90% scale | 2021–2022 90% coverage | 2023–2025 90% coverage | Final mean 90% width |",
@@ -828,7 +956,7 @@ def plot(comparison: dict, uncertainty: dict, spatial_transfer: dict, output: Pa
     axes[3].grid(axis="y", alpha=.18); axes[3].legend(loc="lower right")
     axes[3].text(.02, .96, f'2018–2025 production coverage\n80%: {production_intervals["coverage80"]:.1%} · 90%: {production_intervals["coverage90"]:.1%}\n90% width: {interval_calibration["meanWidth90Reduction"]:.1%} narrower', transform=axes[3].transAxes, va="top", fontsize=9, color="#315d49", bbox={"facecolor": "white", "edgecolor": "#d8dfda", "alpha": .9, "pad": 5})
     axes[3].text(.02, .04, f'Production ρ {production["finalSignal"]["ownCountyPrior"]["spearman"]:.4f} → {production["finalSignal"]["blendedPrior"]["spearman"]:.4f}\nΔ CI {production["finalSignal"]["spearmanDeltaBootstrap95"][0]:+.4f} to {production["finalSignal"]["spearmanDeltaBootstrap95"][1]:+.4f} · gate {"PASS" if production["gate"]["passed"] else "NOT PASSED"}', transform=axes[3].transAxes, fontsize=8.5, color="#315d49", bbox={"facecolor": "white", "edgecolor": "#d8dfda", "alpha": .9, "pad": 5})
-    figure.suptitle("USDA observed-yield prior v9 · geographically stable uncertainty", fontweight="bold")
+    figure.suptitle("USDA observed-yield prior v10 · crop-specific stable blend", fontweight="bold")
     figure.text(.5, .01, "County-level corn, soybean, wheat · not a parcel yield forecast", ha="center", color="#555555")
     figure.tight_layout(rect=(0, .04, 1, .97)); figure.savefig(output, dpi=180); plt.close(figure)
 
@@ -886,10 +1014,14 @@ def nearest_evidence(crop: str, latitude: float, longitude: float, path: Path, m
     if production_blend.get("gate", {}).get("passed") and len(neighbors) > 1:
         primary, regional = neighbors[0], neighbors[1:]
         selected_weights = production_blend["selectedWeights"]
+        weights_by_crop_region = selected_weights.get("regionalNeighborhoodByCropRegion")
         weights_by_region = selected_weights.get("regionalNeighborhoodByRegion")
         regional_weight = float(
-            weights_by_region[STATE_TO_CENSUS_REGION[primary["record"]["state"]]]
-            if weights_by_region else selected_weights["regionalNeighborhood"]
+            weights_by_crop_region[crop_key][STATE_TO_CENSUS_REGION[primary["record"]["state"]]]
+            if weights_by_crop_region else (
+                weights_by_region[STATE_TO_CENSUS_REGION[primary["record"]["state"]]]
+                if weights_by_region else selected_weights["regionalNeighborhood"]
+            )
         )
         if regional_weight > 0:
             used_regional_blend = True
@@ -1002,9 +1134,9 @@ def main() -> None:
     root = Path(__file__).resolve().parents[1]
     parser = argparse.ArgumentParser()
     parser.add_argument("--data", type=Path, default=root / "data/raw/observed-validation/national")
-    parser.add_argument("--atlas", type=Path, default=root / "evaluation/yield-atlas-v9.json")
-    parser.add_argument("--validation", type=Path, default=root / "evaluation/yield-atlas-validation-v9.json")
-    parser.add_argument("--plot", type=Path, default=root / "evaluation/yield-atlas-validation-v9.png")
+    parser.add_argument("--atlas", type=Path, default=root / "evaluation/yield-atlas-v10.json")
+    parser.add_argument("--validation", type=Path, default=root / "evaluation/yield-atlas-validation-v10.json")
+    parser.add_argument("--plot", type=Path, default=root / "evaluation/yield-atlas-validation-v10.png")
     args = parser.parse_args()
     rows = rows_from_quickstats(args.data)
     validation = temporal_validation(rows)

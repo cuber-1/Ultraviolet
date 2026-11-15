@@ -14,9 +14,9 @@
 > Optional: `ML_SOIL_PH` (default 6.5), `ML_IRRIGATED` (default true).
 
 For grain corn, soybean, winter wheat, silage corn, and non-durum spring wheat,
-CropFit API v0.19.0 also returns optional
+CropFit API v0.20.0 also returns optional
 `observedYieldEvidence` from nearby USDA reporting counties within 100 km.
-Atlas v9 includes 2010–2025 history plus a calibrated observed-yield percentile
+Atlas v10 includes 2010–2025 history plus a calibrated observed-yield percentile
 prior with 80% and 90% uncertainty intervals. The prior blends 80% exponential
 recency weighting (three-year half-life) with 20% of the stable long-history
 mean. For regional ranking it adds 15% from up to eight surrounding counties
@@ -103,7 +103,7 @@ results "Crop calendar · model offline". The UI and Deep Agent keep working.
 Failed health probes are not cached, so a recovered primary is redetected as
 CropFit on the next request rather than receiving the generic API payload.
 
-CropFit API v0.19.0 with the v0.11.0 production model artifact is the supported
+CropFit API v0.20.0 with the v0.11.0 production model artifact is the supported
 runtime; the generic contract below is for any other model you want to plug in.
 
 ## `GET /health`

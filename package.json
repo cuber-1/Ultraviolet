@@ -24,6 +24,7 @@
     "ml:evaluate:leaf-smoothing": "PYTHONPATH=machine-learning machine-learning/.venv/bin/python -m cropfit.leaf_smoothing_validation",
     "ml:evaluate:density-refinement-v3": "PYTHONPATH=machine-learning machine-learning/.venv/bin/python -m cropfit.density_refinement_v3_validation",
     "ml:develop:density-capacity": "PYTHONPATH=machine-learning machine-learning/.venv/bin/python -m cropfit.density_capacity_development",
+    "ml:evaluate:production-blend-v2": "PYTHONPATH=machine-learning machine-learning/.venv/bin/python -m cropfit.production_blend_v2_validation",
     "ml:evaluate:scenario-shift": "PYTHONPATH=machine-learning machine-learning/.venv/bin/python -m cropfit.scenario_shift_validation",
     "ml:evaluate:density-shift": "PYTHONPATH=machine-learning machine-learning/.venv/bin/python -m cropfit.density_shift_validation",
     "ml:evaluate:compact": "PYTHONPATH=machine-learning machine-learning/.venv/bin/python -m cropfit.compact_validation",
