@@ -243,7 +243,9 @@ def verify(artifact: Path, profiles: Path) -> None:
         silage = nearest_evidence("silage corn", 43.0, -89.0, subtype_atlas)
         assert spring and spring["yieldUnit"] == "bu/acre" and spring["history"][0]["yieldPerAcre"] > 0
         assert silage and silage["yieldUnit"] == "tons/acre" and silage["history"][0]["yieldPerAcre"] > 0
-        assert spring["observedYieldPrior"]["intervalMethod"] == "spatial-neighborhood-conformal"
+        assert spring["observedYieldPrior"]["intervalMethod"] == "disagreement-scaled-spatial-conformal"
+        assert spring["observedYieldPrior"]["disagreementAlpha"] == 5.0
+        assert spring["observedYieldPrior"]["neighborDisagreement"] >= 0
         assert silage["observedYieldPrior"]["intervalMethod"] == "spatial-neighborhood-conformal"
         assert spring["observedYieldPrior"]["neighborCount"] == 5
         assert silage["observedYieldPrior"]["neighborCount"] == 5

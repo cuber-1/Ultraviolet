@@ -29,43 +29,49 @@
       "crop": "silage corn",
       "historyBucket": "1",
       "examples": 265,
-      "absoluteErrorP80": 0.331,
-      "absoluteErrorP90": 0.4326
+      "normalizedErrorP80": 0.331,
+      "normalizedErrorP90": 0.4326,
+      "disagreementAlpha": 0.0
     },
     {
       "crop": "silage corn",
       "historyBucket": "2-3",
       "examples": 526,
-      "absoluteErrorP80": 0.3644,
-      "absoluteErrorP90": 0.48
+      "normalizedErrorP80": 0.3644,
+      "normalizedErrorP90": 0.48,
+      "disagreementAlpha": 0.0
     },
     {
       "crop": "silage corn",
       "historyBucket": "4+",
       "examples": 365,
-      "absoluteErrorP80": 0.2999,
-      "absoluteErrorP90": 0.3832
+      "normalizedErrorP80": 0.2999,
+      "normalizedErrorP90": 0.3832,
+      "disagreementAlpha": 0.0
     },
     {
       "crop": "spring wheat",
       "historyBucket": "1",
       "examples": 250,
-      "absoluteErrorP80": 0.2557,
-      "absoluteErrorP90": 0.3596
+      "normalizedErrorP80": 0.1553,
+      "normalizedErrorP90": 0.2212,
+      "disagreementAlpha": 5.0
     },
     {
       "crop": "spring wheat",
       "historyBucket": "2-3",
       "examples": 517,
-      "absoluteErrorP80": 0.2413,
-      "absoluteErrorP90": 0.3436
+      "normalizedErrorP80": 0.1492,
+      "normalizedErrorP90": 0.2005,
+      "disagreementAlpha": 5.0
     },
     {
       "crop": "spring wheat",
       "historyBucket": "4+",
       "examples": 424,
-      "absoluteErrorP80": 0.2225,
-      "absoluteErrorP90": 0.2904
+      "normalizedErrorP80": 0.1439,
+      "normalizedErrorP90": 0.1769,
+      "disagreementAlpha": 5.0
     }
   ],
   "neighborhoodSelection": [
@@ -1502,159 +1508,159 @@
           "scale": 1.0,
           "development": {
             "observations": 440,
-            "coverage80": 0.7341,
-            "coverage90": 0.825,
-            "meanWidth80": 0.4293,
-            "meanWidth90": 0.5463
+            "coverage80": 0.7455,
+            "coverage90": 0.8227,
+            "meanWidth80": 0.4184,
+            "meanWidth90": 0.5066
           },
           "stability": {
             "observations": 333,
-            "coverage80": 0.7868,
-            "coverage90": 0.8889,
-            "meanWidth80": 0.4266,
-            "meanWidth90": 0.5438
+            "coverage80": 0.7748,
+            "coverage90": 0.8649,
+            "meanWidth80": 0.4184,
+            "meanWidth90": 0.5044
           }
         },
         {
           "scale": 1.05,
           "development": {
             "observations": 440,
-            "coverage80": 0.75,
-            "coverage90": 0.8523,
-            "meanWidth80": 0.4487,
-            "meanWidth90": 0.5701
+            "coverage80": 0.7614,
+            "coverage90": 0.8273,
+            "meanWidth80": 0.4377,
+            "meanWidth90": 0.5287
           },
           "stability": {
             "observations": 333,
-            "coverage80": 0.8138,
-            "coverage90": 0.9039,
-            "meanWidth80": 0.446,
-            "meanWidth90": 0.5675
+            "coverage80": 0.8018,
+            "coverage90": 0.8859,
+            "meanWidth80": 0.4374,
+            "meanWidth90": 0.5262
           }
         },
         {
           "scale": 1.1,
           "development": {
             "observations": 440,
-            "coverage80": 0.7682,
-            "coverage90": 0.8727,
-            "meanWidth80": 0.4679,
-            "meanWidth90": 0.5934
+            "coverage80": 0.7818,
+            "coverage90": 0.8432,
+            "meanWidth80": 0.4568,
+            "meanWidth90": 0.5502
           },
           "stability": {
             "observations": 333,
-            "coverage80": 0.8288,
-            "coverage90": 0.9189,
-            "meanWidth80": 0.4654,
-            "meanWidth90": 0.5907
+            "coverage80": 0.8198,
+            "coverage90": 0.9009,
+            "meanWidth80": 0.4561,
+            "meanWidth90": 0.5474
           }
         },
         {
           "scale": 1.15,
           "development": {
             "observations": 440,
-            "coverage80": 0.7841,
-            "coverage90": 0.8864,
-            "meanWidth80": 0.487,
-            "meanWidth90": 0.616
+            "coverage80": 0.7955,
+            "coverage90": 0.8727,
+            "meanWidth80": 0.4756,
+            "meanWidth90": 0.5712
           },
           "stability": {
             "observations": 333,
-            "coverage80": 0.8408,
+            "coverage80": 0.8318,
             "coverage90": 0.9249,
-            "meanWidth80": 0.4846,
-            "meanWidth90": 0.6133
+            "meanWidth80": 0.4745,
+            "meanWidth90": 0.5681
           }
         },
         {
           "scale": 1.2,
           "development": {
             "observations": 440,
-            "coverage80": 0.8068,
-            "coverage90": 0.8977,
-            "meanWidth80": 0.5058,
-            "meanWidth90": 0.6381
+            "coverage80": 0.8136,
+            "coverage90": 0.8841,
+            "meanWidth80": 0.4941,
+            "meanWidth90": 0.5913
           },
           "stability": {
             "observations": 333,
-            "coverage80": 0.8468,
-            "coverage90": 0.9399,
-            "meanWidth80": 0.5036,
-            "meanWidth90": 0.6351
+            "coverage80": 0.8529,
+            "coverage90": 0.9339,
+            "meanWidth80": 0.4927,
+            "meanWidth90": 0.5884
           }
         },
         {
           "scale": 1.25,
           "development": {
             "observations": 440,
-            "coverage80": 0.8114,
-            "coverage90": 0.9136,
-            "meanWidth80": 0.5244,
-            "meanWidth90": 0.6596
+            "coverage80": 0.8227,
+            "coverage90": 0.9023,
+            "meanWidth80": 0.5122,
+            "meanWidth90": 0.6106
           },
           "stability": {
             "observations": 333,
-            "coverage80": 0.8649,
-            "coverage90": 0.9399,
-            "meanWidth80": 0.5222,
-            "meanWidth90": 0.6563
+            "coverage80": 0.8709,
+            "coverage90": 0.9489,
+            "meanWidth80": 0.5105,
+            "meanWidth90": 0.6081
           }
         },
         {
           "scale": 1.33,
           "development": {
             "observations": 440,
-            "coverage80": 0.8409,
-            "coverage90": 0.9364,
-            "meanWidth80": 0.5537,
-            "meanWidth90": 0.6921
+            "coverage80": 0.8386,
+            "coverage90": 0.9159,
+            "meanWidth80": 0.5405,
+            "meanWidth90": 0.6403
           },
           "stability": {
             "observations": 333,
-            "coverage80": 0.8919,
+            "coverage80": 0.8949,
             "coverage90": 0.961,
-            "meanWidth80": 0.5516,
-            "meanWidth90": 0.6889
+            "meanWidth80": 0.5385,
+            "meanWidth90": 0.6384
           }
         },
         {
           "scale": 1.4,
           "development": {
             "observations": 440,
-            "coverage80": 0.8591,
-            "coverage90": 0.9409,
-            "meanWidth80": 0.5789,
-            "meanWidth90": 0.7189
+            "coverage80": 0.8682,
+            "coverage90": 0.925,
+            "meanWidth80": 0.5647,
+            "meanWidth90": 0.6653
           },
           "stability": {
             "observations": 333,
-            "coverage80": 0.9159,
-            "coverage90": 0.97,
-            "meanWidth80": 0.5768,
-            "meanWidth90": 0.7162
+            "coverage80": 0.9219,
+            "coverage90": 0.973,
+            "meanWidth80": 0.5622,
+            "meanWidth90": 0.6637
           }
         },
         {
           "scale": 1.5,
           "development": {
             "observations": 440,
-            "coverage80": 0.8841,
-            "coverage90": 0.9523,
-            "meanWidth80": 0.6137,
-            "meanWidth90": 0.7552
+            "coverage80": 0.8955,
+            "coverage90": 0.9364,
+            "meanWidth80": 0.5972,
+            "meanWidth90": 0.6989
           },
           "stability": {
             "observations": 333,
-            "coverage80": 0.9219,
-            "coverage90": 0.976,
-            "meanWidth80": 0.6115,
-            "meanWidth90": 0.7526
+            "coverage80": 0.9369,
+            "coverage90": 0.982,
+            "meanWidth80": 0.595,
+            "meanWidth90": 0.6973
           }
         }
       ],
       "selected": {
-        "scale80": 1.15,
-        "scale90": 1.15
+        "scale80": 1.1,
+        "scale90": 1.2
       }
     }
   ],
@@ -1664,8 +1670,8 @@
       "scale90": 1.0
     },
     "spring wheat": {
-      "scale80": 1.15,
-      "scale90": 1.15
+      "scale80": 1.1,
+      "scale90": 1.2
     }
   },
   "perCrop": [
@@ -1790,6 +1796,24 @@
           -0.0097,
           0.0266
         ]
+      },
+      "disagreementCalibrationComparison": {
+        "baselineAlpha": 0.0,
+        "selectedAlpha": 0.0,
+        "finalBaseline": {
+          "observations": 585,
+          "coverage80": 0.8068,
+          "coverage90": 0.9009,
+          "meanWidth80": 0.6232,
+          "meanWidth90": 0.7461
+        },
+        "finalSelected": {
+          "observations": 585,
+          "coverage80": 0.8068,
+          "coverage90": 0.9009,
+          "meanWidth80": 0.6232,
+          "meanWidth90": 0.7461
+        }
       },
       "development": {
         "observations": 536,
@@ -1986,80 +2010,616 @@
           0.0
         ]
       },
+      "disagreementCalibrationComparison": {
+        "baselineAlpha": 0.0,
+        "selectedAlpha": 5.0,
+        "finalBaseline": {
+          "observations": 257,
+          "coverage80": 0.8599,
+          "coverage90": 0.9339,
+          "meanWidth80": 0.5299,
+          "meanWidth90": 0.6654
+        },
+        "finalSelected": {
+          "observations": 257,
+          "coverage80": 0.8521,
+          "coverage90": 0.9261,
+          "meanWidth80": 0.4782,
+          "meanWidth90": 0.6166
+        }
+      },
       "development": {
         "observations": 440,
-        "coverage80": 0.8386,
-        "coverage90": 0.9182,
-        "meanWidth80": 0.5311,
-        "meanWidth90": 0.668
+        "coverage80": 0.8068,
+        "coverage90": 0.9045,
+        "meanWidth80": 0.4775,
+        "meanWidth90": 0.6144
       },
       "stability": {
         "observations": 333,
-        "coverage80": 0.8919,
-        "coverage90": 0.952,
-        "meanWidth80": 0.5263,
-        "meanWidth90": 0.6611
+        "coverage80": 0.8408,
+        "coverage90": 0.9489,
+        "meanWidth80": 0.475,
+        "meanWidth90": 0.612
       },
       "final": {
         "observations": 257,
-        "coverage80": 0.8599,
-        "coverage90": 0.9339,
-        "meanWidth80": 0.5299,
-        "meanWidth90": 0.6654
+        "coverage80": 0.8521,
+        "coverage90": 0.9261,
+        "meanWidth80": 0.4782,
+        "meanWidth90": 0.6166
       },
       "perRegion": [
         {
           "region": "Midwest",
           "development": {
             "observations": 280,
-            "coverage80": 0.85,
-            "coverage90": 0.9286,
-            "meanWidth80": 0.504,
-            "meanWidth90": 0.6415
+            "coverage80": 0.8107,
+            "coverage90": 0.9071,
+            "meanWidth80": 0.442,
+            "meanWidth90": 0.6079
           },
           "stability": {
             "observations": 217,
-            "coverage80": 0.9032,
-            "coverage90": 0.9585,
-            "meanWidth80": 0.5018,
-            "meanWidth90": 0.6391
+            "coverage80": 0.8295,
+            "coverage90": 0.9493,
+            "meanWidth80": 0.4415,
+            "meanWidth90": 0.6086
           },
           "final": {
             "observations": 163,
-            "coverage80": 0.9018,
-            "coverage90": 0.9693,
-            "meanWidth80": 0.5081,
-            "meanWidth90": 0.6444
+            "coverage80": 0.8712,
+            "coverage90": 0.9448,
+            "meanWidth80": 0.4513,
+            "meanWidth90": 0.6216
           }
         },
         {
           "region": "West",
           "development": {
             "observations": 160,
-            "coverage80": 0.8187,
+            "coverage80": 0.8,
             "coverage90": 0.9,
-            "meanWidth80": 0.5785,
-            "meanWidth90": 0.7145
+            "meanWidth80": 0.5396,
+            "meanWidth90": 0.6258
           },
           "stability": {
             "observations": 116,
-            "coverage80": 0.8707,
-            "coverage90": 0.9397,
-            "meanWidth80": 0.5721,
-            "meanWidth90": 0.7023
+            "coverage80": 0.8621,
+            "coverage90": 0.9483,
+            "meanWidth80": 0.5378,
+            "meanWidth90": 0.6181
           },
           "final": {
             "observations": 94,
-            "coverage80": 0.7872,
-            "coverage90": 0.8723,
-            "meanWidth80": 0.5678,
-            "meanWidth90": 0.702
+            "coverage80": 0.8191,
+            "coverage90": 0.8936,
+            "meanWidth80": 0.525,
+            "meanWidth90": 0.6078
           }
         }
       ],
       "passed": true
     }
   ],
+  "disagreementScaleSelection": [
+    {
+      "crop": "silage corn",
+      "candidates": [
+        {
+          "disagreementAlpha": 0.0,
+          "development": {
+            "observations": 536,
+            "coverage80": 0.8116,
+            "coverage90": 0.9104,
+            "meanWidth80": 0.6321,
+            "meanWidth90": 0.7617
+          },
+          "stability": {
+            "observations": 490,
+            "coverage80": 0.8918,
+            "coverage90": 0.9653,
+            "meanWidth80": 0.6215,
+            "meanWidth90": 0.7466
+          },
+          "selectedScales": {
+            "scale80": 1.05,
+            "scale90": 1.0
+          },
+          "selectedRegionalScales": {
+            "Midwest": {
+              "scale80": 1.05,
+              "scale90": 1.1
+            },
+            "Northeast": {
+              "scale80": 1.0,
+              "scale90": 1.0
+            }
+          }
+        },
+        {
+          "disagreementAlpha": 0.5,
+          "development": {
+            "observations": 536,
+            "coverage80": 0.8172,
+            "coverage90": 0.9198,
+            "meanWidth80": 0.6438,
+            "meanWidth90": 0.7709
+          },
+          "stability": {
+            "observations": 490,
+            "coverage80": 0.8939,
+            "coverage90": 0.9653,
+            "meanWidth80": 0.63,
+            "meanWidth90": 0.7509
+          },
+          "selectedScales": {
+            "scale80": 1.05,
+            "scale90": 1.05
+          },
+          "selectedRegionalScales": {
+            "Midwest": {
+              "scale80": 1.05,
+              "scale90": 1.05
+            },
+            "Northeast": {
+              "scale80": 1.0,
+              "scale90": 1.0
+            }
+          }
+        },
+        {
+          "disagreementAlpha": 1.0,
+          "development": {
+            "observations": 536,
+            "coverage80": 0.819,
+            "coverage90": 0.9086,
+            "meanWidth80": 0.6405,
+            "meanWidth90": 0.7615
+          },
+          "stability": {
+            "observations": 490,
+            "coverage80": 0.8959,
+            "coverage90": 0.9673,
+            "meanWidth80": 0.6236,
+            "meanWidth90": 0.7376
+          },
+          "selectedScales": {
+            "scale80": 1.0,
+            "scale90": 1.05
+          },
+          "selectedRegionalScales": {
+            "Midwest": {
+              "scale80": 1.05,
+              "scale90": 1.05
+            },
+            "Northeast": {
+              "scale80": 1.05,
+              "scale90": 1.0
+            }
+          }
+        },
+        {
+          "disagreementAlpha": 2.0,
+          "development": {
+            "observations": 536,
+            "coverage80": 0.819,
+            "coverage90": 0.9067,
+            "meanWidth80": 0.6461,
+            "meanWidth90": 0.7656
+          },
+          "stability": {
+            "observations": 490,
+            "coverage80": 0.8898,
+            "coverage90": 0.9694,
+            "meanWidth80": 0.6237,
+            "meanWidth90": 0.7389
+          },
+          "selectedScales": {
+            "scale80": 1.0,
+            "scale90": 1.0
+          },
+          "selectedRegionalScales": {
+            "Midwest": {
+              "scale80": 1.05,
+              "scale90": 1.1
+            },
+            "Northeast": {
+              "scale80": 1.05,
+              "scale90": 1.0
+            }
+          }
+        },
+        {
+          "disagreementAlpha": 3.0,
+          "development": {
+            "observations": 536,
+            "coverage80": 0.8134,
+            "coverage90": 0.9086,
+            "meanWidth80": 0.6391,
+            "meanWidth90": 0.7702
+          },
+          "stability": {
+            "observations": 490,
+            "coverage80": 0.8857,
+            "coverage90": 0.9673,
+            "meanWidth80": 0.6134,
+            "meanWidth90": 0.7387
+          },
+          "selectedScales": {
+            "scale80": 1.0,
+            "scale90": 1.0
+          },
+          "selectedRegionalScales": {
+            "Midwest": {
+              "scale80": 1.0,
+              "scale90": 1.1
+            },
+            "Northeast": {
+              "scale80": 1.05,
+              "scale90": 1.0
+            }
+          }
+        },
+        {
+          "disagreementAlpha": 5.0,
+          "development": {
+            "observations": 536,
+            "coverage80": 0.8116,
+            "coverage90": 0.9104,
+            "meanWidth80": 0.6484,
+            "meanWidth90": 0.7718
+          },
+          "stability": {
+            "observations": 490,
+            "coverage80": 0.8796,
+            "coverage90": 0.9612,
+            "meanWidth80": 0.6163,
+            "meanWidth90": 0.7333
+          },
+          "selectedScales": {
+            "scale80": 1.0,
+            "scale90": 1.0
+          },
+          "selectedRegionalScales": {
+            "Midwest": {
+              "scale80": 1.05,
+              "scale90": 1.1
+            },
+            "Northeast": {
+              "scale80": 1.05,
+              "scale90": 1.0
+            }
+          }
+        },
+        {
+          "disagreementAlpha": 8.0,
+          "development": {
+            "observations": 536,
+            "coverage80": 0.8134,
+            "coverage90": 0.9104,
+            "meanWidth80": 0.6464,
+            "meanWidth90": 0.7815
+          },
+          "stability": {
+            "observations": 490,
+            "coverage80": 0.8776,
+            "coverage90": 0.9571,
+            "meanWidth80": 0.6089,
+            "meanWidth90": 0.736
+          },
+          "selectedScales": {
+            "scale80": 1.0,
+            "scale90": 1.0
+          },
+          "selectedRegionalScales": {
+            "Midwest": {
+              "scale80": 1.0,
+              "scale90": 1.1
+            },
+            "Northeast": {
+              "scale80": 1.05,
+              "scale90": 1.0
+            }
+          }
+        },
+        {
+          "disagreementAlpha": 10.0,
+          "development": {
+            "observations": 536,
+            "coverage80": 0.8022,
+            "coverage90": 0.9142,
+            "meanWidth80": 0.6431,
+            "meanWidth90": 0.792
+          },
+          "stability": {
+            "observations": 490,
+            "coverage80": 0.8755,
+            "coverage90": 0.9592,
+            "meanWidth80": 0.6033,
+            "meanWidth90": 0.7444
+          },
+          "selectedScales": {
+            "scale80": 1.0,
+            "scale90": 1.0
+          },
+          "selectedRegionalScales": {
+            "Midwest": {
+              "scale80": 1.0,
+              "scale90": 1.1
+            },
+            "Northeast": {
+              "scale80": 1.0,
+              "scale90": 1.0
+            }
+          }
+        }
+      ],
+      "selected": 0.0,
+      "developmentWidthReduction": 0.0,
+      "minimumDevelopmentWidthReduction": 0.01
+    },
+    {
+      "crop": "spring wheat",
+      "candidates": [
+        {
+          "disagreementAlpha": 0.0,
+          "development": {
+            "observations": 440,
+            "coverage80": 0.8386,
+            "coverage90": 0.9182,
+            "meanWidth80": 0.5311,
+            "meanWidth90": 0.668
+          },
+          "stability": {
+            "observations": 333,
+            "coverage80": 0.8919,
+            "coverage90": 0.952,
+            "meanWidth80": 0.5263,
+            "meanWidth90": 0.6611
+          },
+          "selectedScales": {
+            "scale80": 1.15,
+            "scale90": 1.15
+          },
+          "selectedRegionalScales": {
+            "Midwest": {
+              "scale80": 1.0,
+              "scale90": 1.0
+            },
+            "West": {
+              "scale80": 1.33,
+              "scale90": 1.33
+            }
+          }
+        },
+        {
+          "disagreementAlpha": 0.5,
+          "development": {
+            "observations": 440,
+            "coverage80": 0.8341,
+            "coverage90": 0.9114,
+            "meanWidth80": 0.5216,
+            "meanWidth90": 0.6435
+          },
+          "stability": {
+            "observations": 333,
+            "coverage80": 0.8919,
+            "coverage90": 0.952,
+            "meanWidth80": 0.5182,
+            "meanWidth90": 0.6377
+          },
+          "selectedScales": {
+            "scale80": 1.2,
+            "scale90": 1.15
+          },
+          "selectedRegionalScales": {
+            "Midwest": {
+              "scale80": 1.0,
+              "scale90": 1.0
+            },
+            "West": {
+              "scale80": 1.2,
+              "scale90": 1.25
+            }
+          }
+        },
+        {
+          "disagreementAlpha": 1.0,
+          "development": {
+            "observations": 440,
+            "coverage80": 0.8318,
+            "coverage90": 0.9136,
+            "meanWidth80": 0.5039,
+            "meanWidth90": 0.6422
+          },
+          "stability": {
+            "observations": 333,
+            "coverage80": 0.8649,
+            "coverage90": 0.952,
+            "meanWidth80": 0.5005,
+            "meanWidth90": 0.637
+          },
+          "selectedScales": {
+            "scale80": 1.15,
+            "scale90": 1.2
+          },
+          "selectedRegionalScales": {
+            "Midwest": {
+              "scale80": 1.0,
+              "scale90": 1.0
+            },
+            "West": {
+              "scale80": 1.2,
+              "scale90": 1.2
+            }
+          }
+        },
+        {
+          "disagreementAlpha": 2.0,
+          "development": {
+            "observations": 440,
+            "coverage80": 0.8318,
+            "coverage90": 0.9091,
+            "meanWidth80": 0.4973,
+            "meanWidth90": 0.6337
+          },
+          "stability": {
+            "observations": 333,
+            "coverage80": 0.8589,
+            "coverage90": 0.955,
+            "meanWidth80": 0.494,
+            "meanWidth90": 0.6294
+          },
+          "selectedScales": {
+            "scale80": 1.15,
+            "scale90": 1.2
+          },
+          "selectedRegionalScales": {
+            "Midwest": {
+              "scale80": 1.0,
+              "scale90": 1.0
+            },
+            "West": {
+              "scale80": 1.2,
+              "scale90": 1.15
+            }
+          }
+        },
+        {
+          "disagreementAlpha": 3.0,
+          "development": {
+            "observations": 440,
+            "coverage80": 0.8227,
+            "coverage90": 0.9068,
+            "meanWidth80": 0.4916,
+            "meanWidth90": 0.6238
+          },
+          "stability": {
+            "observations": 333,
+            "coverage80": 0.8438,
+            "coverage90": 0.955,
+            "meanWidth80": 0.4888,
+            "meanWidth90": 0.6199
+          },
+          "selectedScales": {
+            "scale80": 1.15,
+            "scale90": 1.25
+          },
+          "selectedRegionalScales": {
+            "Midwest": {
+              "scale80": 1.0,
+              "scale90": 1.0
+            },
+            "West": {
+              "scale80": 1.15,
+              "scale90": 1.1
+            }
+          }
+        },
+        {
+          "disagreementAlpha": 5.0,
+          "development": {
+            "observations": 440,
+            "coverage80": 0.8068,
+            "coverage90": 0.9045,
+            "meanWidth80": 0.4775,
+            "meanWidth90": 0.6144
+          },
+          "stability": {
+            "observations": 333,
+            "coverage80": 0.8408,
+            "coverage90": 0.9489,
+            "meanWidth80": 0.475,
+            "meanWidth90": 0.612
+          },
+          "selectedScales": {
+            "scale80": 1.1,
+            "scale90": 1.2
+          },
+          "selectedRegionalScales": {
+            "Midwest": {
+              "scale80": 1.0,
+              "scale90": 1.05
+            },
+            "West": {
+              "scale80": 1.15,
+              "scale90": 1.05
+            }
+          }
+        },
+        {
+          "disagreementAlpha": 8.0,
+          "development": {
+            "observations": 440,
+            "coverage80": 0.8205,
+            "coverage90": 0.9068,
+            "meanWidth80": 0.4957,
+            "meanWidth90": 0.6233
+          },
+          "stability": {
+            "observations": 333,
+            "coverage80": 0.8589,
+            "coverage90": 0.9489,
+            "meanWidth80": 0.4924,
+            "meanWidth90": 0.6206
+          },
+          "selectedScales": {
+            "scale80": 1.15,
+            "scale90": 1.2
+          },
+          "selectedRegionalScales": {
+            "Midwest": {
+              "scale80": 1.0,
+              "scale90": 1.05
+            },
+            "West": {
+              "scale80": 1.15,
+              "scale90": 1.05
+            }
+          }
+        },
+        {
+          "disagreementAlpha": 10.0,
+          "development": {
+            "observations": 440,
+            "coverage80": 0.8136,
+            "coverage90": 0.9091,
+            "meanWidth80": 0.4949,
+            "meanWidth90": 0.6208
+          },
+          "stability": {
+            "observations": 333,
+            "coverage80": 0.8468,
+            "coverage90": 0.9459,
+            "meanWidth80": 0.4923,
+            "meanWidth90": 0.6176
+          },
+          "selectedScales": {
+            "scale80": 1.1,
+            "scale90": 1.2
+          },
+          "selectedRegionalScales": {
+            "Midwest": {
+              "scale80": 1.05,
+              "scale90": 1.05
+            },
+            "West": {
+              "scale80": 1.15,
+              "scale90": 1.05
+            }
+          }
+        }
+      ],
+      "selected": 5.0,
+      "developmentWidthReduction": 0.0802,
+      "minimumDevelopmentWidthReduction": 0.01
+    }
+  ],
+  "selectedDisagreementAlphas": {
+    "silage corn": 0.0,
+    "spring wheat": 5.0
+  },
   "regionalScaleSelection": [
     {
       "crop": "silage corn",
@@ -2395,159 +2955,159 @@
           "scale": 1.0,
           "development": {
             "observations": 280,
-            "coverage80": 0.85,
-            "coverage90": 0.9286,
-            "meanWidth80": 0.504,
-            "meanWidth90": 0.6415
+            "coverage80": 0.8107,
+            "coverage90": 0.8893,
+            "meanWidth80": 0.442,
+            "meanWidth90": 0.583
           },
           "stability": {
             "observations": 217,
-            "coverage80": 0.9032,
-            "coverage90": 0.9585,
-            "meanWidth80": 0.5018,
-            "meanWidth90": 0.6391
+            "coverage80": 0.8295,
+            "coverage90": 0.9355,
+            "meanWidth80": 0.4415,
+            "meanWidth90": 0.5826
           }
         },
         {
           "scale": 1.05,
           "development": {
             "observations": 280,
-            "coverage80": 0.8714,
-            "coverage90": 0.9393,
-            "meanWidth80": 0.5272,
-            "meanWidth90": 0.668
+            "coverage80": 0.825,
+            "coverage90": 0.9071,
+            "meanWidth80": 0.4633,
+            "meanWidth90": 0.6079
           },
           "stability": {
             "observations": 217,
-            "coverage80": 0.9078,
-            "coverage90": 0.9631,
-            "meanWidth80": 0.5252,
-            "meanWidth90": 0.6656
+            "coverage80": 0.8387,
+            "coverage90": 0.9493,
+            "meanWidth80": 0.4625,
+            "meanWidth90": 0.6086
           }
         },
         {
           "scale": 1.1,
           "development": {
             "observations": 280,
-            "coverage80": 0.8714,
-            "coverage90": 0.95,
-            "meanWidth80": 0.5502,
-            "meanWidth90": 0.6932
+            "coverage80": 0.8357,
+            "coverage90": 0.9179,
+            "meanWidth80": 0.4843,
+            "meanWidth90": 0.632
           },
           "stability": {
             "observations": 217,
-            "coverage80": 0.9124,
-            "coverage90": 0.9677,
-            "meanWidth80": 0.548,
-            "meanWidth90": 0.6908
+            "coverage80": 0.8618,
+            "coverage90": 0.9585,
+            "meanWidth80": 0.4834,
+            "meanWidth90": 0.6339
           }
         },
         {
           "scale": 1.15,
           "development": {
             "observations": 280,
-            "coverage80": 0.8893,
-            "coverage90": 0.9643,
-            "meanWidth80": 0.5726,
-            "meanWidth90": 0.717
+            "coverage80": 0.8393,
+            "coverage90": 0.9321,
+            "meanWidth80": 0.505,
+            "meanWidth90": 0.6555
           },
           "stability": {
             "observations": 217,
-            "coverage80": 0.9309,
-            "coverage90": 0.9816,
-            "meanWidth80": 0.5705,
-            "meanWidth90": 0.7152
+            "coverage80": 0.8894,
+            "coverage90": 0.9677,
+            "meanWidth80": 0.5041,
+            "meanWidth90": 0.6584
           }
         },
         {
           "scale": 1.2,
           "development": {
             "observations": 280,
-            "coverage80": 0.9,
-            "coverage90": 0.9679,
-            "meanWidth80": 0.5947,
-            "meanWidth90": 0.7395
+            "coverage80": 0.85,
+            "coverage90": 0.9357,
+            "meanWidth80": 0.5254,
+            "meanWidth90": 0.6785
           },
           "stability": {
             "observations": 217,
-            "coverage80": 0.9493,
-            "coverage90": 0.9862,
-            "meanWidth80": 0.5926,
-            "meanWidth90": 0.7388
+            "coverage80": 0.9032,
+            "coverage90": 0.977,
+            "meanWidth80": 0.5246,
+            "meanWidth90": 0.6818
           }
         },
         {
           "scale": 1.25,
           "development": {
             "observations": 280,
-            "coverage80": 0.9179,
-            "coverage90": 0.975,
-            "meanWidth80": 0.6163,
-            "meanWidth90": 0.7613
+            "coverage80": 0.8679,
+            "coverage90": 0.9464,
+            "meanWidth80": 0.5455,
+            "meanWidth90": 0.7003
           },
           "stability": {
             "observations": 217,
-            "coverage80": 0.9539,
-            "coverage90": 0.9954,
-            "meanWidth80": 0.6143,
-            "meanWidth90": 0.7614
+            "coverage80": 0.9078,
+            "coverage90": 0.9862,
+            "meanWidth80": 0.5448,
+            "meanWidth90": 0.7039
           }
         },
         {
           "scale": 1.33,
           "development": {
             "observations": 280,
-            "coverage80": 0.925,
-            "coverage90": 0.9857,
-            "meanWidth80": 0.6496,
-            "meanWidth90": 0.7944
+            "coverage80": 0.8893,
+            "coverage90": 0.9643,
+            "meanWidth80": 0.5766,
+            "meanWidth90": 0.7326
           },
           "stability": {
             "observations": 217,
-            "coverage80": 0.9585,
-            "coverage90": 0.9954,
-            "meanWidth80": 0.6478,
-            "meanWidth90": 0.7949
+            "coverage80": 0.9309,
+            "coverage90": 0.9862,
+            "meanWidth80": 0.5767,
+            "meanWidth90": 0.7376
           }
         },
         {
           "scale": 1.4,
           "development": {
             "observations": 280,
-            "coverage80": 0.9357,
-            "coverage90": 0.9857,
-            "meanWidth80": 0.6775,
-            "meanWidth90": 0.8212
+            "coverage80": 0.9,
+            "coverage90": 0.9786,
+            "meanWidth80": 0.6026,
+            "meanWidth90": 0.7592
           },
           "stability": {
             "observations": 217,
-            "coverage80": 0.9631,
-            "coverage90": 1.0,
-            "meanWidth80": 0.6758,
-            "meanWidth90": 0.8218
+            "coverage80": 0.9401,
+            "coverage90": 0.9908,
+            "meanWidth80": 0.6039,
+            "meanWidth90": 0.7644
           }
         },
         {
           "scale": 1.5,
           "development": {
             "observations": 280,
-            "coverage80": 0.9643,
-            "coverage90": 0.9857,
-            "meanWidth80": 0.7148,
-            "meanWidth90": 0.8559
+            "coverage80": 0.9107,
+            "coverage90": 0.9821,
+            "meanWidth80": 0.6384,
+            "meanWidth90": 0.7941
           },
           "stability": {
             "observations": 217,
-            "coverage80": 0.9816,
-            "coverage90": 1.0,
-            "meanWidth80": 0.7135,
-            "meanWidth90": 0.8567
+            "coverage80": 0.9677,
+            "coverage90": 0.9954,
+            "meanWidth80": 0.6413,
+            "meanWidth90": 0.7987
           }
         }
       ],
       "selected": {
         "scale80": 1.0,
-        "scale90": 1.0
+        "scale90": 1.05
       }
     },
     {
@@ -2558,159 +3118,159 @@
           "scale": 1.0,
           "development": {
             "observations": 160,
-            "coverage80": 0.6687,
-            "coverage90": 0.8125,
-            "meanWidth80": 0.4572,
-            "meanWidth90": 0.5715
+            "coverage80": 0.7312,
+            "coverage90": 0.875,
+            "meanWidth80": 0.4826,
+            "meanWidth90": 0.6058
           },
           "stability": {
             "observations": 116,
-            "coverage80": 0.7241,
-            "coverage90": 0.8621,
-            "meanWidth80": 0.4524,
-            "meanWidth90": 0.565
+            "coverage80": 0.8017,
+            "coverage90": 0.931,
+            "meanWidth80": 0.4834,
+            "meanWidth90": 0.5993
           }
         },
         {
           "scale": 1.05,
           "development": {
             "observations": 160,
-            "coverage80": 0.6937,
-            "coverage90": 0.8375,
-            "meanWidth80": 0.4759,
-            "meanWidth90": 0.5949
+            "coverage80": 0.75,
+            "coverage90": 0.9,
+            "meanWidth80": 0.5023,
+            "meanWidth90": 0.6258
           },
           "stability": {
             "observations": 116,
-            "coverage80": 0.7328,
-            "coverage90": 0.8966,
-            "meanWidth80": 0.4712,
-            "meanWidth90": 0.5873
+            "coverage80": 0.819,
+            "coverage90": 0.9483,
+            "meanWidth80": 0.5023,
+            "meanWidth90": 0.6181
           }
         },
         {
           "scale": 1.1,
           "development": {
             "observations": 160,
-            "coverage80": 0.7188,
-            "coverage90": 0.8625,
-            "meanWidth80": 0.4945,
-            "meanWidth90": 0.618
+            "coverage80": 0.775,
+            "coverage90": 0.9125,
+            "meanWidth80": 0.5213,
+            "meanWidth90": 0.6449
           },
           "stability": {
             "observations": 116,
-            "coverage80": 0.7759,
-            "coverage90": 0.9052,
-            "meanWidth80": 0.4899,
-            "meanWidth90": 0.6094
+            "coverage80": 0.8448,
+            "coverage90": 0.9569,
+            "meanWidth80": 0.5203,
+            "meanWidth90": 0.6361
           }
         },
         {
           "scale": 1.15,
           "development": {
             "observations": 160,
-            "coverage80": 0.7438,
-            "coverage90": 0.8812,
-            "meanWidth80": 0.513,
-            "meanWidth90": 0.6405
+            "coverage80": 0.8,
+            "coverage90": 0.9125,
+            "meanWidth80": 0.5396,
+            "meanWidth90": 0.6631
           },
           "stability": {
             "observations": 116,
-            "coverage80": 0.8103,
-            "coverage90": 0.9052,
-            "meanWidth80": 0.5085,
-            "meanWidth90": 0.6311
+            "coverage80": 0.8621,
+            "coverage90": 0.9655,
+            "meanWidth80": 0.5378,
+            "meanWidth90": 0.6531
           }
         },
         {
           "scale": 1.2,
           "development": {
             "observations": 160,
-            "coverage80": 0.7812,
-            "coverage90": 0.8938,
-            "meanWidth80": 0.5315,
-            "meanWidth90": 0.6622
+            "coverage80": 0.8063,
+            "coverage90": 0.9125,
+            "meanWidth80": 0.5574,
+            "meanWidth90": 0.6802
           },
           "stability": {
             "observations": 116,
-            "coverage80": 0.8448,
-            "coverage90": 0.9224,
-            "meanWidth80": 0.5266,
-            "meanWidth90": 0.6519
+            "coverage80": 0.8793,
+            "coverage90": 0.9741,
+            "meanWidth80": 0.5547,
+            "meanWidth90": 0.6693
           }
         },
         {
           "scale": 1.25,
           "development": {
             "observations": 160,
-            "coverage80": 0.7937,
-            "coverage90": 0.8938,
-            "meanWidth80": 0.5498,
-            "meanWidth90": 0.6831
+            "coverage80": 0.825,
+            "coverage90": 0.9187,
+            "meanWidth80": 0.5747,
+            "meanWidth90": 0.6964
           },
           "stability": {
             "observations": 116,
-            "coverage80": 0.8448,
-            "coverage90": 0.9397,
-            "meanWidth80": 0.5444,
-            "meanWidth90": 0.6718
+            "coverage80": 0.9052,
+            "coverage90": 0.9741,
+            "meanWidth80": 0.5706,
+            "meanWidth90": 0.6849
           }
         },
         {
           "scale": 1.33,
           "development": {
             "observations": 160,
-            "coverage80": 0.8187,
-            "coverage90": 0.9,
-            "meanWidth80": 0.5785,
-            "meanWidth90": 0.7145
+            "coverage80": 0.875,
+            "coverage90": 0.9187,
+            "meanWidth80": 0.6009,
+            "meanWidth90": 0.7207
           },
           "stability": {
             "observations": 116,
-            "coverage80": 0.8707,
-            "coverage90": 0.9397,
-            "meanWidth80": 0.5721,
-            "meanWidth90": 0.7023
+            "coverage80": 0.931,
+            "coverage90": 0.9741,
+            "meanWidth80": 0.5949,
+            "meanWidth90": 0.7084
           }
         },
         {
           "scale": 1.4,
           "development": {
             "observations": 160,
-            "coverage80": 0.8375,
-            "coverage90": 0.9,
-            "meanWidth80": 0.6034,
-            "meanWidth90": 0.7399
+            "coverage80": 0.9,
+            "coverage90": 0.9187,
+            "meanWidth80": 0.6219,
+            "meanWidth90": 0.7397
           },
           "stability": {
             "observations": 116,
-            "coverage80": 0.8966,
-            "coverage90": 0.9397,
-            "meanWidth80": 0.5959,
-            "meanWidth90": 0.7275
+            "coverage80": 0.9483,
+            "coverage90": 0.9828,
+            "meanWidth80": 0.6147,
+            "meanWidth90": 0.7273
           }
         },
         {
           "scale": 1.5,
           "development": {
             "observations": 160,
-            "coverage80": 0.8812,
-            "coverage90": 0.9187,
-            "meanWidth80": 0.6381,
-            "meanWidth90": 0.774
+            "coverage80": 0.9125,
+            "coverage90": 0.9563,
+            "meanWidth80": 0.6501,
+            "meanWidth90": 0.7642
           },
           "stability": {
             "observations": 116,
-            "coverage80": 0.9052,
-            "coverage90": 0.9569,
-            "meanWidth80": 0.6291,
-            "meanWidth90": 0.7616
+            "coverage80": 0.9569,
+            "coverage90": 0.9828,
+            "meanWidth80": 0.6412,
+            "meanWidth90": 0.751
           }
         }
       ],
       "selected": {
-        "scale80": 1.33,
-        "scale90": 1.33
+        "scale80": 1.15,
+        "scale90": 1.05
       }
     }
   ],
@@ -2728,11 +3288,11 @@
     "spring wheat": {
       "Midwest": {
         "scale80": 1.0,
-        "scale90": 1.0
+        "scale90": 1.05
       },
       "West": {
-        "scale80": 1.33,
-        "scale90": 1.33
+        "scale80": 1.15,
+        "scale90": 1.05
       }
     }
   },
@@ -2752,7 +3312,7 @@
   ],
   "gate": {
     "passed": true,
-    "rule": "Select neighborhood size, distance power, and history-reliability power on 2018-2020 only. Leave-one-county-out transfer within 100 km then needs final N >=100, Spearman >=0.50 with grouped-bootstrap lower >0.30; paired-bootstrap rank-gain lower >0; positive rank gain and MAE reduction over one nearest county in development, stability, and locked final blocks; no rank or MAE regression versus the best development-selected distance-only candidate in any block. Regional interval multipliers selected on development/stability must reach 80%/90%; locked pooled coverage must be 75-90%/87-96%, and every region needs final N >=50, 80% coverage >=70%, 90% coverage 85-98%, and mean 90% width <=0.90."
+    "rule": "Select neighborhood size, distance power, and history-reliability power on 2018-2020 only. Select neighbor-disagreement scaling only when it reduces development mean 90% width by at least 1%; stability still sets coverage scales. Leave-one-county-out transfer within 100 km then needs final N >=100, Spearman >=0.50 with grouped-bootstrap lower >0.30; paired-bootstrap rank-gain lower >0; positive rank gain and MAE reduction over one nearest county in development, stability, and locked final blocks; no rank or MAE regression versus the best development-selected distance-only candidate in any block. Regional interval multipliers selected on development/stability must reach 80%/90%; locked pooled coverage must be 75-90%/87-96%, and every region needs final N >=50, 80% coverage >=70%, 90% coverage 85-98%, and mean 90% width <=0.90."
   },
   "interpretation": "Nearby-county subtype ordering and uncertainty only; not parcel yield, revenue, or purchase returns."
 }

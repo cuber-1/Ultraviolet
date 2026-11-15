@@ -32,7 +32,7 @@ artifact instead, use the full setup below. Because the repository is private,
 the installer uses an authenticated GitHub CLI session (`gh auth login`) or a
 `GITHUB_TOKEN`.
 
-Runtime API v0.13.0 keeps the validated v0.9.1 estimator and hardens every direct
+Runtime API v0.14.0 keeps the validated v0.9.1 estimator and hardens every direct
 and HTTP prediction path with the same finite coordinate, soil-pH, boolean,
 climate-shape, and 20-year history limits. Startup validates the artifact's
 internal model/metadata contract. `GET /health` returns the artifact SHA-256 and
@@ -259,11 +259,13 @@ distance-only silage prior, history weighting also improves rank and MAE in
 development, stability, and final blocks; the locked incremental rank interval
 is -0.010 to +0.027, so this small ablation gain is not presented as conclusive.
 Grouped-bootstrap lower bounds are 0.615 and 0.428; paired gains against one
-nearest county are +0.047 to +0.194 and +0.018 to +0.139. Region multipliers
-selected before the final test lift Western spring-wheat 80% / 90% coverage
-from 72.3% / 78.7% to 78.7% / 87.2%.
-Locked pooled coverage remains 86.0% / 93.4% for spring wheat. The
-history-weighted silage intervals achieve 80.7% / 90.1% coverage;
+nearest county are +0.047 to +0.194 and +0.018 to +0.139. A development-only
+uncertainty search retains neighbor-disagreement scaling for spring wheat only:
+it reduces development mean 90% width 8.0%. On locked outcomes, mean width
+falls from 0.665 to 0.617 while coverage remains 85.2% / 92.6%. Western locked
+coverage improves to 81.9% / 89.4% and its mean 90% width falls from 0.702 to
+0.608. Silage retains α=0 because no candidate cleared the 1% development-width
+floor. Its intervals achieve 80.7% / 90.1% coverage;
 their mean 90% width falls from 0.761 to 0.746. The 690-record artifact keeps
 `bu/acre` and `tons/acre` explicit and publishes only crop-region pairs with at
 least 50 examples in development, stability, and final blocks. Generic

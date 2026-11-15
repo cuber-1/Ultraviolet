@@ -58,8 +58,8 @@ const subtypeAtlas = JSON.parse(readFileSync(
 )) as {
   crops: string[];
   records: Array<{ crop: string; yieldUnit: string; history: Array<{ yieldPerAcre: number }> }>;
-  spatialTransferValidation?: { selectedNeighborhoodByCrop?: Record<string, { maxNeighbors: number; distancePower: number; historyPower: number; distanceOffsetKm: number }>; distanceOnlyNeighborhoodByCrop?: Record<string, { maxNeighbors: number; distancePower: number; historyPower: number; distanceOffsetKm: number }>; selectedRegionalScalesByCrop?: Record<string, Record<string, { scale80: number; scale90: number }>>; supportedRegionsByCrop?: Record<string, string[]> };
-  validation: { acceptedCrops: string[]; gate: { passed: boolean }; selectedNeighborhoods: Record<string, { maxNeighbors: number; distancePower: number; historyPower: number; distanceOffsetKm: number }>; distanceOnlyNeighborhoods: Record<string, { maxNeighbors: number; distancePower: number; historyPower: number; distanceOffsetKm: number }>; selectedRegionalScales: Record<string, Record<string, { scale80: number; scale90: number }>>; supportedRegionsByCrop: Record<string, string[]>; perCrop: Array<{ crop: string; passed: boolean; spearmanGain: number; spearmanGainBootstrap95: [number, number]; maeReduction: number; pointValidation: Record<'development' | 'stability' | 'final', { spearmanGain: number; maeReduction: number }>; historyReliabilityComparison: Record<'development' | 'stability' | 'final', { spearmanGain: number; maeReduction: number }> & { finalSpearmanGainBootstrap95: [number, number] }; signal: { observations: number; spearman: number; bootstrap95: [number, number] }; development: { coverage80: number; coverage90: number }; stability: { coverage80: number; coverage90: number }; final: { coverage80: number; coverage90: number; meanWidth90: number }; perRegion: Array<{ region: string; final: { observations: number; coverage80: number; coverage90: number; meanWidth90: number } }> }> };
+  spatialTransferValidation?: { selectedNeighborhoodByCrop?: Record<string, { maxNeighbors: number; distancePower: number; historyPower: number; distanceOffsetKm: number }>; distanceOnlyNeighborhoodByCrop?: Record<string, { maxNeighbors: number; distancePower: number; historyPower: number; distanceOffsetKm: number }>; selectedDisagreementAlphasByCrop?: Record<string, number>; selectedRegionalScalesByCrop?: Record<string, Record<string, { scale80: number; scale90: number }>>; supportedRegionsByCrop?: Record<string, string[]> };
+  validation: { acceptedCrops: string[]; gate: { passed: boolean }; selectedNeighborhoods: Record<string, { maxNeighbors: number; distancePower: number; historyPower: number; distanceOffsetKm: number }>; distanceOnlyNeighborhoods: Record<string, { maxNeighbors: number; distancePower: number; historyPower: number; distanceOffsetKm: number }>; selectedDisagreementAlphas: Record<string, number>; disagreementScaleSelection: Array<{ crop: string; selected: number; developmentWidthReduction: number; minimumDevelopmentWidthReduction: number }>; selectedRegionalScales: Record<string, Record<string, { scale80: number; scale90: number }>>; supportedRegionsByCrop: Record<string, string[]>; perCrop: Array<{ crop: string; passed: boolean; spearmanGain: number; spearmanGainBootstrap95: [number, number]; maeReduction: number; pointValidation: Record<'development' | 'stability' | 'final', { spearmanGain: number; maeReduction: number }>; historyReliabilityComparison: Record<'development' | 'stability' | 'final', { spearmanGain: number; maeReduction: number }> & { finalSpearmanGainBootstrap95: [number, number] }; disagreementCalibrationComparison: { selectedAlpha: number; finalBaseline: { meanWidth90: number }; finalSelected: { meanWidth90: number } }; signal: { observations: number; spearman: number; bootstrap95: [number, number] }; development: { coverage80: number; coverage90: number }; stability: { coverage80: number; coverage90: number }; final: { coverage80: number; coverage90: number; meanWidth90: number }; perRegion: Array<{ region: string; final: { observations: number; coverage80: number; coverage90: number; meanWidth90: number } }> }> };
 };
 const expectedNeighborhoods = {
   'silage corn': { maxNeighbors: 5, distancePower: 2, historyPower: 1, distanceOffsetKm: 5 },
@@ -71,8 +71,9 @@ const expectedDistanceOnlyNeighborhoods = {
 };
 const expectedRegionalScales = {
   'silage corn': { Midwest: { scale80: 1.05, scale90: 1.1 }, Northeast: { scale80: 1, scale90: 1 } },
-  'spring wheat': { Midwest: { scale80: 1, scale90: 1 }, West: { scale80: 1.33, scale90: 1.33 } },
+  'spring wheat': { Midwest: { scale80: 1, scale90: 1.05 }, West: { scale80: 1.15, scale90: 1.05 } },
 };
+const expectedDisagreementAlphas = { 'silage corn': 0, 'spring wheat': 5 };
 const expectedRegions = { 'silage corn': ['Midwest', 'Northeast'], 'spring wheat': ['Midwest', 'West'] };
 if (JSON.stringify(subtypeAtlas.crops) !== JSON.stringify(['silage corn', 'spring wheat'])
   || JSON.stringify(subtypeAtlas.validation.acceptedCrops) !== JSON.stringify(['silage corn', 'spring wheat'])
@@ -80,6 +81,8 @@ if (JSON.stringify(subtypeAtlas.crops) !== JSON.stringify(['silage corn', 'sprin
   || JSON.stringify(subtypeAtlas.spatialTransferValidation?.selectedNeighborhoodByCrop) !== JSON.stringify(expectedNeighborhoods)
   || JSON.stringify(subtypeAtlas.validation.distanceOnlyNeighborhoods) !== JSON.stringify(expectedDistanceOnlyNeighborhoods)
   || JSON.stringify(subtypeAtlas.spatialTransferValidation?.distanceOnlyNeighborhoodByCrop) !== JSON.stringify(expectedDistanceOnlyNeighborhoods)
+  || JSON.stringify(subtypeAtlas.validation.selectedDisagreementAlphas) !== JSON.stringify(expectedDisagreementAlphas)
+  || JSON.stringify(subtypeAtlas.spatialTransferValidation?.selectedDisagreementAlphasByCrop) !== JSON.stringify(expectedDisagreementAlphas)
   || JSON.stringify(subtypeAtlas.validation.selectedRegionalScales) !== JSON.stringify(expectedRegionalScales)
   || JSON.stringify(subtypeAtlas.spatialTransferValidation?.selectedRegionalScalesByCrop) !== JSON.stringify(expectedRegionalScales)
   || JSON.stringify(subtypeAtlas.validation.supportedRegionsByCrop) !== JSON.stringify(expectedRegions)
@@ -87,12 +90,18 @@ if (JSON.stringify(subtypeAtlas.crops) !== JSON.stringify(['silage corn', 'sprin
   || !subtypeAtlas.validation.gate.passed || subtypeAtlas.records.length !== 690) {
   throw new Error('Crop-subtype production atlas identity or promotion gate changed unexpectedly.');
 }
+if (!subtypeAtlas.validation.disagreementScaleSelection.every((item) => item.selected === 0
+  || item.developmentWidthReduction >= item.minimumDevelopmentWidthReduction)) {
+  throw new Error('Neighbor-disagreement scaling bypassed its development-width selection floor.');
+}
 for (const item of subtypeAtlas.validation.perCrop) {
   const passes = item.signal.observations >= 100 && item.signal.spearman >= .5 && item.signal.bootstrap95[0] > .3
     && item.spearmanGainBootstrap95[0] > 0
     && Object.values(item.pointValidation).every((block) => block.spearmanGain > 0 && block.maeReduction > 0)
     && (['development', 'stability', 'final'] as const).every((key) => item.historyReliabilityComparison[key].spearmanGain >= 0
       && item.historyReliabilityComparison[key].maeReduction >= 0)
+    && (item.disagreementCalibrationComparison.selectedAlpha === 0
+      || item.disagreementCalibrationComparison.finalSelected.meanWidth90 < item.disagreementCalibrationComparison.finalBaseline.meanWidth90)
     && item.development.coverage80 >= .78 && item.development.coverage90 >= .88
     && item.stability.coverage80 >= .78 && item.stability.coverage90 >= .88
     && item.final.coverage80 >= .75 && item.final.coverage80 <= .9
@@ -108,4 +117,4 @@ if (subtypeAtlas.records.some((record) => !['bu/acre', 'tons/acre'].includes(rec
   throw new Error('Crop-subtype atlas lost explicit, finite yield units.');
 }
 
-console.log('Crop expansion policy verified: five-county subtype priors improve locked transfer with history reliability and region-safe uncertainty');
+console.log('Crop expansion policy verified: five-county subtype priors improve locked transfer with history reliability, disagreement scaling, and region-safe uncertainty');
