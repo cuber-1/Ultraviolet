@@ -67,6 +67,7 @@ def evaluate(
     mean_gain_floor: float = 25,
     shift_gain_floor: float = 20,
     maximum_size_bytes: int = 40_000_000,
+    require_smaller_size: bool = True,
     latency_ceiling: float = 1.0,
     validation_name: str = "CropFit interaction-only compaction validation v0.12 candidate",
     protocol_champion: str = "v0.11.0, six range-relative features, 40 Extra Trees, min_samples_leaf=1",
@@ -176,21 +177,32 @@ def evaluate(
         item.pop("treeStd")
         item.pop("errors")
 
+    size_passed = (
+        sizes["interactionCandidate"] <= maximum_size_bytes
+        and (
+            not require_smaller_size
+            or sizes["interactionCandidate"] < sizes["championV011"]
+        )
+    )
+    size_rule = (
+        f"compressed size must be smaller than v0.11 and <={maximum_size_bytes / 1_000_000:g} MB"
+        if require_smaller_size
+        else f"compressed size must be <={maximum_size_bytes / 1_000_000:g} MB (a measured size increase is allowed)"
+    )
     gate = {
         "passed": (
             all(item["passedPerSeedGate"] for item in results)
             and all_mae_gain >= mean_gain_floor and all_p90_gain >= mean_gain_floor
             and final_mae_gain >= mean_gain_floor and final_p90_gain >= mean_gain_floor
             and latency_ratio <= latency_ceiling
-            and sizes["interactionCandidate"] < sizes["championV011"]
-            and sizes["interactionCandidate"] <= maximum_size_bytes
+            and size_passed
             and shift_gate
         ),
         "rule": (
             "Every fresh grouped seed must improve MAE, p90, and deployed maximum error; preserve "
             "API-served active 80%/90% coverage within 3 points; and tighten both active intervals. "
             f"All-seed and final-only mean MAE/p90 gains must each be >={mean_gain_floor:g}%; mean API latency must "
-            f"be <={latency_ceiling:g}x; compressed size must be smaller than v0.11 and <={maximum_size_bytes / 1_000_000:g} MB. A separate "
+            f"be <={latency_ceiling:g}x; {size_rule}. A separate "
             f"Latin-hypercube shift must improve raw MAE, raw p90, and deployed MAE by >={shift_gain_floor:g}%, "
             "improve irrigated/rainfed/active MAE and deployed maximum error, and preserve active "
             "coverage within 2 points of nominal."
@@ -249,9 +261,10 @@ def evaluate(
 def markdown(
     report: dict,
     introduction: str = "The candidate keeps only the two transparent interaction features and uses leaf smoothing to improve tail safety. Training density and evaluation rows are unchanged from v0.11.",
+    report_title: str = "CropFit interaction-only compaction validation",
 ) -> str:
     lines = [
-        "# CropFit interaction-only compaction validation", "",
+        f"# {report_title}", "",
         introduction, "",
         "| Phase | Seed | v0.11 MAE | Candidate MAE | MAE gain | p90 gain | Max deployed error | Active 80% | Active 90% |",
         "|---|---:|---:|---:|---:|---:|---:|---:|---:|",
@@ -266,9 +279,15 @@ def markdown(
             f'{active["coverage80"]:.1%} | {active["coverage90"]:.1%} |'
         )
     summary, shift = report["summary"], report["independentShift"]
+    size_change = summary["sizeReductionPercent"]
+    size_description = (
+        f"{size_change:.1f}% smaller"
+        if size_change >= 0
+        else f"{-size_change:.1f}% larger"
+    )
     lines += [
         "", f'Seed wins: **{summary["seedWins"]}/{summary["seeds"]}**. Final-only gains are **{summary["finalMeanMaeImprovementPercent"]:.2f}% MAE** and **{summary["finalMeanP90ImprovementPercent"]:.2f}% p90**.',
-        "", f'The forest is **{summary["candidateSerializedSizeBytes"] / 1_000_000:.1f} MB** ({summary["sizeReductionPercent"]:.1f}% smaller) with **{summary["meanApiBatchLatencyRatio"]:.2f}x** batch latency.',
+        "", f'The forest is **{summary["candidateSerializedSizeBytes"] / 1_000_000:.1f} MB** ({size_description}) with **{summary["meanApiBatchLatencyRatio"]:.2f}x** batch latency.',
         "", "## Independent shift", "",
         f'Fresh-shift gains are **{shift["gains"]["maePercent"]:.2f}% raw MAE**, **{shift["gains"]["p90Percent"]:.2f}% raw p90**, and **{shift["gains"]["deployedMaePercent"]:.2f}% deployed MAE**.',
         "", f'Active shifted coverage is **{shift["activeCoverage"]["independentShift"]["p80"]:.1%} / {shift["activeCoverage"]["independentShift"]["p90"]:.1%}**.',
@@ -284,6 +303,7 @@ def plot(
     output: Path,
     figure_title: str = "CropFit v0.12 candidate rejected · one deployed-tail regression",
     heldout_title: str = "Two-feature held-out gains",
+    calibration_title: str = "Candidate active calibration",
     tail_title: str = "Tail gate fails on seed 18",
 ) -> None:
     results = report["results"]
@@ -299,7 +319,7 @@ def plot(
     axes[1].plot(x, [item["interactionCandidate"]["activeCalibration"]["coverage80"] for item in results], marker="o", label="active 80%", color="#d98352")
     axes[1].plot(x, [item["interactionCandidate"]["activeCalibration"]["coverage90"] for item in results], marker="o", label="active 90%", color="#315d49")
     axes[1].axhline(.8, color="#d98352", linestyle="--", alpha=.65); axes[1].axhline(.9, color="#315d49", linestyle="--", alpha=.65)
-    axes[1].set(xticks=x, xticklabels=labels, ylim=(.75, .95), xlabel="fresh seed suffix", ylabel="Coverage", title="Interaction-model calibration")
+    axes[1].set(xticks=x, xticklabels=labels, ylim=(.75, .95), xlabel="fresh seed suffix", ylabel="Coverage", title=calibration_title)
     axes[1].legend(); axes[1].grid(alpha=.18)
     width = .38
     champion_max = [item["championV011"]["deployedMaximumAbsoluteError"] for item in results]

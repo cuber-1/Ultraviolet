@@ -453,6 +453,24 @@ def verify(artifact: Path, profiles: Path) -> None:
         assert smoothing_report["independentShift"]["gains"]["p90Percent"] < 5
         assert smoothing_report["independentShift"]["interactionCandidate"]["deployedMaximumAbsoluteError"] > smoothing_report["independentShift"]["championV011"]["deployedMaximumAbsoluteError"]
 
+    density_refinement_v3_validation = artifact.parents[1] / "evaluation/density-refinement-v3-validation-v0.12.json"
+    if density_refinement_v3_validation.exists():
+        density_v3_report = json.loads(density_refinement_v3_validation.read_text())
+        assert not density_v3_report["gate"]["passed"]
+        assert density_v3_report["summary"]["seedWins"] == 5
+        assert density_v3_report["summary"]["seeds"] == 10
+        assert density_v3_report["summary"]["finalMeanP90ImprovementPercent"] < 5
+        assert density_v3_report["summary"]["candidateSerializedSizeBytes"] > density_v3_report["summary"]["championSerializedSizeBytes"]
+        assert density_v3_report["summary"]["candidateSerializedSizeBytes"] <= 70_000_000
+        assert not density_v3_report["independentShift"]["passed"]
+        assert density_v3_report["independentShift"]["gains"]["deployedMaePercent"] < 0
+        failed_tails = [
+            item for item in density_v3_report["results"]
+            if item["interactionCandidate"]["deployedMaximumAbsoluteError"]
+            > item["championV011"]["deployedMaximumAbsoluteError"]
+        ]
+        assert [item["seed"] for item in failed_tails] == [20270321, 20270322, 20270323, 20270328]
+
     from .trained_api import PredictionRequest, predict as api_predict
 
     valid_climate = climate(20.0)

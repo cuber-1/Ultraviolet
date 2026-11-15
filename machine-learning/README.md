@@ -127,6 +127,14 @@ npm run ml:evaluate:density-refinement
 npm run ml:evaluate:density-shift
 ```
 
+The later 300-scenario/28-tree refinement is also preserved as a rejection. It
+improves average error, but fails fresh per-seed tail safety, the final p90
+floor, and independent-shift deployed MAE:
+
+```bash
+npm run ml:evaluate:density-refinement-v3
+```
+
 Training refuses to replace the production artifact unless frozen MAE, p90,
 R², held-out-profile-count, and conformal-coverage thresholds all pass. The
 artifact and metadata are written atomically, so interruption cannot leave a

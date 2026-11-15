@@ -49,6 +49,16 @@ A six-feature smoothing follow-up also failed. Increasing to 72 trees with
 against a 5% floor, while deployed maximum error worsened from 0.698 to 1.200.
 See `evaluation/leaf-smoothing-validation-v0.12.md`.
 
+A denser six-feature follow-up fitted 300 scenarios per crop and reduced the
+forest to 28 trees. It improved all-seed MAE/p90 by 7.94%/7.39%, but only 5/10
+fresh seeds cleared every gate. Final-only p90 improved 4.82%, below the 5%
+floor; four seeds worsened deployed maximum error; and independent-shift
+deployed MAE regressed 2.67%. Its 66.9 MB artifact was also 4.16% larger. The
+experiment's declared 70 MB ceiling allowed that measured increase; correcting
+an inherited smaller-than-v0.11 harness clause did not affect the rejection,
+which independently fails accuracy and tail gates. See
+`evaluation/density-refinement-v3-validation-v0.12.md`.
+
 Version 0.9 increases generated fitting coverage from 72 to 120 scenarios per
 training crop while preserving the exact v0.8 validation and held-out rows. The
 denser fitting data lets the ensemble shrink from 120 to 70 trees. Across two
