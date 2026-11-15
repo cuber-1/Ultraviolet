@@ -59,6 +59,15 @@ an inherited smaller-than-v0.11 harness clause did not affect the rejection,
 which independently fails accuracy and tail gates. See
 `evaluation/density-refinement-v3-validation-v0.12.md`.
 
+A subsequent development-only screen kept all confirmation, final, and shift
+seeds closed while comparing additional density/tree balances, 48-tree
+capacity, Poisson splitting, and active-case upper tree quantiles. None
+advanced. The strongest average candidate, 300 scenarios with 32 trees,
+improved MAE/p90 by 11.65%/14.05% but cleared only 2/3 development seed
+screens. Poisson variants cleared 0/3 and produced deployed maximum errors as
+high as 8.75 points; upper quantiles regressed raw error by 35–120%. See
+`evaluation/density-capacity-development-v0.12.md`.
+
 Version 0.9 increases generated fitting coverage from 72 to 120 scenarios per
 training crop while preserving the exact v0.8 validation and held-out rows. The
 denser fitting data lets the ensemble shrink from 120 to 70 trees. Across two

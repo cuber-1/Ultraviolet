@@ -1,0 +1,795 @@
+{
+  "name": "CropFit density/capacity development screen v0.12",
+  "protocol": {
+    "target": "EcoCrop mechanistic screening teacher; not observed yield",
+    "features": "the six locked v0.11 range-relative and interaction features",
+    "developmentSeeds": [
+      20270401,
+      20270402,
+      20270403
+    ],
+    "reservedSeedsOpened": false,
+    "sizeCeilingBytes": 80000000,
+    "rule": "Advance only if every development seed improves raw MAE, raw p90, and deployed maximum error; mean MAE/p90 gains are each at least 5%; and compressed size is at most 80 MB. Passing development permits fresh validation but is not promotion.",
+    "quantilePolicy": "Upper tree quantiles are applied only to active cases; inactive predictions retain the mean. No held-out labels are used by the aggregator."
+  },
+  "results": [
+    {
+      "seed": 20270401,
+      "models": {
+        "v0.11": {
+          "mae": 0.01041,
+          "p90AbsoluteError": 0.02869,
+          "deployedMaximumAbsoluteError": 0.59925,
+          "fitSeconds": 0.488
+        },
+        "200x48": {
+          "mae": 0.0098,
+          "p90AbsoluteError": 0.02658,
+          "deployedMaximumAbsoluteError": 0.40572,
+          "fitSeconds": 0.577,
+          "gains": {
+            "maePercent": 5.86,
+            "p90Percent": 7.35
+          },
+          "tailWin": true,
+          "passedSeedScreen": true
+        },
+        "220x40": {
+          "mae": 0.00972,
+          "p90AbsoluteError": 0.02456,
+          "deployedMaximumAbsoluteError": 0.5975,
+          "fitSeconds": 0.559,
+          "gains": {
+            "maePercent": 6.63,
+            "p90Percent": 14.4
+          },
+          "tailWin": true,
+          "passedSeedScreen": true
+        },
+        "240x40": {
+          "mae": 0.009,
+          "p90AbsoluteError": 0.02273,
+          "deployedMaximumAbsoluteError": 0.5297,
+          "fitSeconds": 0.602,
+          "gains": {
+            "maePercent": 13.54,
+            "p90Percent": 20.77
+          },
+          "tailWin": true,
+          "passedSeedScreen": true
+        },
+        "240x40-q50": {
+          "mae": 0.01505,
+          "p90AbsoluteError": 0.04085,
+          "deployedMaximumAbsoluteError": 0.63045,
+          "gains": {
+            "maePercent": -44.57,
+            "p90Percent": -42.38
+          },
+          "tailWin": false,
+          "passedSeedScreen": false
+        },
+        "240x40-q55": {
+          "mae": 0.01603,
+          "p90AbsoluteError": 0.04399,
+          "deployedMaximumAbsoluteError": 0.63045,
+          "gains": {
+            "maePercent": -53.99,
+            "p90Percent": -53.33
+          },
+          "tailWin": false,
+          "passedSeedScreen": false
+        },
+        "240x40-q60": {
+          "mae": 0.01798,
+          "p90AbsoluteError": 0.04898,
+          "deployedMaximumAbsoluteError": 0.56891,
+          "gains": {
+            "maePercent": -72.72,
+            "p90Percent": -70.72
+          },
+          "tailWin": true,
+          "passedSeedScreen": false
+        },
+        "240x40-q65": {
+          "mae": 0.02103,
+          "p90AbsoluteError": 0.05759,
+          "deployedMaximumAbsoluteError": 0.39172,
+          "gains": {
+            "maePercent": -102.02,
+            "p90Percent": -100.73
+          },
+          "tailWin": true,
+          "passedSeedScreen": false
+        },
+        "260x36": {
+          "mae": 0.00967,
+          "p90AbsoluteError": 0.02495,
+          "deployedMaximumAbsoluteError": 0.50281,
+          "fitSeconds": 0.575,
+          "gains": {
+            "maePercent": 7.11,
+            "p90Percent": 13.04
+          },
+          "tailWin": true,
+          "passedSeedScreen": true
+        },
+        "280x34": {
+          "mae": 0.00951,
+          "p90AbsoluteError": 0.02477,
+          "deployedMaximumAbsoluteError": 0.59197,
+          "fitSeconds": 0.574,
+          "gains": {
+            "maePercent": 8.65,
+            "p90Percent": 13.66
+          },
+          "tailWin": true,
+          "passedSeedScreen": true
+        },
+        "300x32": {
+          "mae": 0.00879,
+          "p90AbsoluteError": 0.02275,
+          "deployedMaximumAbsoluteError": 0.71501,
+          "fitSeconds": 0.608,
+          "gains": {
+            "maePercent": 15.56,
+            "p90Percent": 20.7
+          },
+          "tailWin": false,
+          "passedSeedScreen": false
+        },
+        "300x32-q50": {
+          "mae": 0.01371,
+          "p90AbsoluteError": 0.03889,
+          "deployedMaximumAbsoluteError": 1.1133,
+          "gains": {
+            "maePercent": -31.7,
+            "p90Percent": -35.55
+          },
+          "tailWin": false,
+          "passedSeedScreen": false
+        },
+        "300x32-q55": {
+          "mae": 0.01482,
+          "p90AbsoluteError": 0.04361,
+          "deployedMaximumAbsoluteError": 1.1133,
+          "gains": {
+            "maePercent": -42.36,
+            "p90Percent": -52.0
+          },
+          "tailWin": false,
+          "passedSeedScreen": false
+        },
+        "300x32-q60": {
+          "mae": 0.01638,
+          "p90AbsoluteError": 0.0486,
+          "deployedMaximumAbsoluteError": 0.7044,
+          "gains": {
+            "maePercent": -57.35,
+            "p90Percent": -69.4
+          },
+          "tailWin": false,
+          "passedSeedScreen": false
+        },
+        "300x32-q65": {
+          "mae": 0.01921,
+          "p90AbsoluteError": 0.05666,
+          "deployedMaximumAbsoluteError": 0.37722,
+          "gains": {
+            "maePercent": -84.53,
+            "p90Percent": -97.49
+          },
+          "tailWin": true,
+          "passedSeedScreen": false
+        },
+        "200x40-poisson": {
+          "mae": 0.0107,
+          "p90AbsoluteError": 0.02716,
+          "deployedMaximumAbsoluteError": 1.85354,
+          "fitSeconds": 0.577,
+          "gains": {
+            "maePercent": -2.79,
+            "p90Percent": 5.33
+          },
+          "tailWin": false,
+          "passedSeedScreen": false
+        },
+        "200x48-poisson": {
+          "mae": 0.0101,
+          "p90AbsoluteError": 0.02562,
+          "deployedMaximumAbsoluteError": 2.19562,
+          "fitSeconds": 0.671,
+          "gains": {
+            "maePercent": 2.98,
+            "p90Percent": 10.7
+          },
+          "tailWin": false,
+          "passedSeedScreen": false
+        },
+        "240x40-poisson": {
+          "mae": 0.00953,
+          "p90AbsoluteError": 0.02524,
+          "deployedMaximumAbsoluteError": 1.66788,
+          "fitSeconds": 0.69,
+          "gains": {
+            "maePercent": 8.45,
+            "p90Percent": 12.03
+          },
+          "tailWin": false,
+          "passedSeedScreen": false
+        }
+      }
+    },
+    {
+      "seed": 20270402,
+      "models": {
+        "v0.11": {
+          "mae": 0.00988,
+          "p90AbsoluteError": 0.02455,
+          "deployedMaximumAbsoluteError": 0.69868,
+          "fitSeconds": 0.488
+        },
+        "200x48": {
+          "mae": 0.00947,
+          "p90AbsoluteError": 0.02411,
+          "deployedMaximumAbsoluteError": 0.755,
+          "fitSeconds": 0.64,
+          "gains": {
+            "maePercent": 4.15,
+            "p90Percent": 1.79
+          },
+          "tailWin": false,
+          "passedSeedScreen": false
+        },
+        "220x40": {
+          "mae": 0.00971,
+          "p90AbsoluteError": 0.02418,
+          "deployedMaximumAbsoluteError": 1.23737,
+          "fitSeconds": 0.516,
+          "gains": {
+            "maePercent": 1.72,
+            "p90Percent": 1.51
+          },
+          "tailWin": false,
+          "passedSeedScreen": false
+        },
+        "240x40": {
+          "mae": 0.00904,
+          "p90AbsoluteError": 0.02242,
+          "deployedMaximumAbsoluteError": 0.90941,
+          "fitSeconds": 0.618,
+          "gains": {
+            "maePercent": 8.5,
+            "p90Percent": 8.68
+          },
+          "tailWin": false,
+          "passedSeedScreen": false
+        },
+        "240x40-q50": {
+          "mae": 0.01529,
+          "p90AbsoluteError": 0.03965,
+          "deployedMaximumAbsoluteError": 1.21457,
+          "gains": {
+            "maePercent": -54.76,
+            "p90Percent": -61.51
+          },
+          "tailWin": false,
+          "passedSeedScreen": false
+        },
+        "240x40-q55": {
+          "mae": 0.01598,
+          "p90AbsoluteError": 0.04121,
+          "deployedMaximumAbsoluteError": 1.0217,
+          "gains": {
+            "maePercent": -61.74,
+            "p90Percent": -67.86
+          },
+          "tailWin": false,
+          "passedSeedScreen": false
+        },
+        "240x40-q60": {
+          "mae": 0.01823,
+          "p90AbsoluteError": 0.04864,
+          "deployedMaximumAbsoluteError": 0.6201,
+          "gains": {
+            "maePercent": -84.51,
+            "p90Percent": -98.13
+          },
+          "tailWin": true,
+          "passedSeedScreen": false
+        },
+        "240x40-q65": {
+          "mae": 0.02151,
+          "p90AbsoluteError": 0.05718,
+          "deployedMaximumAbsoluteError": 0.40855,
+          "gains": {
+            "maePercent": -117.71,
+            "p90Percent": -132.91
+          },
+          "tailWin": true,
+          "passedSeedScreen": false
+        },
+        "260x36": {
+          "mae": 0.00873,
+          "p90AbsoluteError": 0.02148,
+          "deployedMaximumAbsoluteError": 0.9456,
+          "fitSeconds": 0.593,
+          "gains": {
+            "maePercent": 11.64,
+            "p90Percent": 12.51
+          },
+          "tailWin": false,
+          "passedSeedScreen": false
+        },
+        "280x34": {
+          "mae": 0.00887,
+          "p90AbsoluteError": 0.02188,
+          "deployedMaximumAbsoluteError": 0.43562,
+          "fitSeconds": 0.591,
+          "gains": {
+            "maePercent": 10.22,
+            "p90Percent": 10.88
+          },
+          "tailWin": true,
+          "passedSeedScreen": true
+        },
+        "300x32": {
+          "mae": 0.0085,
+          "p90AbsoluteError": 0.02064,
+          "deployedMaximumAbsoluteError": 0.60198,
+          "fitSeconds": 0.611,
+          "gains": {
+            "maePercent": 13.97,
+            "p90Percent": 15.93
+          },
+          "tailWin": true,
+          "passedSeedScreen": true
+        },
+        "300x32-q50": {
+          "mae": 0.01327,
+          "p90AbsoluteError": 0.03544,
+          "deployedMaximumAbsoluteError": 0.68401,
+          "gains": {
+            "maePercent": -34.31,
+            "p90Percent": -44.36
+          },
+          "tailWin": true,
+          "passedSeedScreen": false
+        },
+        "300x32-q55": {
+          "mae": 0.01434,
+          "p90AbsoluteError": 0.03883,
+          "deployedMaximumAbsoluteError": 0.63518,
+          "gains": {
+            "maePercent": -45.14,
+            "p90Percent": -58.17
+          },
+          "tailWin": true,
+          "passedSeedScreen": false
+        },
+        "300x32-q60": {
+          "mae": 0.01579,
+          "p90AbsoluteError": 0.04106,
+          "deployedMaximumAbsoluteError": 0.54286,
+          "gains": {
+            "maePercent": -59.82,
+            "p90Percent": -67.25
+          },
+          "tailWin": true,
+          "passedSeedScreen": false
+        },
+        "300x32-q65": {
+          "mae": 0.01864,
+          "p90AbsoluteError": 0.04982,
+          "deployedMaximumAbsoluteError": 0.35293,
+          "gains": {
+            "maePercent": -88.66,
+            "p90Percent": -102.93
+          },
+          "tailWin": true,
+          "passedSeedScreen": false
+        },
+        "200x40-poisson": {
+          "mae": 0.01041,
+          "p90AbsoluteError": 0.02496,
+          "deployedMaximumAbsoluteError": 7.88231,
+          "fitSeconds": 0.59,
+          "gains": {
+            "maePercent": -5.36,
+            "p90Percent": -1.67
+          },
+          "tailWin": false,
+          "passedSeedScreen": false
+        },
+        "200x48-poisson": {
+          "mae": 0.01008,
+          "p90AbsoluteError": 0.02449,
+          "deployedMaximumAbsoluteError": 8.75274,
+          "fitSeconds": 0.711,
+          "gains": {
+            "maePercent": -2.02,
+            "p90Percent": 0.24
+          },
+          "tailWin": false,
+          "passedSeedScreen": false
+        },
+        "240x40-poisson": {
+          "mae": 0.00889,
+          "p90AbsoluteError": 0.02232,
+          "deployedMaximumAbsoluteError": 1.79168,
+          "fitSeconds": 0.701,
+          "gains": {
+            "maePercent": 10.02,
+            "p90Percent": 9.08
+          },
+          "tailWin": false,
+          "passedSeedScreen": false
+        }
+      }
+    },
+    {
+      "seed": 20270403,
+      "models": {
+        "v0.11": {
+          "mae": 0.00997,
+          "p90AbsoluteError": 0.02487,
+          "deployedMaximumAbsoluteError": 0.49199,
+          "fitSeconds": 0.473
+        },
+        "200x48": {
+          "mae": 0.00943,
+          "p90AbsoluteError": 0.02463,
+          "deployedMaximumAbsoluteError": 0.43754,
+          "fitSeconds": 0.558,
+          "gains": {
+            "maePercent": 5.42,
+            "p90Percent": 0.97
+          },
+          "tailWin": true,
+          "passedSeedScreen": true
+        },
+        "220x40": {
+          "mae": 0.00942,
+          "p90AbsoluteError": 0.02467,
+          "deployedMaximumAbsoluteError": 0.45047,
+          "fitSeconds": 0.501,
+          "gains": {
+            "maePercent": 5.52,
+            "p90Percent": 0.8
+          },
+          "tailWin": true,
+          "passedSeedScreen": true
+        },
+        "240x40": {
+          "mae": 0.00938,
+          "p90AbsoluteError": 0.0223,
+          "deployedMaximumAbsoluteError": 0.40774,
+          "fitSeconds": 0.564,
+          "gains": {
+            "maePercent": 5.92,
+            "p90Percent": 10.33
+          },
+          "tailWin": true,
+          "passedSeedScreen": true
+        },
+        "240x40-q50": {
+          "mae": 0.01489,
+          "p90AbsoluteError": 0.03918,
+          "deployedMaximumAbsoluteError": 1.30121,
+          "gains": {
+            "maePercent": -49.35,
+            "p90Percent": -57.54
+          },
+          "tailWin": false,
+          "passedSeedScreen": false
+        },
+        "240x40-q55": {
+          "mae": 0.01595,
+          "p90AbsoluteError": 0.042,
+          "deployedMaximumAbsoluteError": 1.30121,
+          "gains": {
+            "maePercent": -59.98,
+            "p90Percent": -68.88
+          },
+          "tailWin": false,
+          "passedSeedScreen": false
+        },
+        "240x40-q60": {
+          "mae": 0.01808,
+          "p90AbsoluteError": 0.04726,
+          "deployedMaximumAbsoluteError": 0.93606,
+          "gains": {
+            "maePercent": -81.34,
+            "p90Percent": -90.03
+          },
+          "tailWin": false,
+          "passedSeedScreen": false
+        },
+        "240x40-q65": {
+          "mae": 0.0211,
+          "p90AbsoluteError": 0.05598,
+          "deployedMaximumAbsoluteError": 0.50263,
+          "gains": {
+            "maePercent": -111.63,
+            "p90Percent": -125.09
+          },
+          "tailWin": false,
+          "passedSeedScreen": false
+        },
+        "260x36": {
+          "mae": 0.0093,
+          "p90AbsoluteError": 0.0237,
+          "deployedMaximumAbsoluteError": 0.66842,
+          "fitSeconds": 0.546,
+          "gains": {
+            "maePercent": 6.72,
+            "p90Percent": 4.7
+          },
+          "tailWin": false,
+          "passedSeedScreen": false
+        },
+        "280x34": {
+          "mae": 0.00912,
+          "p90AbsoluteError": 0.02327,
+          "deployedMaximumAbsoluteError": 0.65241,
+          "fitSeconds": 0.569,
+          "gains": {
+            "maePercent": 8.53,
+            "p90Percent": 6.43
+          },
+          "tailWin": false,
+          "passedSeedScreen": false
+        },
+        "300x32": {
+          "mae": 0.00943,
+          "p90AbsoluteError": 0.0235,
+          "deployedMaximumAbsoluteError": 0.46633,
+          "fitSeconds": 0.586,
+          "gains": {
+            "maePercent": 5.42,
+            "p90Percent": 5.51
+          },
+          "tailWin": true,
+          "passedSeedScreen": true
+        },
+        "300x32-q50": {
+          "mae": 0.01386,
+          "p90AbsoluteError": 0.03563,
+          "deployedMaximumAbsoluteError": 0.96302,
+          "gains": {
+            "maePercent": -39.02,
+            "p90Percent": -43.26
+          },
+          "tailWin": false,
+          "passedSeedScreen": false
+        },
+        "300x32-q55": {
+          "mae": 0.01504,
+          "p90AbsoluteError": 0.03852,
+          "deployedMaximumAbsoluteError": 0.87786,
+          "gains": {
+            "maePercent": -50.85,
+            "p90Percent": -54.89
+          },
+          "tailWin": false,
+          "passedSeedScreen": false
+        },
+        "300x32-q60": {
+          "mae": 0.01674,
+          "p90AbsoluteError": 0.04222,
+          "deployedMaximumAbsoluteError": 0.51295,
+          "gains": {
+            "maePercent": -67.9,
+            "p90Percent": -69.76
+          },
+          "tailWin": false,
+          "passedSeedScreen": false
+        },
+        "300x32-q65": {
+          "mae": 0.01964,
+          "p90AbsoluteError": 0.05096,
+          "deployedMaximumAbsoluteError": 0.50085,
+          "gains": {
+            "maePercent": -96.99,
+            "p90Percent": -104.91
+          },
+          "tailWin": false,
+          "passedSeedScreen": false
+        },
+        "200x40-poisson": {
+          "mae": 0.01057,
+          "p90AbsoluteError": 0.02605,
+          "deployedMaximumAbsoluteError": 3.16887,
+          "fitSeconds": 0.582,
+          "gains": {
+            "maePercent": -6.02,
+            "p90Percent": -4.74
+          },
+          "tailWin": false,
+          "passedSeedScreen": false
+        },
+        "200x48-poisson": {
+          "mae": 0.00994,
+          "p90AbsoluteError": 0.02331,
+          "deployedMaximumAbsoluteError": 3.25584,
+          "fitSeconds": 0.663,
+          "gains": {
+            "maePercent": 0.3,
+            "p90Percent": 6.27
+          },
+          "tailWin": false,
+          "passedSeedScreen": false
+        },
+        "240x40-poisson": {
+          "mae": 0.00941,
+          "p90AbsoluteError": 0.02369,
+          "deployedMaximumAbsoluteError": 6.20271,
+          "fitSeconds": 0.702,
+          "gains": {
+            "maePercent": 5.62,
+            "p90Percent": 4.74
+          },
+          "tailWin": false,
+          "passedSeedScreen": false
+        }
+      }
+    }
+  ],
+  "summary": [
+    {
+      "candidate": "200x48",
+      "meanMaeImprovementPercent": 5.14,
+      "meanP90ImprovementPercent": 3.37,
+      "seedScreensPassed": 2,
+      "seeds": 3,
+      "serializedSizeBytes": 77370563,
+      "advanced": false
+    },
+    {
+      "candidate": "220x40",
+      "meanMaeImprovementPercent": 4.62,
+      "meanP90ImprovementPercent": 5.57,
+      "seedScreensPassed": 2,
+      "seeds": 3,
+      "serializedSizeBytes": 70548841,
+      "advanced": false
+    },
+    {
+      "candidate": "240x40",
+      "meanMaeImprovementPercent": 9.32,
+      "meanP90ImprovementPercent": 13.26,
+      "seedScreensPassed": 2,
+      "seeds": 3,
+      "serializedSizeBytes": 76486670,
+      "advanced": false
+    },
+    {
+      "candidate": "240x40-q50",
+      "meanMaeImprovementPercent": -49.56,
+      "meanP90ImprovementPercent": -53.81,
+      "seedScreensPassed": 0,
+      "seeds": 3,
+      "serializedSizeBytes": 76486670,
+      "advanced": false
+    },
+    {
+      "candidate": "240x40-q55",
+      "meanMaeImprovementPercent": -58.57,
+      "meanP90ImprovementPercent": -63.36,
+      "seedScreensPassed": 0,
+      "seeds": 3,
+      "serializedSizeBytes": 76486670,
+      "advanced": false
+    },
+    {
+      "candidate": "240x40-q60",
+      "meanMaeImprovementPercent": -79.52,
+      "meanP90ImprovementPercent": -86.29,
+      "seedScreensPassed": 0,
+      "seeds": 3,
+      "serializedSizeBytes": 76486670,
+      "advanced": false
+    },
+    {
+      "candidate": "240x40-q65",
+      "meanMaeImprovementPercent": -110.45,
+      "meanP90ImprovementPercent": -119.58,
+      "seedScreensPassed": 0,
+      "seeds": 3,
+      "serializedSizeBytes": 76486670,
+      "advanced": false
+    },
+    {
+      "candidate": "260x36",
+      "meanMaeImprovementPercent": 8.49,
+      "meanP90ImprovementPercent": 10.08,
+      "seedScreensPassed": 1,
+      "seeds": 3,
+      "serializedSizeBytes": 75002181,
+      "advanced": false
+    },
+    {
+      "candidate": "280x34",
+      "meanMaeImprovementPercent": 9.13,
+      "meanP90ImprovementPercent": 10.32,
+      "seedScreensPassed": 2,
+      "seeds": 3,
+      "serializedSizeBytes": 76192373,
+      "advanced": false
+    },
+    {
+      "candidate": "300x32",
+      "meanMaeImprovementPercent": 11.65,
+      "meanP90ImprovementPercent": 14.05,
+      "seedScreensPassed": 2,
+      "seeds": 3,
+      "serializedSizeBytes": 76683627,
+      "advanced": false
+    },
+    {
+      "candidate": "300x32-q50",
+      "meanMaeImprovementPercent": -35.01,
+      "meanP90ImprovementPercent": -41.06,
+      "seedScreensPassed": 0,
+      "seeds": 3,
+      "serializedSizeBytes": 76683627,
+      "advanced": false
+    },
+    {
+      "candidate": "300x32-q55",
+      "meanMaeImprovementPercent": -46.12,
+      "meanP90ImprovementPercent": -55.02,
+      "seedScreensPassed": 0,
+      "seeds": 3,
+      "serializedSizeBytes": 76683627,
+      "advanced": false
+    },
+    {
+      "candidate": "300x32-q60",
+      "meanMaeImprovementPercent": -61.69,
+      "meanP90ImprovementPercent": -68.8,
+      "seedScreensPassed": 0,
+      "seeds": 3,
+      "serializedSizeBytes": 76683627,
+      "advanced": false
+    },
+    {
+      "candidate": "300x32-q65",
+      "meanMaeImprovementPercent": -90.06,
+      "meanP90ImprovementPercent": -101.78,
+      "seedScreensPassed": 0,
+      "seeds": 3,
+      "serializedSizeBytes": 76683627,
+      "advanced": false
+    },
+    {
+      "candidate": "200x40-poisson",
+      "meanMaeImprovementPercent": -4.72,
+      "meanP90ImprovementPercent": -0.36,
+      "seedScreensPassed": 0,
+      "seeds": 3,
+      "serializedSizeBytes": 67997634,
+      "advanced": false
+    },
+    {
+      "candidate": "200x48-poisson",
+      "meanMaeImprovementPercent": 0.42,
+      "meanP90ImprovementPercent": 5.74,
+      "seedScreensPassed": 0,
+      "seeds": 3,
+      "serializedSizeBytes": 81599966,
+      "advanced": false
+    },
+    {
+      "candidate": "240x40-poisson",
+      "meanMaeImprovementPercent": 8.03,
+      "meanP90ImprovementPercent": 8.62,
+      "seedScreensPassed": 0,
+      "seeds": 3,
+      "serializedSizeBytes": 80883466,
+      "advanced": false
+    }
+  ],
+  "advancedCandidates": []
+}

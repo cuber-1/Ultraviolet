@@ -471,6 +471,28 @@ def verify(artifact: Path, profiles: Path) -> None:
         ]
         assert [item["seed"] for item in failed_tails] == [20270321, 20270322, 20270323, 20270328]
 
+    density_capacity_development = artifact.parents[1] / "evaluation/density-capacity-development-v0.12.json"
+    if density_capacity_development.exists():
+        development_report = json.loads(density_capacity_development.read_text())
+        assert development_report["protocol"]["reservedSeedsOpened"] is False
+        assert development_report["advancedCandidates"] == []
+        development_summary = {
+            item["candidate"]: item for item in development_report["summary"]
+        }
+        densest = development_summary["300x32"]
+        assert densest["meanMaeImprovementPercent"] >= 10
+        assert densest["meanP90ImprovementPercent"] >= 10
+        assert densest["seedScreensPassed"] == 2
+        assert not densest["advanced"]
+        for name in ("200x40-poisson", "200x48-poisson", "240x40-poisson"):
+            assert development_summary[name]["seedScreensPassed"] == 0
+            assert not development_summary[name]["advanced"]
+        assert min(
+            item["meanMaeImprovementPercent"]
+            for name, item in development_summary.items()
+            if "-q" in name
+        ) < -100
+
     from .trained_api import PredictionRequest, predict as api_predict
 
     valid_climate = climate(20.0)

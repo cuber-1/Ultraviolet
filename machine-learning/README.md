@@ -135,6 +135,13 @@ floor, and independent-shift deployed MAE:
 npm run ml:evaluate:density-refinement-v3
 ```
 
+The follow-up density, capacity, Poisson, and ensemble-quantile search uses
+development seeds only. No design advanced to reserved validation:
+
+```bash
+npm run ml:develop:density-capacity
+```
+
 Training refuses to replace the production artifact unless frozen MAE, p90,
 R², held-out-profile-count, and conformal-coverage thresholds all pass. The
 artifact and metadata are written atomically, so interruption cannot leave a
