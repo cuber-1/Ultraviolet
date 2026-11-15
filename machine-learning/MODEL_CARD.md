@@ -188,6 +188,12 @@ Hard-zero deployed scores receive zero radius because the deterministic ceiling
 fixes their value. These are conditional EcoCrop-teacher fidelity bands, not
 per-species or observed-yield guarantees.
 
+The property presentation uses the calibrated p80 radius for its score band and
+labels it **surrogate error**. It displays values below one tenth of a point as
+`<0.1` instead of rounding them to a misleading `0`. The separate historical
+p10–p90 band describes ten-year weather variability; neither band is a parcel-
+yield or financial-return interval.
+
 The production estimator is solved by ordinary least squares and therefore has
 no learning rate or iterative production loss curve. A CUDA XGBoost diagnostic
 candidate still completed 500 rounds with a cosine schedule from 0.08 to

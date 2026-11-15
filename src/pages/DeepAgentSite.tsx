@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, Box, CalendarDays, Cpu, ExternalLink, LayoutGrid, MapPin, ShieldCheck, Sun } from 'lucide-react';
 import { SiteWorkspace } from './AgriculturePage';
 import RoofPreview3D from '../components/RoofPreview3D';
-import { CLASSES, ComponentBars, CropTimeline, PlantingCurveChart, classify, CROP_COLORS } from '../components/charts/DeepAgentCharts';
+import { CLASSES, ComponentBars, CropTimeline, PlantingCurveChart, classify, CROP_COLORS, formatSurrogateError } from '../components/charts/DeepAgentCharts';
 import type { CropModelInfo, CropPrediction, SearchResult, SunlightEvidence } from '../services/vexcel';
 import { cropById, estimateFood, formatLbs, type Crop } from '../services/cropPlan';
 import { roofTitle, useAddresses } from '../services/addresses';
@@ -42,6 +42,7 @@ export default function DeepAgentSite({ result, rank, total, simulation, predict
   const sun = sunScore(sunlit, criteria.targetAreaSqft, meanHours);
   const lead = predictions.find((item) => item.source === 'ml' && item.plantMonth !== null) ?? null;
   const leadPoint = lead?.curve?.find((point) => point.month === lead.plantMonth) ?? null;
+  const leadError = leadPoint?.errorP80 ?? leadPoint?.uncertainty ?? null;
   const cropProfiles = crops.map((crop) => cropById(crop.id)).filter((crop): crop is Crop => Boolean(crop));
   const food = estimateFood(sunlit, cropProfiles, new Set(predictions.filter((item) => item.source === 'ml' && item.plantMonth === null).map((item) => item.cropId)));
   const starts = predictions.filter((item) => item.plantMonth !== null).sort((a, b) => ((a.plantMonth! - preferredMonth + 12) % 12) - ((b.plantMonth! - preferredMonth + 12) % 12));
@@ -65,7 +66,7 @@ export default function DeepAgentSite({ result, rank, total, simulation, predict
       <section>
         <div className="das-metrics">
           <Metric tone="sun" label="Sun score" value={sun === null ? '—' : `${sun}`} unit="/ 100" hint={sunlit === null ? 'Roof geometry missing' : `${fmt(sunlit)} ft² gets ${criteria.targetHours} h+ · ${meanHours === null ? '—' : meanHours.toFixed(1)} h average`} />
-          <Metric tone="fit" label="Crop fit" value={avgFit === null ? '—' : `${Math.round(avgFit)}`} unit={leadPoint?.uncertainty != null ? `± ${Math.round(leadPoint.uncertainty)}` : '/ 100'} hint={lead ? `${cropName(lead.cropId)} in ${MONTHS[lead.plantMonth!]}${leadPoint?.historicalP10 != null && leadPoint.historicalP90 != null ? ` · past years ${Math.round(leadPoint.historicalP10)}–${Math.round(leadPoint.historicalP90)}` : ''}` : 'Model unavailable'} />
+          <Metric tone="fit" label="Crop fit" value={avgFit === null ? '—' : `${Math.round(avgFit)}`} unit={leadError !== null ? `± ${formatSurrogateError(leadError)}` : '/ 100'} hint={lead ? `${cropName(lead.cropId)} in ${MONTHS[lead.plantMonth!]}${leadPoint?.historicalP10 != null && leadPoint.historicalP90 != null ? ` · past years ${Math.round(leadPoint.historicalP10)}–${Math.round(leadPoint.historicalP90)}` : ''}` : 'Model unavailable'} />
           <Metric tone="food" label="Food per year" value={food ? formatLbs(food.lbsPerYear) : '—'} unit="lbs" hint={food ? `${fmt(food.usableSqft)} ft² of beds · estimate` : 'Needs sunlit area'} />
         </div>
         {explanation && <div className="das-card das-why"><span className="das-label">Why it ranks #{rank}</span><p title={explanation}>{explanation}</p></div>}
@@ -133,6 +134,7 @@ function ModelTab({ predictions, crops, preferredMonth, mlModel }: { predictions
   const index = Math.max(0, crops.findIndex((crop) => crop.id === cropId));
   const series = useMemo(() => crops.flatMap((crop) => { const p = predictions.find((x) => x.cropId === crop.id); return p?.curve?.length === 12 ? [{ id: crop.id, name: crop.name, curve: p.curve, plantMonth: p.plantMonth, harvestMonth: p.harvestMonth, suitableMonths: p.suitableMonths ?? [] }] : []; }), [crops, predictions]);
   const point = item?.curve?.find((entry) => entry.month === item.plantMonth) ?? null;
+  const pointError = point?.errorP80 ?? point?.uncertainty ?? null;
   const components = point?.components ?? null;
   if (!item) return <main className="das-body"><p className="viz-empty">The crop model did not score these crops for this roof.</p></main>;
   return <main className="das-body das-model">
@@ -146,7 +148,7 @@ function ModelTab({ predictions, crops, preferredMonth, mlModel }: { predictions
         <span className="das-label" style={{ color: CROP_COLORS[index % CROP_COLORS.length] }}>{crops[index]?.name}</span>
         <div className="das-score"><strong>{Math.round(item.suitability * 100)}</strong><span>fit if planted in {item.plantMonth !== null ? MONTHS[item.plantMonth] : '—'}</span></div>
         <dl className="das-dl">
-          <div><dt>Model uncertainty</dt><dd>{point?.uncertainty != null ? `± ${Math.round(point.uncertainty)} points` : '—'}</dd></div>
+          <div><dt>80% surrogate error</dt><dd>{pointError !== null ? `± ${formatSurrogateError(pointError)} points` : '—'}</dd></div>
           <div><dt>Past 10 years (weather)</dt><dd>{point?.historicalP10 != null && point.historicalP90 != null ? `${Math.round(point.historicalP10)}–${Math.round(point.historicalP90)}` : '—'}</dd></div>
           <div><dt>Growing days</dt><dd>{item.growingDays ? `${Math.round(item.growingDays.min)}–${Math.round(item.growingDays.max)}` : '—'}</dd></div>
           <div><dt>Source</dt><dd>{item.source === 'ml' ? 'Trained model' : 'Crop calendar'}</dd></div>

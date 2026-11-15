@@ -20,7 +20,7 @@ let recoveredRequests = 0;
 const cropFitResponse = {
   score: 81, bestPlantingMonth: 'MAR', suitableMonths: ['MAR', 'APR'], confidence: 0.7,
   growingDays: { min: 60, max: 90 }, limitingFactors: [{ factor: 'water', score: 75 }],
-  monthlyCurve: [{ month: 'MAR', score: 81, uncertainty: 5 }],
+  monthlyCurve: [{ month: 'MAR', score: 81, uncertainty: 5, expectedAbsoluteErrorP80: .08, expectedAbsoluteErrorP90: .12 }],
   observedYieldEvidence: {
     county: 'Fort Bend County', state: 'TX', distanceKm: 46.7, years: [2024, 2025], observations: 2,
     meanPercentile: .4, p10Percentile: .3, p90Percentile: .5, meanYieldBushelsPerAcre: 140,
@@ -55,7 +55,7 @@ const backup = await start(async (req, res) => {
     const body = JSON.parse(Buffer.concat(chunks).toString()) as { climate?: unknown[] };
     receivedClimate = body.climate?.length === 12;
     backupRequests += 1;
-    return send(res, 200, { ...cropFitResponse, score: backupScore, monthlyCurve: [{ month: 'MAR', score: backupScore, uncertainty: 5 }] });
+    return send(res, 200, { ...cropFitResponse, score: backupScore, monthlyCurve: [{ month: 'MAR', score: backupScore, uncertainty: 5, expectedAbsoluteErrorP80: .08, expectedAbsoluteErrorP90: .12 }] });
   }
   send(res, 404, {});
 });
@@ -86,7 +86,7 @@ try {
   const backupResult = await predictCropSuitability(request);
   const health = await mlModelHealth();
   const herbs = backupResult.predictions.find(({ cropId }) => cropId === 'herbs');
-  if (backupResult.model.name !== 'CropFit backup' || backupResult.model.source !== 'ml' || health.role !== 'backup' || !receivedClimate || backupResult.predictions[0]?.observedYieldEvidence?.observedYieldPrior?.interval90[1] !== .7 || backupResult.predictions[0]?.observedYieldEvidence?.observedYieldPrior?.neighborCount !== 2 || backupResult.predictions[0]?.observedYieldEvidence?.regionalNeighbors?.[1]?.county !== 'Waller County' || !herbs?.notes?.includes('Representative EcoCrop profile for Herbs: basil.')) {
+  if (backupResult.model.name !== 'CropFit backup' || backupResult.model.source !== 'ml' || health.role !== 'backup' || !receivedClimate || backupResult.predictions[0]?.curve?.[0]?.errorP80 !== .08 || backupResult.predictions[0]?.curve?.[0]?.errorP90 !== .12 || backupResult.predictions[0]?.observedYieldEvidence?.observedYieldPrior?.interval90[1] !== .7 || backupResult.predictions[0]?.observedYieldEvidence?.observedYieldPrior?.neighborCount !== 2 || backupResult.predictions[0]?.observedYieldEvidence?.regionalNeighbors?.[1]?.county !== 'Waller County' || !herbs?.notes?.includes('Representative EcoCrop profile for Herbs: basil.')) {
     throw new Error('Primary-to-backup failover did not select the backup model.');
   }
   const cachedBackup = await predictCropSuitability(request);

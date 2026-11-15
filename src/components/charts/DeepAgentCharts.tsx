@@ -16,6 +16,8 @@ export const FIT_THRESHOLD = 70;
 const MONTHS = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'];
 const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const fmt = (value: number) => new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(value);
+const surrogateError = (point: { errorP80?: number | null; uncertainty: number | null }) => point.errorP80 ?? point.uncertainty;
+export const formatSurrogateError = (value: number | null | undefined) => value == null ? '—' : value < .1 ? '<0.1' : value.toFixed(value < 1 ? 1 : 0);
 
 export function classify(sunlit: number | null, fit: number | null, target: number): ClassKey {
   const enoughSun = sunlit !== null && sunlit >= target;
@@ -138,7 +140,7 @@ export function OptimalPointsChart({ points, crops, targetAreaSqft, onSelect }: 
 }
 
 // ---------------------------------------------------------------- Planting curves
-export type CurveSeries = { id: string; name: string; curve: Array<{ month: number; score: number; uncertainty: number | null }>; plantMonth: number | null; harvestMonth: number | null; suitableMonths: number[] };
+export type CurveSeries = { id: string; name: string; curve: Array<{ month: number; score: number; uncertainty: number | null; errorP80?: number | null }>; plantMonth: number | null; harvestMonth: number | null; suitableMonths: number[] };
 
 export function PlantingCurveChart({ series, preferredMonth, focusId = null }: { series: CurveSeries[]; preferredMonth: number; focusId?: string | null }) {
   const tip = useTip();
@@ -167,8 +169,8 @@ export function PlantingCurveChart({ series, preferredMonth, focusId = null }: {
       {hover !== null && <line x1={x(hover)} x2={x(hover)} y1={m.t} y2={height - m.b} className="viz-crosshair" />}
       {usable.map((item, index) => {
         const color = CROP_COLORS[index % CROP_COLORS.length];
-        const upper = item.curve.map((point) => `${x(point.month)},${y(point.score + (point.uncertainty ?? 0))}`);
-        const lower = item.curve.slice().reverse().map((point) => `${x(point.month)},${y(point.score - (point.uncertainty ?? 0))}`);
+        const upper = item.curve.map((point) => `${x(point.month)},${y(point.score + (surrogateError(point) ?? 0))}`);
+        const lower = item.curve.slice().reverse().map((point) => `${x(point.month)},${y(point.score - (surrogateError(point) ?? 0))}`);
         const dim = focusId !== null && focusId !== item.id;
         const delay = (dim ? 0 : .15) + index * .18;
         return <g key={item.id} opacity={dim ? .3 : 1}>
@@ -181,10 +183,10 @@ export function PlantingCurveChart({ series, preferredMonth, focusId = null }: {
       {labels.map((label) => <g key={label.id} className="viz-fade" style={{ animationDelay: '1.2s' }}><circle cx={width - m.r + 12} cy={label.y - 4} r={4} fill={label.color} /><text x={width - m.r + 20} y={label.y} className="viz-label">{label.name.length > 16 ? `${label.name.slice(0, 15)}…` : label.name}</text></g>)}
       </g>
       {MONTHS.map((_, month) => <rect key={month} x={m.l + month * band} y={m.t} width={band} height={height - m.t - m.b} fill="transparent"
-        onMouseMove={(event) => { setHover(month); tip.show(event, <><strong>Plant in {MONTH_NAMES[month]}</strong>{usable.map((item, index) => { const point = item.curve[month]; return <span key={item.id}><i style={{ background: CROP_COLORS[index % CROP_COLORS.length] }} />{item.name}: {point.score.toFixed(0)}{point.uncertainty !== null ? ` ± ${point.uncertainty.toFixed(0)}` : ''}{item.plantMonth === month ? ' · recommended' : item.suitableMonths.includes(month) ? ' · workable' : ''}</span>; })}</>); }}
+        onMouseMove={(event) => { setHover(month); tip.show(event, <><strong>Plant in {MONTH_NAMES[month]}</strong>{usable.map((item, index) => { const point = item.curve[month]; const error = surrogateError(point); return <span key={item.id}><i style={{ background: CROP_COLORS[index % CROP_COLORS.length] }} />{item.name}: {point.score.toFixed(0)}{error !== null ? ` ± ${formatSurrogateError(error)} (80%)` : ''}{item.plantMonth === month ? ' · recommended' : item.suitableMonths.includes(month) ? ' · workable' : ''}</span>; })}</>); }}
         onMouseLeave={() => { setHover(null); tip.hide(); }} />)}
     </svg>
-    <div className="viz-legend">{usable.map((item, index) => <span key={item.id}><i style={{ background: CROP_COLORS[index % CROP_COLORS.length] }} />{item.name}{item.plantMonth !== null ? ` · plant ${MONTH_NAMES[item.plantMonth]}` : ' · no workable month'}</span>)}<span className="viz-muted">◯ recommended start · • workable month{focusId ? ' · band = model uncertainty' : ''}</span></div>
+    <div className="viz-legend">{usable.map((item, index) => <span key={item.id}><i style={{ background: CROP_COLORS[index % CROP_COLORS.length] }} />{item.name}{item.plantMonth !== null ? ` · plant ${MONTH_NAMES[item.plantMonth]}` : ' · no workable month'}</span>)}<span className="viz-muted">◯ recommended start · • workable month{focusId ? ' · band = calibrated 80% surrogate error' : ''}</span></div>
     {tip.node}
     <TableView headers={['Crop', ...MONTH_NAMES]} rows={usable.map((item) => [item.name, ...item.curve.map((point) => `${point.score.toFixed(0)}${item.plantMonth === point.month ? '★' : ''}`)])} />
   </div>;
