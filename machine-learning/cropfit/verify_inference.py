@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import copy
 import io
 import json
 import math
@@ -99,6 +100,19 @@ def verify(artifact: Path, profiles: Path) -> None:
         assert predictor.metadata["evaluationExamples"] == 134_064
         assert predictor.metadata["metrics"]["mae"] <= .02
         assert predictor.metadata["metrics"]["p90AbsoluteError"] <= .05
+    if predictor.metadata["model"].endswith("v0.12.1"):
+        assert predictor.metadata["selectedModel"] == "logLinear"
+        assert predictor.metadata["modelParameters"]["estimator"] == "LogLinearCropFitRegressor"
+        assert predictor.metadata["modelParameters"]["membershipFloor"] == 1e-6
+        assert predictor.metadata["modelParameters"]["inputFeatures"] == 4
+        assert predictor.metadata["featureNames"] == COMPACT_FEATURE_NAMES[:4]
+        assert predictor.metadata["modelParameters"]["coefficients"] == {
+            "temperature_range_fit": .42,
+            "water_range_fit": .26,
+            "ph_range_fit": .18,
+            "solar_range_fit": .14,
+        }
+        assert predictor.metadata["metrics"]["maximumAbsoluteError"] <= 1e-5
     if predictor.metadata.get("promotionGate"):
         assert predictor.metadata["promotionGate"]["passed"]
         assert all(predictor.metadata["promotionGate"]["checks"].values())
@@ -107,7 +121,7 @@ def verify(artifact: Path, profiles: Path) -> None:
     assert result["plantingReliability"]["years"] == 10
     assert "2016–2025" in result["disclaimer"]
     calibration = predictor.metadata["uncertaintyCalibration"]
-    if calibration.get("normalizedErrorQuantiles"):
+    if calibration.get("normalizedErrorQuantiles") or calibration.get("absoluteErrorQuantiles"):
         assert calibration["gate"]["passed"]
         assert result["confidence"] == calibration["nominalCoverage"]["p80"] == .8
         assert result["expectedAbsoluteError"]["p80"] <= result["expectedAbsoluteError"]["p90"]
@@ -186,6 +200,20 @@ def verify(artifact: Path, profiles: Path) -> None:
             assert "model and metadata" in str(error)
         else:
             raise AssertionError("malformed artifact contract was accepted")
+
+    if predictor.metadata["model"].endswith("v0.12.1"):
+        malformed_model = copy.deepcopy(predictor.model)
+        del malformed_model.coef_
+        with patch("cropfit.inference.joblib.load", return_value={
+            "model": malformed_model,
+            "metadata": predictor.metadata,
+        }):
+            try:
+                CropFitPredictor(artifact, profiles)
+            except RuntimeError as error:
+                assert "supported fitted estimator" in str(error)
+            else:
+                raise AssertionError("unfitted log-linear artifact was accepted")
 
     atlas = artifact.parents[1] / "evaluation/yield-atlas-v11.json"
     if atlas.exists():

@@ -76,8 +76,16 @@ class CropFitPredictor:
                 raise RuntimeError(f"CropFit artifact requests unknown features: {sorted(unknown)}")
             if len(set(metadata_features)) != len(metadata_features):
                 raise RuntimeError("CropFit artifact feature contract contains duplicate names.")
-        if not getattr(self.model, "estimators_", None):
-            raise RuntimeError("CropFit artifact does not contain fitted ensemble estimators.")
+        ensemble_fitted = bool(getattr(self.model, "estimators_", None))
+        parameters = self.metadata.get("modelParameters", {})
+        log_linear_fitted = (
+            parameters.get("estimator") == "LogLinearCropFitRegressor"
+            and hasattr(self.model, "coef_")
+            and hasattr(self.model, "intercept_")
+            and len(self.model.coef_) == expected_features == 4
+        )
+        if not ensemble_fitted and not log_linear_fitted:
+            raise RuntimeError("CropFit artifact does not contain a supported fitted estimator.")
         self.artifact_sha256 = sha256_file(artifact)
         self.profiles = load_profiles(profiles_path)
 
@@ -91,6 +99,11 @@ class CropFitPredictor:
 
     def calibrated_error(self, tree_std: float, active: bool = True) -> tuple[float, float]:
         conditional = self.metadata.get("conditionalUncertaintyCalibration", {})
+        absolute_quantiles = conditional.get("activeAbsoluteErrorQuantiles")
+        if absolute_quantiles:
+            if not active:
+                return 0.0, 0.0
+            return float(absolute_quantiles["p80"]), float(absolute_quantiles["p90"])
         conditional_quantiles = conditional.get("activeNormalizedErrorQuantiles")
         if conditional_quantiles:
             if not active:
@@ -218,13 +231,17 @@ class CropFitPredictor:
     def curves(self, profile, climate_series: list[list[dict]], soil_ph: float, irrigated: bool) -> list[list[dict]]:
         inputs = [self.curve_inputs(profile, values, soil_ph, irrigated) for values in climate_series]
         all_rows = np.asarray([row for rows, *_ in inputs for row in rows], dtype=np.float32)
-        tree_predictions = np.asarray([tree.predict(all_rows) for tree in self.model.estimators_])
+        estimators = getattr(self.model, "estimators_", None)
+        if estimators:
+            tree_predictions = np.asarray([tree.predict(all_rows) for tree in estimators])
+            predictions = tree_predictions.mean(axis=0)
+            uncertainty = tree_predictions.std(axis=0)
+        else:
+            predictions = self.model.predict(all_rows)
+            uncertainty = np.zeros(len(all_rows), dtype=np.float64)
         if self.booster is not None and self.metadata.get("selectedModel") == "xgboost":
             import xgboost as xgb
             predictions = self.booster.predict(xgb.DMatrix(all_rows, feature_names=self.metadata["featureNames"]))
-        else:
-            predictions = tree_predictions.mean(axis=0)
-        uncertainty = tree_predictions.std(axis=0)
         result = []
         offset = 0
         for climate_values, (_, teacher, establishment, seasonal_climate) in zip(climate_series, inputs, strict=True):

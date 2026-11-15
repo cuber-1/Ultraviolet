@@ -7,7 +7,7 @@ revenue, or a buy/sell recommendation.
 
 ## Run the trained model
 
-On macOS or Linux, install the released v0.11.0 artifact, EcoCrop profiles, and
+On macOS or Linux, install the released v0.12.1 artifact, EcoCrop profiles, and
 inference dependencies without access to the Spark:
 
 ```bash
@@ -32,14 +32,14 @@ artifact instead, use the full setup below. Because the repository is private,
 the installer uses an authenticated GitHub CLI session (`gh auth login`) or a
 `GITHUB_TOKEN`.
 
-Runtime API v0.21.0 serves the validated v0.11.0 estimator and hardens every direct
+Runtime API v0.22.0 serves the validated v0.12.1 estimator and hardens every direct
 and HTTP prediction path with the same finite coordinate, soil-pH, boolean,
 climate-shape, and 20-year history limits. Startup validates the artifact's
 internal model/metadata contract. `GET /health` returns the artifact SHA-256 and
 includes its first 12 characters in `revision`, so the web cache and operators
 can identify the exact model binary serving a result. Its `modelContract`
-identifies the regression task, Extra Trees estimator, all 25 candidate
-features, and the six selected production features.
+identifies the regression task, log-linear estimator, all 25 candidate
+features, and the four selected production features.
 
 Every push to `main` repeats the release installation and loopback HTTP test on
 a GitHub-hosted Apple Silicon (`macos-15`, arm64) runner with Python 3.12.
@@ -94,16 +94,20 @@ learning-rate schedule, error distribution, and feature importance to
 `machine-learning/runs/<run-id>/`. A candidate is only promoted when it improves held-out
 crop-profile error.
 
-CropFit v0.11.0 fits 200 scenarios per training crop with 40 Extra Trees, but
-selects only six transparent range-relative and interaction features from the
-25 engineered inputs. Its promotion report compares the candidate with v0.10
-on ten newly reserved grouped crop-profile splits plus a fresh independent
-Latin-hypercube shift, including API-served active uncertainty, artifact size,
-deployed worst-case error, and API-sized latency:
+CropFit v0.12.1 learns a four-feature log-linear surrogate from temperature,
+water, pH, and solar range memberships. Its sealed promotion report compares
+the candidate with v0.11 on ten newly reserved grouped crop-profile splits and
+a fresh independent runtime-shaped shift, including API-served active
+uncertainty, artifact size, deployed worst-case error, and API-sized latency:
 
 ```bash
-npm run ml:evaluate:feature-compaction
+npm run ml:evaluate:log-linear-floor
 ```
+
+The production estimator uses closed-form ordinary least squares in log space,
+so it has no learning-rate schedule or iterative loss curve. Training still
+records the XGBoost candidate's learning-rate and loss diagnostics for honest
+comparison, but that candidate is not served.
 
 The first compact-feature report remains committed as a failed gate: one
 pooled 80% interval covered 83.1% against an 83.0% ceiling. That pooled check

@@ -58,19 +58,19 @@ climate = [{"month": month, "temperatureC": 22, "precipitationMmDay": 3, "solarM
 payload = {"crop": "corn", "latitude": 29.76, "longitude": -95.37, "soilPh": 6.5, "irrigated": True, "climate": climate, "climateHistory": [climate] * 10}
 health = requests.get(f"{base}/health", timeout=10).json()
 assert health["status"] == "ok" and health["requestLimits"]["historyYearsMax"] == 20
-assert health["apiVersion"] == "0.21.0"
+assert health["apiVersion"] == "0.22.0"
 assert health["revision"].startswith(f'{health["apiVersion"]}:')
-assert health["model"] == "CropFit EcoCrop surrogate v0.11.0"
+assert health["model"] == "CropFit EcoCrop surrogate v0.12.1"
 assert len(health["artifactSha256"]) == 64
 assert health["revision"].endswith(health["artifactSha256"][:12])
-assert health["metrics"]["mae"] == .0106
+assert health["metrics"]["mae"] <= 1e-5
+assert health["metrics"]["maximumAbsoluteError"] <= 1e-5
 contract = health["modelContract"]
-assert contract["task"] == "regression" and contract["estimator"] == "ExtraTreesRegressor"
+assert contract["task"] == "regression" and contract["estimator"] == "LogLinearCropFitRegressor"
 assert contract["candidateFeatureCount"] == len(contract["candidateFeatureNames"]) == 25
-assert contract["selectedFeatureCount"] == len(contract["selectedFeatureNames"]) == 6
+assert contract["selectedFeatureCount"] == len(contract["selectedFeatureNames"]) == 4
 assert contract["selectedFeatureNames"] == [
     "temperature_range_fit", "water_range_fit", "ph_range_fit", "solar_range_fit",
-    "temperature_water_interaction", "ph_solar_interaction",
 ]
 assert sum(len(items) for items in contract["featureGroups"].values()) == 25
 assert contract["usesCropIdentity"] is False and contract["usesCoordinatesDirectly"] is False
@@ -201,5 +201,5 @@ unsupported_silage.raise_for_status()
 assert unsupported_silage.json()["observedYieldEvidence"] is None
 invalid = requests.post(f"{base}/predict", json={**payload, "climate": climate[:11]}, timeout=10)
 assert invalid.status_code == 422
-print(f'CropFit HTTP verified: API {health["apiVersion"]}, model v0.11.0, six-feature artifact identity, atlas v11 crop-region intervals plus unit-safe subtype atlas, seasonal boundary ceiling, 2016-2025 climate window, USDA evidence, input bounds')
+print(f'CropFit HTTP verified: API {health["apiVersion"]}, model v0.12.1, four-feature log-linear artifact identity, atlas v11 crop-region intervals plus unit-safe subtype atlas, seasonal boundary ceiling, 2016-2025 climate window, USDA evidence, input bounds')
 PY

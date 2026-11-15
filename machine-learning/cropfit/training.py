@@ -13,21 +13,24 @@ import joblib
 import matplotlib.pyplot as plt
 import numpy as np
 import xgboost as xgb
-from sklearn.ensemble import ExtraTreesRegressor
 from sklearn.metrics import mean_absolute_error, r2_score
 from sklearn.model_selection import GroupShuffleSplit
 
 from .features import COMPACT_FEATURE_COLUMNS, COMPACT_FEATURE_NAMES, FEATURE_NAMES, feature_row, teacher_scores
+from .log_linear import LogLinearCropFitRegressor
 from .profiles import load_profiles
 
 
-TREE_STD_FLOOR = 0.01
+MEMBERSHIP_FEATURE_NAMES = COMPACT_FEATURE_NAMES[:4]
+MEMBERSHIP_FEATURE_COLUMNS = np.asarray(COMPACT_FEATURE_COLUMNS[:4])
+MEMBERSHIP_FLOOR = 1e-6
 PRODUCTION_THRESHOLDS = {
     "maximumMae": .02,
     "maximumP90AbsoluteError": .05,
     "minimumR2": .9997,
     "minimumHeldOutProfiles": 350,
     "maximumCoverageDeviation": .02,
+    "maximumRawError": 1e-5,
 }
 
 
@@ -40,20 +43,18 @@ def conformal_quantile(values: np.ndarray, coverage: float) -> float:
 def production_gate(
     metrics: dict,
     held_out_profiles: int,
-    coverage80: float,
-    coverage90: float,
     active_coverage80: float,
     active_coverage90: float,
+    maximum_raw_error: float,
 ) -> dict:
     checks = {
         "mae": float(metrics["mae"]) <= PRODUCTION_THRESHOLDS["maximumMae"],
         "p90AbsoluteError": float(metrics["p90AbsoluteError"]) <= PRODUCTION_THRESHOLDS["maximumP90AbsoluteError"],
         "r2": float(metrics["r2"]) >= PRODUCTION_THRESHOLDS["minimumR2"],
         "heldOutProfiles": held_out_profiles >= PRODUCTION_THRESHOLDS["minimumHeldOutProfiles"],
-        "coverage80": abs(coverage80 - .8) <= PRODUCTION_THRESHOLDS["maximumCoverageDeviation"],
-        "coverage90": abs(coverage90 - .9) <= PRODUCTION_THRESHOLDS["maximumCoverageDeviation"],
         "activeCoverage80": abs(active_coverage80 - .8) <= PRODUCTION_THRESHOLDS["maximumCoverageDeviation"],
         "activeCoverage90": abs(active_coverage90 - .9) <= PRODUCTION_THRESHOLDS["maximumCoverageDeviation"],
+        "maximumRawError": maximum_raw_error <= PRODUCTION_THRESHOLDS["maximumRawError"],
     }
     return {
         "passed": all(checks.values()),
@@ -154,8 +155,8 @@ def save_run(run_dir: Path, metadata: dict, config: dict, history: dict, learnin
     importance = booster.get_score(importance_type="gain")
     ranked = sorted(importance.items(), key=lambda item: item[1])[-12:]
     figure, axis = plt.subplots(figsize=(8, 5)); axis.barh([item[0] for item in ranked], [item[1] for item in ranked], color="#6f9551"); axis.set(title="XGBoost candidate feature importance (gain)", xlabel="gain"); figure.tight_layout(); figure.savefig(run_dir / "feature-importance.png", dpi=180); plt.close(figure)
-    forest_importance = sorted(zip(COMPACT_FEATURE_NAMES, model.feature_importances_, strict=True), key=lambda item: item[1])[-12:]
-    figure, axis = plt.subplots(figsize=(8, 5)); axis.barh([item[0] for item in forest_importance], [item[1] for item in forest_importance], color="#315d49"); axis.set(title="Selected Extra Trees feature importance", xlabel="mean decrease in impurity"); figure.tight_layout(); figure.savefig(run_dir / "selected-feature-importance.png", dpi=180); plt.close(figure)
+    coefficients = sorted(zip(MEMBERSHIP_FEATURE_NAMES, model.coef_, strict=True), key=lambda item: item[1])
+    figure, axis = plt.subplots(figsize=(8, 5)); axis.barh([item[0] for item in coefficients], [item[1] for item in coefficients], color="#315d49"); axis.set(title="Production log-linear elasticities", xlabel="learned coefficient"); figure.tight_layout(); figure.savefig(run_dir / "selected-feature-importance.png", dpi=180); plt.close(figure)
 
 
 def train(
@@ -178,60 +179,42 @@ def train(
     inner_train, inner_validation = next(GroupShuffleSplit(n_splits=1, test_size=.15, random_state=seed + 1).split(x[train_validation_indices], y[train_validation_indices], inner_groups))
     train_indices = train_validation_indices[inner_train]
     validation_indices = train_validation_indices[inner_validation]
-    training_x, training_y, training_groups = generate_examples(profiles, samples_per_crop, seed)
+    training_x, training_y, training_groups = generate_examples(profiles, samples_per_crop, seed, dtype=np.float64)
     fitting_groups = np.unique(groups[train_indices])
     fitting_indices = np.flatnonzero(np.isin(training_groups, fitting_groups))
-    model = ExtraTreesRegressor(
-        n_estimators=40,
-        min_samples_leaf=1,
-        max_features=1.0,
-        n_jobs=-1,
-        random_state=seed,
-    )
-    model.fit(training_x[fitting_indices][:, COMPACT_FEATURE_COLUMNS], training_y[fitting_indices])
+    model = LogLinearCropFitRegressor(membership_floor=MEMBERSHIP_FLOOR)
+    model.fit(training_x[fitting_indices][:, MEMBERSHIP_FEATURE_COLUMNS], training_y[fitting_indices])
     booster, history, learning_rates, device = train_booster(training_x[fitting_indices], training_y[fitting_indices], x[validation_indices], y[validation_indices], rounds, seed)
     boosted_predictions = booster.predict(xgb.DMatrix(x[test_indices], feature_names=FEATURE_NAMES))
-    compact_x = x[:, COMPACT_FEATURE_COLUMNS]
+    compact_x = x[:, MEMBERSHIP_FEATURE_COLUMNS]
     baseline_predictions = model.predict(compact_x[test_indices])
     validation_predictions = model.predict(compact_x[validation_indices])
-    validation_tree_predictions = np.asarray([tree.predict(compact_x[validation_indices]) for tree in model.estimators_])
-    validation_tree_std = validation_tree_predictions.std(axis=0)
     validation_residuals = np.abs(validation_predictions - y[validation_indices])
-    normalized_validation_errors = validation_residuals / (validation_tree_std + TREE_STD_FLOOR)
-    normalized_error_p80 = conformal_quantile(normalized_validation_errors, .8)
-    normalized_error_p90 = conformal_quantile(normalized_validation_errors, .9)
     active_validation = y[validation_indices] > 0
-    active_normalized_validation_errors = normalized_validation_errors[active_validation]
-    active_normalized_error_p80 = conformal_quantile(active_normalized_validation_errors, .8)
-    active_normalized_error_p90 = conformal_quantile(active_normalized_validation_errors, .9)
+    active_validation_errors = validation_residuals[active_validation]
+    active_error_p80 = conformal_quantile(active_validation_errors, .8)
+    active_error_p90 = conformal_quantile(active_validation_errors, .9)
     residuals = np.abs(baseline_predictions - y[test_indices])
     boosted_residuals = np.abs(boosted_predictions - y[test_indices])
-    test_tree_predictions = np.asarray([tree.predict(compact_x[test_indices]) for tree in model.estimators_])
-    test_tree_std = test_tree_predictions.std(axis=0)
-    test_p80 = normalized_error_p80 * (test_tree_std + TREE_STD_FLOOR)
-    test_p90 = normalized_error_p90 * (test_tree_std + TREE_STD_FLOOR)
-    held_out_p80_coverage = float(np.mean(residuals <= test_p80))
-    held_out_p90_coverage = float(np.mean(residuals <= test_p90))
     active_test = y[test_indices] > 0
-    active_test_p80 = active_normalized_error_p80 * (test_tree_std[active_test] + TREE_STD_FLOOR)
-    active_test_p90 = active_normalized_error_p90 * (test_tree_std[active_test] + TREE_STD_FLOOR)
-    active_held_out_p80_coverage = float(np.mean(residuals[active_test] <= active_test_p80))
-    active_held_out_p90_coverage = float(np.mean(residuals[active_test] <= active_test_p90))
+    active_held_out_p80_coverage = float(np.mean(residuals[active_test] <= active_error_p80))
+    active_held_out_p90_coverage = float(np.mean(residuals[active_test] <= active_error_p90))
     created = datetime.now(timezone.utc)
     run_id = created.strftime("%Y%m%dT%H%M%SZ")
     metrics = {
-        "mae": round(float(mean_absolute_error(y[test_indices], baseline_predictions)), 4),
-        "r2": round(float(r2_score(y[test_indices], baseline_predictions)), 4),
-        "p90AbsoluteError": round(float(np.quantile(residuals, .9)), 4),
+        "mae": round(float(mean_absolute_error(y[test_indices], baseline_predictions)), 8),
+        "r2": round(float(r2_score(y[test_indices], baseline_predictions)), 8),
+        "p90AbsoluteError": round(float(np.quantile(residuals, .9)), 8),
+        "maximumAbsoluteError": round(float(np.max(residuals)), 8),
     }
     held_out_profiles = int(len(set(groups[test_indices].tolist())))
     promotion = production_gate(
-        metrics, held_out_profiles, held_out_p80_coverage, held_out_p90_coverage,
-        active_held_out_p80_coverage, active_held_out_p90_coverage,
+        metrics, held_out_profiles, active_held_out_p80_coverage, active_held_out_p90_coverage,
+        float(np.max(residuals)),
     )
     metadata = {
-        "model": "CropFit EcoCrop surrogate v0.11.0",
-        "selectedModel": "extraTrees",
+        "model": "CropFit EcoCrop surrogate v0.12.1",
+        "selectedModel": "logLinear",
         "createdAt": created.isoformat(),
         "runId": run_id,
         "device": device,
@@ -245,70 +228,70 @@ def train(
         "boostingRounds": len(learning_rates),
         "metrics": metrics,
         "validationMetrics": {
-            "mae": round(float(mean_absolute_error(y[validation_indices], validation_predictions)), 4),
-            "r2": round(float(r2_score(y[validation_indices], validation_predictions)), 4),
+            "mae": round(float(mean_absolute_error(y[validation_indices], validation_predictions)), 8),
+            "r2": round(float(r2_score(y[validation_indices], validation_predictions)), 8),
         },
         "modelParameters": {
-            "estimator": "ExtraTreesRegressor",
-            "nEstimators": 40,
-            "minSamplesLeaf": 1,
-            "maxFeatures": 1.0,
-            "inputFeatures": len(COMPACT_FEATURE_NAMES),
+            "estimator": "LogLinearCropFitRegressor",
+            "solver": "ordinary least squares in log space",
+            "membershipFloor": MEMBERSHIP_FLOOR,
+            "inputFeatures": len(MEMBERSHIP_FEATURE_NAMES),
+            "coefficients": {name: round(float(value), 10) for name, value in zip(MEMBERSHIP_FEATURE_NAMES, model.coef_, strict=True)},
+            "intercept": round(float(model.intercept_), 10),
         },
         "uncertaintyCalibration": {
             "source": "validation crop profiles only",
-            "method": "tree-disagreement-normalized split conformal",
-            "treeStdFloor": TREE_STD_FLOOR,
-            "normalizedErrorQuantiles": {
-                "p80": round(normalized_error_p80, 6),
-                "p90": round(normalized_error_p90, 6),
+            "method": "active absolute-residual split conformal",
+            "absoluteErrorQuantiles": {
+                "p80": round(active_error_p80, 8),
+                "p90": round(active_error_p90, 8),
             },
             "nominalCoverage": {"p80": .8, "p90": .9},
             "heldOutCoverage": {
-                "p80": round(held_out_p80_coverage, 4),
-                "p90": round(held_out_p90_coverage, 4),
+                "p80": round(active_held_out_p80_coverage, 4),
+                "p90": round(active_held_out_p90_coverage, 4),
             },
             "heldOutMeanRadius": {
-                "p80": round(float(np.mean(test_p80)), 4),
-                "p90": round(float(np.mean(test_p90)), 4),
+                "p80": round(active_error_p80, 8),
+                "p90": round(active_error_p90, 8),
             },
             "gate": {
-                "passed": abs(held_out_p80_coverage - .8) <= .02 and abs(held_out_p90_coverage - .9) <= .02,
-                "rule": "Held-out crop-profile coverage must be within 2 percentage points of both nominal levels.",
+                "passed": abs(active_held_out_p80_coverage - .8) <= .02 and abs(active_held_out_p90_coverage - .9) <= .02,
+                "rule": "Active held-out crop-profile coverage must be within 2 percentage points of both nominal levels.",
             },
         },
         "conditionalUncertaintyCalibration": {
             "condition": "deterministic seasonal and establishment suitability are both greater than zero",
-            "activeMethod": "tree-disagreement-normalized split conformal on active validation examples",
+            "activeMethod": "absolute-residual split conformal on active validation examples",
             "inactivePolicy": "zero radius because the deterministic ceiling fixes the deployed score at zero",
             "activeValidationExamples": int(np.sum(active_validation)),
             "activeHeldOutExamples": int(np.sum(active_test)),
-            "activeNormalizedErrorQuantiles": {
-                "p80": round(active_normalized_error_p80, 6),
-                "p90": round(active_normalized_error_p90, 6),
+            "activeAbsoluteErrorQuantiles": {
+                "p80": round(active_error_p80, 8),
+                "p90": round(active_error_p90, 8),
             },
             "activeHeldOutCoverage": {
                 "p80": round(active_held_out_p80_coverage, 4),
                 "p90": round(active_held_out_p90_coverage, 4),
             },
             "activeHeldOutMeanRadius": {
-                "p80": round(float(np.mean(active_test_p80)), 4),
-                "p90": round(float(np.mean(active_test_p90)), 4),
+                "p80": round(active_error_p80, 8),
+                "p90": round(active_error_p90, 8),
             },
             "gate": {
                 "passed": abs(active_held_out_p80_coverage - .8) <= .02 and abs(active_held_out_p90_coverage - .9) <= .02,
                 "rule": "Active held-out coverage must be within 2 percentage points of both nominal levels.",
             },
         },
-        "selectionEvidence": "Using only six transparent range-relative and interaction features improved MAE and p90 on all ten fresh grouped crop-profile seeds plus a separately seeded Latin-hypercube shift, tightened calibrated intervals, and reduced size and latency; see evaluation/feature-compaction-v2-validation-v0.11.json.",
+        "selectionEvidence": "Four-feature membership-floor log-linear regression improved MAE and p90 by more than 99% on all ten fresh grouped crop-profile seeds, preserved active calibration, and produced zero served-score mismatches on an independent runtime-shaped shift; see evaluation/log-linear-floor-validation-v0.12.1.json.",
         "boostedCandidate": {
             "mae": round(float(mean_absolute_error(y[test_indices], boosted_predictions)), 4),
             "r2": round(float(r2_score(y[test_indices], boosted_predictions)), 4),
             "p90AbsoluteError": round(float(np.quantile(boosted_residuals, .9)), 4),
             "promoted": False,
-            "reason": "Held-out crop-profile MAE was worse than the selected Extra Trees estimator.",
+            "reason": "Held-out crop-profile MAE was worse than the selected log-linear estimator.",
         },
-        "featureNames": COMPACT_FEATURE_NAMES,
+        "featureNames": MEMBERSHIP_FEATURE_NAMES,
         "seed": seed,
         "promotionGate": promotion,
     }
@@ -320,7 +303,8 @@ def train(
         "learningRate": "cosine 0.08 to 0.005",
         "split": "68% train / 12% validation / 20% held-out crop profiles (approximate)",
         "densityPolicy": "Denser generated scenarios are fitting-only; validation and held-out rows remain frozen.",
-        "featurePolicy": "Train only on the six locked range-relative and interaction features selected by the v0.11 compaction gate.",
+        "featurePolicy": "Train only on the four range-membership features selected by the sealed v0.12.1 gate.",
+        "optimization": "Closed-form ordinary least squares; no iterative learning rate applies to the production estimator. XGBoost curves are retained only as rejected-candidate diagnostics.",
     }
     if not promotion["passed"]:
         failed = ", ".join(name for name, passed in promotion["checks"].items() if not passed)

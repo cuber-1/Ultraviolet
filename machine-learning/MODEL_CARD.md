@@ -1,4 +1,4 @@
-# CropFit EcoCrop surrogate v0.11.0
+# CropFit EcoCrop surrogate v0.12.1
 
 - Trained: 2026-11-15
 - Source: FAO EcoCrop environmental requirement profiles via OpenCLIM
@@ -6,13 +6,19 @@
 - Generated fitting scenarios: 372,400 (253,000 from training profiles)
 - Frozen validation/test scenarios: 134,064 before profile splitting
 - Evaluation: entire crop profiles held out (373 profiles)
-- Selected production estimator: Extra Trees
-- Selected model inputs: 6 of 25 engineered features
-- Raw estimator MAE: 0.0106 suitability points
-- Deployed score MAE after deterministic seasonal ceiling: 0.00385 points
+- Selected production estimator: log-linear regression (closed-form OLS)
+- Selected model inputs: 4 of 25 engineered features
+- Raw estimator MAE: 0.00000029 suitability points
+- Maximum raw estimator error: 0.00000546 points
 - R²: 1.0000
-- Raw estimator 90th percentile absolute error: 0.0284 points
-- Deployed score 90th percentile absolute error: 0.00000 points
+- Raw estimator 90th percentile absolute error: 0.00000118 points
+- Artifact SHA-256: `10ba0916d6d751e52cba7f990b29af9a6b54e3d7adea97fded3d1f63634043fb`
+
+Version 0.12.1 learns the four positive elasticities of the mechanistic
+EcoCrop teacher in log space. A zero membership remains a structural zero;
+positive memberships use the teacher's pre-existing `1e-6` numerical floor.
+The fitted coefficients are temperature `0.42`, water `0.26`, pH `0.18`, and
+solar `0.14`. Crop identity and coordinates are not direct estimator inputs.
 
 Version 0.11 keeps the v0.10 training density and 40-tree capacity but removes
 19 redundant raw/profile inputs from the fitted forest. The retained inputs are
@@ -39,8 +45,8 @@ used 60 leaf-smoothed trees. Its averages were attractive—MAE fell 40.89%, p90
 fell 35.60%, the serialized forest shrank 40.17%, and mean batch latency was
 0.92×—but it was rejected. On fresh final seed 20270218, deployed maximum error
 rose from 0.356 to 0.456, violating the per-seed tail-safety gate. The passing
-independent shift and strong averages do not override that failure. Production
-therefore remains the six-feature v0.11 model. See
+independent shift and strong averages did not override that failure, so v0.11
+remained production at that gate. See
 `evaluation/interaction-compaction-validation-v0.12.md`.
 
 A six-feature smoothing follow-up also failed. Increasing to 72 trees with
@@ -81,8 +87,8 @@ rejected the candidate despite 99.99% average gains: 9/10 seeds passed, but
 final seed 20270519 covered 83.9% at the nominal 80% level, above the 82%
 ceiling. Independently generated float64 rows were covered 100%/100% by
 absolute-error radii calibrated on float32 rows, exposing a representation-
-shift calibration mismatch at numerical-error scale. Production remains
-v0.11. See `evaluation/log-linear-development-v0.12.md` and
+shift calibration mismatch at numerical-error scale. That candidate was not
+promoted. See `evaluation/log-linear-development-v0.12.md` and
 `evaluation/log-linear-validation-v0.12.md`.
 
 The v0.12.1 development follow-up identified the exact boundary mismatch: the
@@ -98,8 +104,9 @@ an independent runtime-shaped shift. Mean MAE/p90 gains are 99.997%/99.996%,
 maximum raw error stays below 0.000006, active random-row calibration remains
 nominal, serialized radii are 0.001/0.001, and all shifted served scores match
 at 0.1-point precision. The candidate serializes to 389 bytes versus 63.8 MB.
-It is eligible for a separate runtime/artifact migration; production remains
-v0.11 until that migration passes. See
+The separate runtime/artifact migration passed offline inference, loopback HTTP,
+artifact-contract, and release-bundle verification, so this candidate is now
+the v0.12.1 production model. See
 `evaluation/log-linear-floor-development-v0.12.1.md` and
 `evaluation/log-linear-floor-validation-v0.12.1.md`.
 
@@ -150,7 +157,7 @@ rejected; that experiment did not replace the 120-tree v0.6 champion. See
 
 ## Out-of-distribution ceiling
 
-API v0.21.0 retains the v0.6.1 safety ceiling that caps the ML score by the exact
+API v0.22.0 retains the v0.6.1 safety ceiling that caps the ML score by the exact
 seasonal and establishment EcoCrop suitability already computed for
 limiting-factor explanations. This is a one-sided safety constraint: the
 ensemble still determines underprediction but cannot claim suitability above
@@ -172,20 +179,21 @@ feature design, it improved held-out MAE on all five robustness seeds from
 reproducible protocol and per-seed results are in
 `evaluation/feature-validation-v0.5.md`.
 
-Version 0.11.0 fits its active-case tree-disagreement-normalized split-conformal
-calibrator using 3,395 active examples from 224 validation crop profiles. On
-5,628 active held-out examples from the 373 test profiles, nominal 80% and 90%
-bands cover 78.2% and 89.5%; mean radii are 0.068 and 0.094 suitability points.
+Version 0.12.1 fits its active absolute-residual split-conformal calibrator
+using 3,395 active examples from 224 validation crop profiles. On 5,628 active
+held-out examples from the 373 test profiles, nominal 80% and 90% bands cover
+80.86% and 90.65%; raw radii are 0.00000240 and 0.00000313 suitability points
+and serialize upward to 0.001 points at the API's error-resolution boundary.
 Hard-zero deployed scores receive zero radius because the deterministic ceiling
 fixes their value. These are conditional EcoCrop-teacher fidelity bands, not
 per-species or observed-yield guarantees.
 
-The CUDA XGBoost candidate completed 500 rounds with a cosine learning-rate
-schedule from 0.08 to 0.005. It was not promoted because held-out-profile MAE
-was worse (0.0845). The committed diagnostics are
-`evaluation/training-curves-v0.11.0.png`,
-`evaluation/selected-feature-importance-v0.11.0.png`, and
-`evaluation/training-history-v0.11.0.csv`.
+The production estimator is solved by ordinary least squares and therefore has
+no learning rate or iterative production loss curve. A CUDA XGBoost diagnostic
+candidate still completed 500 rounds with a cosine schedule from 0.08 to
+0.005; it was not promoted because held-out-profile MAE was worse (0.0845).
+Its learning-rate/loss charts remain candidate diagnostics, while the selected
+feature chart shows the four production elasticities.
 
 ## Intended use
 
@@ -360,7 +368,7 @@ crop-region pairs without at least 50 examples in every validation block. See
 
 ## Inference request safety
 
-API v0.21.0 bounds caller-supplied climate to 12 or 24 ordered months and at
+API v0.22.0 bounds caller-supplied climate to 12 or 24 ordered months and at
 most 20 complete history years. Temperature, precipitation, and solar inputs
 must be finite and remain within documented physical limits. Invalid caller
 data returns HTTP 422 instead of being mislabeled as a model/upstream failure;
@@ -394,13 +402,13 @@ reuse a stale prediction. The cache is a bounded 2,048-entry LRU, and CI checks
 key sensitivity, revision invalidation, model isolation, expiry, and
 least-recently-used eviction.
 
-API v0.21.0 exposes its API+training-run+artifact-hash revision and the full
+API v0.22.0 exposes its API+training-run+artifact-hash revision and the full
 artifact SHA-256 through `/health`. The browser proxy reads the revision once
-per prediction request. Startup rejects artifacts missing the fitted ensemble,
-model identity, or a consistent feature contract. Direct and HTTP inference
+per prediction request. Startup rejects artifacts missing a supported fitted
+estimator, model identity, or a consistent feature contract. Direct and HTTP inference
 share finite coordinate, geographic, soil-pH, boolean irrigation, climate, and
 history-size checks. The same health response publishes the regression task,
-Extra Trees estimator, 25-feature engineering vocabulary, and six selected
+log-linear estimator, 25-feature engineering vocabulary, and four selected
 production features. If revision health is unavailable, model predictions
 continue but bypass the cache until provenance is verified.
 
