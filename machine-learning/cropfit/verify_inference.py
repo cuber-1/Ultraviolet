@@ -432,6 +432,17 @@ def verify(artifact: Path, profiles: Path) -> None:
         assert compact_ood_report["heldOut"]["rawSurrogate"]["mae"] <= .011
         assert compact_ood_report["heldOut"]["seasonalCeiling"]["mae"] <= .004
 
+    interaction_compaction_validation = artifact.parents[1] / "evaluation/interaction-compaction-validation-v0.12.json"
+    if interaction_compaction_validation.exists():
+        interaction_report = json.loads(interaction_compaction_validation.read_text())
+        assert not interaction_report["gate"]["passed"]
+        assert interaction_report["summary"]["seedWins"] == 9
+        assert interaction_report["summary"]["seeds"] == 10
+        failed = [item for item in interaction_report["results"] if not item["passedPerSeedGate"]]
+        assert [item["seed"] for item in failed] == [20270218]
+        assert failed[0]["interactionCandidate"]["deployedMaximumAbsoluteError"] > failed[0]["championV011"]["deployedMaximumAbsoluteError"]
+        assert interaction_report["independentShift"]["passed"]
+
     from .trained_api import PredictionRequest, predict as api_predict
 
     valid_climate = climate(20.0)

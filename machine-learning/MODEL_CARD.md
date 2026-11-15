@@ -34,6 +34,15 @@ v2 protocol declared before opening ten new seeds reports that diagnostic but
 gates the active intervals actually served by the API and zero-radius inactive
 policy separately. See `evaluation/feature-compaction-validation-v0.11.md`.
 
+A subsequent v0.12 experiment retained only the two interaction features and
+used 60 leaf-smoothed trees. Its averages were attractive—MAE fell 40.89%, p90
+fell 35.60%, the serialized forest shrank 40.17%, and mean batch latency was
+0.92×—but it was rejected. On fresh final seed 20270218, deployed maximum error
+rose from 0.356 to 0.456, violating the per-seed tail-safety gate. The passing
+independent shift and strong averages do not override that failure. Production
+therefore remains the six-feature v0.11 model. See
+`evaluation/interaction-compaction-validation-v0.12.md`.
+
 Version 0.9 increases generated fitting coverage from 72 to 120 scenarios per
 training crop while preserving the exact v0.8 validation and held-out rows. The
 denser fitting data lets the ensemble shrink from 120 to 70 trees. Across two

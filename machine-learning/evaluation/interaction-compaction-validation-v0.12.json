@@ -1,0 +1,663 @@
+{
+  "name": "CropFit interaction-only compaction validation v0.12 candidate",
+  "protocol": {
+    "target": "EcoCrop mechanistic screening teacher; not observed yield",
+    "champion": "v0.11.0, six range-relative features, 40 Extra Trees, min_samples_leaf=1",
+    "candidate": "two transparent interaction features, 60 Extra Trees, min_samples_leaf=2",
+    "candidateFeatures": [
+      "temperature_water_interaction",
+      "ph_solar_interaction"
+    ],
+    "selection": "Development seeds 20270201-20270203 compared two-feature forests with 32-60 trees and leaf sizes 1-3. The 60-tree/leaf-2 candidate was the strongest option that improved mean and tail error while remaining substantially smaller. Seeds in this report were reserved until after that choice.",
+    "fixedEvaluation": "Both models use identical fitting, validation, held-out profiles, and scenario rows.",
+    "confirmationSeeds": [
+      20270210,
+      20270211,
+      20270212,
+      20270213,
+      20270214
+    ],
+    "finalSeeds": [
+      20270215,
+      20270216,
+      20270217,
+      20270218,
+      20270219
+    ],
+    "shiftSeed": 20270220,
+    "declaredGate": "Every fresh grouped seed must improve MAE, p90, and deployed maximum error; preserve API-served active 80%/90% coverage within 3 points; and tighten both active intervals. All-seed and final-only mean MAE/p90 gains must each be >=25%; mean API latency must not increase; compressed size must be smaller than v0.11 and <=40 MB. A separate Latin-hypercube shift must improve raw MAE, raw p90, and deployed MAE by >=20%, improve irrigated/rainfed/active MAE and deployed maximum error, and preserve active coverage within 2 points of nominal."
+  },
+  "results": [
+    {
+      "seed": 20270210,
+      "phase": "confirmation",
+      "testProfiles": 373,
+      "championV011": {
+        "mae": 0.00964,
+        "p90AbsoluteError": 0.02428,
+        "deployedMaximumAbsoluteError": 0.79747,
+        "fitSeconds": 0.401,
+        "apiBatchLatencyMs": 14.052,
+        "calibration": {
+          "coverage80": 0.8014,
+          "coverage90": 0.9018,
+          "meanRadius80": 0.0,
+          "meanRadius90": 0.008
+        },
+        "activeCalibration": {
+          "validationExamples": 3269,
+          "testExamples": 5677,
+          "coverage80": 0.8159,
+          "meanRadius80": 0.0675,
+          "coverage90": 0.8998,
+          "meanRadius90": 0.0887
+        }
+      },
+      "interactionCandidate": {
+        "mae": 0.00588,
+        "p90AbsoluteError": 0.01661,
+        "deployedMaximumAbsoluteError": 0.30464,
+        "fitSeconds": 0.174,
+        "apiBatchLatencyMs": 13.01,
+        "calibration": {
+          "coverage80": 0.811,
+          "coverage90": 0.9025,
+          "meanRadius80": 0.0012,
+          "meanRadius90": 0.0064
+        },
+        "activeCalibration": {
+          "validationExamples": 3269,
+          "testExamples": 5677,
+          "coverage80": 0.8103,
+          "meanRadius80": 0.0431,
+          "coverage90": 0.9079,
+          "meanRadius90": 0.0577
+        }
+      },
+      "gains": {
+        "maePercent": 39.0,
+        "p90Percent": 31.59
+      },
+      "latencyRatio": 0.926,
+      "passedPerSeedGate": true
+    },
+    {
+      "seed": 20270211,
+      "phase": "confirmation",
+      "testProfiles": 373,
+      "championV011": {
+        "mae": 0.01,
+        "p90AbsoluteError": 0.02671,
+        "deployedMaximumAbsoluteError": 0.44203,
+        "fitSeconds": 0.361,
+        "apiBatchLatencyMs": 14.189,
+        "calibration": {
+          "coverage80": 0.8318,
+          "coverage90": 0.905,
+          "meanRadius80": 0.0014,
+          "meanRadius90": 0.009
+        },
+        "activeCalibration": {
+          "validationExamples": 3547,
+          "testExamples": 5629,
+          "coverage80": 0.8119,
+          "meanRadius80": 0.0696,
+          "coverage90": 0.9096,
+          "meanRadius90": 0.0954
+        }
+      },
+      "interactionCandidate": {
+        "mae": 0.00578,
+        "p90AbsoluteError": 0.01573,
+        "deployedMaximumAbsoluteError": 0.34946,
+        "fitSeconds": 0.183,
+        "apiBatchLatencyMs": 13.007,
+        "calibration": {
+          "coverage80": 0.8177,
+          "coverage90": 0.9093,
+          "meanRadius80": 0.0015,
+          "meanRadius90": 0.0067
+        },
+        "activeCalibration": {
+          "validationExamples": 3547,
+          "testExamples": 5629,
+          "coverage80": 0.8021,
+          "meanRadius80": 0.0424,
+          "coverage90": 0.8977,
+          "meanRadius90": 0.0558
+        }
+      },
+      "gains": {
+        "maePercent": 42.2,
+        "p90Percent": 41.11
+      },
+      "latencyRatio": 0.917,
+      "passedPerSeedGate": true
+    },
+    {
+      "seed": 20270212,
+      "phase": "confirmation",
+      "testProfiles": 373,
+      "championV011": {
+        "mae": 0.01005,
+        "p90AbsoluteError": 0.02765,
+        "deployedMaximumAbsoluteError": 0.41745,
+        "fitSeconds": 0.381,
+        "apiBatchLatencyMs": 14.514,
+        "calibration": {
+          "coverage80": 0.8251,
+          "coverage90": 0.9026,
+          "meanRadius80": 0.0011,
+          "meanRadius90": 0.0088
+        },
+        "activeCalibration": {
+          "validationExamples": 3471,
+          "testExamples": 5735,
+          "coverage80": 0.8092,
+          "meanRadius80": 0.0674,
+          "coverage90": 0.9011,
+          "meanRadius90": 0.0932
+        }
+      },
+      "interactionCandidate": {
+        "mae": 0.00606,
+        "p90AbsoluteError": 0.01828,
+        "deployedMaximumAbsoluteError": 0.36901,
+        "fitSeconds": 0.185,
+        "apiBatchLatencyMs": 12.799,
+        "calibration": {
+          "coverage80": 0.81,
+          "coverage90": 0.9028,
+          "meanRadius80": 0.0013,
+          "meanRadius90": 0.0068
+        },
+        "activeCalibration": {
+          "validationExamples": 3471,
+          "testExamples": 5735,
+          "coverage80": 0.8023,
+          "meanRadius80": 0.043,
+          "coverage90": 0.9006,
+          "meanRadius90": 0.0561
+        }
+      },
+      "gains": {
+        "maePercent": 39.7,
+        "p90Percent": 33.89
+      },
+      "latencyRatio": 0.882,
+      "passedPerSeedGate": true
+    },
+    {
+      "seed": 20270213,
+      "phase": "confirmation",
+      "testProfiles": 373,
+      "championV011": {
+        "mae": 0.01012,
+        "p90AbsoluteError": 0.02786,
+        "deployedMaximumAbsoluteError": 0.50496,
+        "fitSeconds": 0.368,
+        "apiBatchLatencyMs": 14.475,
+        "calibration": {
+          "coverage80": 0.7977,
+          "coverage90": 0.9041,
+          "meanRadius80": 0.0,
+          "meanRadius90": 0.0088
+        },
+        "activeCalibration": {
+          "validationExamples": 3386,
+          "testExamples": 5733,
+          "coverage80": 0.7931,
+          "meanRadius80": 0.0651,
+          "coverage90": 0.8892,
+          "meanRadius90": 0.0882
+        }
+      },
+      "interactionCandidate": {
+        "mae": 0.00602,
+        "p90AbsoluteError": 0.01788,
+        "deployedMaximumAbsoluteError": 0.34082,
+        "fitSeconds": 0.172,
+        "apiBatchLatencyMs": 13.097,
+        "calibration": {
+          "coverage80": 0.8057,
+          "coverage90": 0.8993,
+          "meanRadius80": 0.0011,
+          "meanRadius90": 0.0066
+        },
+        "activeCalibration": {
+          "validationExamples": 3386,
+          "testExamples": 5733,
+          "coverage80": 0.8088,
+          "meanRadius80": 0.0431,
+          "coverage90": 0.902,
+          "meanRadius90": 0.0565
+        }
+      },
+      "gains": {
+        "maePercent": 40.51,
+        "p90Percent": 35.82
+      },
+      "latencyRatio": 0.905,
+      "passedPerSeedGate": true
+    },
+    {
+      "seed": 20270214,
+      "phase": "confirmation",
+      "testProfiles": 373,
+      "championV011": {
+        "mae": 0.01015,
+        "p90AbsoluteError": 0.02593,
+        "deployedMaximumAbsoluteError": 0.83523,
+        "fitSeconds": 0.393,
+        "apiBatchLatencyMs": 14.321,
+        "calibration": {
+          "coverage80": 0.8061,
+          "coverage90": 0.9053,
+          "meanRadius80": 0.0,
+          "meanRadius90": 0.0086
+        },
+        "activeCalibration": {
+          "validationExamples": 3337,
+          "testExamples": 5529,
+          "coverage80": 0.798,
+          "meanRadius80": 0.0676,
+          "coverage90": 0.8933,
+          "meanRadius90": 0.0917
+        }
+      },
+      "interactionCandidate": {
+        "mae": 0.00577,
+        "p90AbsoluteError": 0.01646,
+        "deployedMaximumAbsoluteError": 0.42073,
+        "fitSeconds": 0.192,
+        "apiBatchLatencyMs": 13.403,
+        "calibration": {
+          "coverage80": 0.8136,
+          "coverage90": 0.9039,
+          "meanRadius80": 0.001,
+          "meanRadius90": 0.0064
+        },
+        "activeCalibration": {
+          "validationExamples": 3337,
+          "testExamples": 5529,
+          "coverage80": 0.8048,
+          "meanRadius80": 0.0432,
+          "coverage90": 0.9014,
+          "meanRadius90": 0.0566
+        }
+      },
+      "gains": {
+        "maePercent": 43.15,
+        "p90Percent": 36.52
+      },
+      "latencyRatio": 0.936,
+      "passedPerSeedGate": true
+    },
+    {
+      "seed": 20270215,
+      "phase": "final",
+      "testProfiles": 373,
+      "championV011": {
+        "mae": 0.00962,
+        "p90AbsoluteError": 0.02463,
+        "deployedMaximumAbsoluteError": 0.43903,
+        "fitSeconds": 0.357,
+        "apiBatchLatencyMs": 14.341,
+        "calibration": {
+          "coverage80": 0.8047,
+          "coverage90": 0.8995,
+          "meanRadius80": 0.0,
+          "meanRadius90": 0.0071
+        },
+        "activeCalibration": {
+          "validationExamples": 3234,
+          "testExamples": 5550,
+          "coverage80": 0.7951,
+          "meanRadius80": 0.0666,
+          "coverage90": 0.9011,
+          "meanRadius90": 0.0909
+        }
+      },
+      "interactionCandidate": {
+        "mae": 0.00561,
+        "p90AbsoluteError": 0.0161,
+        "deployedMaximumAbsoluteError": 0.23451,
+        "fitSeconds": 0.199,
+        "apiBatchLatencyMs": 12.688,
+        "calibration": {
+          "coverage80": 0.8131,
+          "coverage90": 0.9045,
+          "meanRadius80": 0.0011,
+          "meanRadius90": 0.0063
+        },
+        "activeCalibration": {
+          "validationExamples": 3234,
+          "testExamples": 5550,
+          "coverage80": 0.816,
+          "meanRadius80": 0.0437,
+          "coverage90": 0.9041,
+          "meanRadius90": 0.057
+        }
+      },
+      "gains": {
+        "maePercent": 41.68,
+        "p90Percent": 34.63
+      },
+      "latencyRatio": 0.885,
+      "passedPerSeedGate": true
+    },
+    {
+      "seed": 20270216,
+      "phase": "final",
+      "testProfiles": 373,
+      "championV011": {
+        "mae": 0.00952,
+        "p90AbsoluteError": 0.02418,
+        "deployedMaximumAbsoluteError": 0.47654,
+        "fitSeconds": 0.369,
+        "apiBatchLatencyMs": 14.218,
+        "calibration": {
+          "coverage80": 0.8305,
+          "coverage90": 0.9081,
+          "meanRadius80": 0.001,
+          "meanRadius90": 0.0085
+        },
+        "activeCalibration": {
+          "validationExamples": 3424,
+          "testExamples": 5593,
+          "coverage80": 0.8112,
+          "meanRadius80": 0.0653,
+          "coverage90": 0.9083,
+          "meanRadius90": 0.0905
+        }
+      },
+      "interactionCandidate": {
+        "mae": 0.00569,
+        "p90AbsoluteError": 0.016,
+        "deployedMaximumAbsoluteError": 0.32553,
+        "fitSeconds": 0.181,
+        "apiBatchLatencyMs": 12.752,
+        "calibration": {
+          "coverage80": 0.8153,
+          "coverage90": 0.9098,
+          "meanRadius80": 0.0012,
+          "meanRadius90": 0.0066
+        },
+        "activeCalibration": {
+          "validationExamples": 3424,
+          "testExamples": 5593,
+          "coverage80": 0.8149,
+          "meanRadius80": 0.0429,
+          "coverage90": 0.9063,
+          "meanRadius90": 0.0568
+        }
+      },
+      "gains": {
+        "maePercent": 40.23,
+        "p90Percent": 33.83
+      },
+      "latencyRatio": 0.897,
+      "passedPerSeedGate": true
+    },
+    {
+      "seed": 20270217,
+      "phase": "final",
+      "testProfiles": 373,
+      "championV011": {
+        "mae": 0.00996,
+        "p90AbsoluteError": 0.02565,
+        "deployedMaximumAbsoluteError": 0.44217,
+        "fitSeconds": 0.383,
+        "apiBatchLatencyMs": 12.522,
+        "calibration": {
+          "coverage80": 0.8033,
+          "coverage90": 0.903,
+          "meanRadius80": 0.0,
+          "meanRadius90": 0.0084
+        },
+        "activeCalibration": {
+          "validationExamples": 3310,
+          "testExamples": 5603,
+          "coverage80": 0.7953,
+          "meanRadius80": 0.0656,
+          "coverage90": 0.8993,
+          "meanRadius90": 0.0916
+        }
+      },
+      "interactionCandidate": {
+        "mae": 0.00616,
+        "p90AbsoluteError": 0.01689,
+        "deployedMaximumAbsoluteError": 0.26023,
+        "fitSeconds": 0.172,
+        "apiBatchLatencyMs": 12.928,
+        "calibration": {
+          "coverage80": 0.8105,
+          "coverage90": 0.9036,
+          "meanRadius80": 0.0011,
+          "meanRadius90": 0.0066
+        },
+        "activeCalibration": {
+          "validationExamples": 3310,
+          "testExamples": 5603,
+          "coverage80": 0.8064,
+          "meanRadius80": 0.0446,
+          "coverage90": 0.9077,
+          "meanRadius90": 0.0586
+        }
+      },
+      "gains": {
+        "maePercent": 38.15,
+        "p90Percent": 34.15
+      },
+      "latencyRatio": 1.032,
+      "passedPerSeedGate": true
+    },
+    {
+      "seed": 20270218,
+      "phase": "final",
+      "testProfiles": 373,
+      "championV011": {
+        "mae": 0.00983,
+        "p90AbsoluteError": 0.0267,
+        "deployedMaximumAbsoluteError": 0.35578,
+        "fitSeconds": 0.377,
+        "apiBatchLatencyMs": 14.304,
+        "calibration": {
+          "coverage80": 0.8324,
+          "coverage90": 0.9094,
+          "meanRadius80": 0.0012,
+          "meanRadius90": 0.0089
+        },
+        "activeCalibration": {
+          "validationExamples": 3461,
+          "testExamples": 5552,
+          "coverage80": 0.8114,
+          "meanRadius80": 0.0686,
+          "coverage90": 0.9065,
+          "meanRadius90": 0.094
+        }
+      },
+      "interactionCandidate": {
+        "mae": 0.00591,
+        "p90AbsoluteError": 0.0173,
+        "deployedMaximumAbsoluteError": 0.45586,
+        "fitSeconds": 0.183,
+        "apiBatchLatencyMs": 13.141,
+        "calibration": {
+          "coverage80": 0.8162,
+          "coverage90": 0.9066,
+          "meanRadius80": 0.0012,
+          "meanRadius90": 0.0065
+        },
+        "activeCalibration": {
+          "validationExamples": 3461,
+          "testExamples": 5552,
+          "coverage80": 0.7979,
+          "meanRadius80": 0.0429,
+          "coverage90": 0.8894,
+          "meanRadius90": 0.0559
+        }
+      },
+      "gains": {
+        "maePercent": 39.88,
+        "p90Percent": 35.21
+      },
+      "latencyRatio": 0.919,
+      "passedPerSeedGate": false
+    },
+    {
+      "seed": 20270219,
+      "phase": "final",
+      "testProfiles": 373,
+      "championV011": {
+        "mae": 0.0106,
+        "p90AbsoluteError": 0.02662,
+        "deployedMaximumAbsoluteError": 0.47456,
+        "fitSeconds": 0.35,
+        "apiBatchLatencyMs": 14.446,
+        "calibration": {
+          "coverage80": 0.8304,
+          "coverage90": 0.9097,
+          "meanRadius80": 0.0012,
+          "meanRadius90": 0.0096
+        },
+        "activeCalibration": {
+          "validationExamples": 3499,
+          "testExamples": 5667,
+          "coverage80": 0.8165,
+          "meanRadius80": 0.0734,
+          "coverage90": 0.9047,
+          "meanRadius90": 0.0994
+        }
+      },
+      "interactionCandidate": {
+        "mae": 0.00589,
+        "p90AbsoluteError": 0.01616,
+        "deployedMaximumAbsoluteError": 0.3031,
+        "fitSeconds": 0.2,
+        "apiBatchLatencyMs": 13.059,
+        "calibration": {
+          "coverage80": 0.8149,
+          "coverage90": 0.9065,
+          "meanRadius80": 0.0013,
+          "meanRadius90": 0.0066
+        },
+        "activeCalibration": {
+          "validationExamples": 3499,
+          "testExamples": 5667,
+          "coverage80": 0.8006,
+          "meanRadius80": 0.0421,
+          "coverage90": 0.8936,
+          "meanRadius90": 0.0551
+        }
+      },
+      "gains": {
+        "maePercent": 44.43,
+        "p90Percent": 39.29
+      },
+      "latencyRatio": 0.904,
+      "passedPerSeedGate": true
+    }
+  ],
+  "summary": {
+    "seedWins": 9,
+    "seeds": 10,
+    "allMeanMaeImprovementPercent": 40.89,
+    "allMeanP90ImprovementPercent": 35.6,
+    "finalMeanMaeImprovementPercent": 40.87,
+    "finalMeanP90ImprovementPercent": 35.42,
+    "meanApiBatchLatencyRatio": 0.92,
+    "championSerializedSizeBytes": 64183863,
+    "candidateSerializedSizeBytes": 38403652,
+    "sizeReductionPercent": 40.17
+  },
+  "independentShift": {
+    "seed": 20270220,
+    "profiles": 373,
+    "examples": 23872,
+    "championV011": {
+      "examples": 23872,
+      "mae": 0.00955,
+      "p90AbsoluteError": 0.02275,
+      "maximumAbsoluteError": 1.64799,
+      "deployedMae": 0.00367,
+      "deployedP90AbsoluteError": 0.0,
+      "deployedMaximumAbsoluteError": 0.498,
+      "subgroups": {
+        "irrigated": {
+          "examples": 11936,
+          "mae": 0.00996,
+          "p90AbsoluteError": 0.02485
+        },
+        "rainfed": {
+          "examples": 11936,
+          "mae": 0.00913,
+          "p90AbsoluteError": 0.01957
+        },
+        "active": {
+          "examples": 4856,
+          "mae": 0.04693,
+          "p90AbsoluteError": 0.12235
+        },
+        "hardZero": {
+          "examples": 19016,
+          "mae": 0.0,
+          "p90AbsoluteError": 0.0
+        }
+      }
+    },
+    "interactionCandidate": {
+      "examples": 23872,
+      "mae": 0.00551,
+      "p90AbsoluteError": 0.01496,
+      "maximumAbsoluteError": 1.44244,
+      "deployedMae": 0.00239,
+      "deployedP90AbsoluteError": 0.00098,
+      "deployedMaximumAbsoluteError": 0.26332,
+      "subgroups": {
+        "irrigated": {
+          "examples": 11936,
+          "mae": 0.00588,
+          "p90AbsoluteError": 0.01761
+        },
+        "rainfed": {
+          "examples": 11936,
+          "mae": 0.00515,
+          "p90AbsoluteError": 0.01251
+        },
+        "active": {
+          "examples": 4856,
+          "mae": 0.02707,
+          "p90AbsoluteError": 0.06682
+        },
+        "hardZero": {
+          "examples": 19016,
+          "mae": 1e-05,
+          "p90AbsoluteError": 0.0
+        }
+      }
+    },
+    "gains": {
+      "maePercent": 42.3,
+      "p90Percent": 34.24,
+      "deployedMaePercent": 34.88
+    },
+    "activeCoverage": {
+      "frozenRandom": {
+        "p80": 0.7963,
+        "p90": 0.9027
+      },
+      "independentShift": {
+        "p80": 0.8072,
+        "meanRadius80": 0.0415,
+        "p90": 0.9034,
+        "meanRadius90": 0.0549
+      }
+    },
+    "passed": true
+  },
+  "gate": {
+    "passed": false,
+    "rule": "Every fresh grouped seed must improve MAE, p90, and deployed maximum error; preserve API-served active 80%/90% coverage within 3 points; and tighten both active intervals. All-seed and final-only mean MAE/p90 gains must each be >=25%; mean API latency must not increase; compressed size must be smaller than v0.11 and <=40 MB. A separate Latin-hypercube shift must improve raw MAE, raw p90, and deployed MAE by >=20%, improve irrigated/rainfed/active MAE and deployed maximum error, and preserve active coverage within 2 points of nominal."
+  }
+}
