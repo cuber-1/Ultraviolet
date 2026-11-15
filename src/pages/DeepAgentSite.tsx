@@ -62,7 +62,8 @@ export default function DeepAgentSite({ result, rank, total, simulation, predict
           <Stat label="Crop-model fit" value={avgFit === null ? '—' : `${avgFit.toFixed(0)} / 100`} hint={mlModel?.source === 'ml' ? mlModel.name : 'Model unavailable'} />
           <Stat label="Best start" value={starts[0] ? MONTHS[starts[0].plantMonth!] : '—'} hint={starts[0] ? `${cropName(starts[0].cropId)} first` : 'No workable month'} />
         </div>
-        {explanation && <div className="das-card"><span className="das-label">Why it ranks #{rank}</span><p>{explanation}</p></div>}
+        {explanation && <div className="das-card das-why"><span className="das-label">Why it ranks #{rank}</span><p title={explanation}>{explanation}</p></div>}
+        <div className="das-pair">
         <div className="das-card">
           <span className="das-label">Your crops here</span>
           <ul className="das-crops">{crops.map((crop, index) => { const item = predictions.find((p) => p.cropId === crop.id); return <li key={crop.id}><i style={{ background: CROP_COLORS[index % CROP_COLORS.length] }} /><strong>{crop.name}</strong>{item ? <span>{Math.round(item.suitability * 100)} fit · {item.plantMonth !== null ? `plant ${MONTHS[item.plantMonth].slice(0, 3)}${item.harvestMonth !== null ? ` → harvest ${MONTHS[item.harvestMonth].slice(0, 3)}` : ''}` : 'no workable month'}</span> : <span className="muted">Not scored by the model</span>}</li>; })}</ul>
@@ -71,10 +72,11 @@ export default function DeepAgentSite({ result, rank, total, simulation, predict
           <span className="das-label">Property</span>
           {result.costar ? <dl className="das-dl">
             <div><dt>Type</dt><dd>{result.costar.propertyType}</dd></div>
-            <div><dt>Listing</dt><dd>{result.costar.listing?.active ? `Active · ${result.costar.listing.statuses.join(', ')}` : 'No active listing'}</dd></div>
+            <div><dt>Listing</dt><dd>{result.costar.listing?.active ? [...new Set(['Active', ...result.costar.listing.statuses])].join(' · ') : 'No active listing'}</dd></div>
             <div><dt>Roof (Vexcel)</dt><dd>{result.property?.roofAreaSqft ? `${fmt(result.property.roofAreaSqft)} ft²` : '—'}</dd></div>
             <div><dt>3D tours</dt><dd>{result.costar.matterport.length || 'None'}</dd></div>
           </dl> : <p className="muted">No CoStar property record within 125 m. Roof area from Vexcel: {result.property?.roofAreaSqft ? `${fmt(result.property.roofAreaSqft)} ft²` : 'unknown'}.</p>}
+        </div>
         </div>
       </section>
     </main>}
@@ -91,7 +93,7 @@ export default function DeepAgentSite({ result, rank, total, simulation, predict
 
     {tab === 'model' && <ModelTab predictions={predictions} crops={crops} preferredMonth={preferredMonth} mlModel={mlModel} />}
 
-    {tab === 'calendar' && <main className="das-body">
+    {tab === 'calendar' && <main className="das-body das-calendar">
       <div className="das-card wide">
         <span className="das-label">When to start</span>
         <h2>{starts[0] ? `Start with ${cropName(starts[0].cropId).toLowerCase()} in ${MONTHS[starts[0].plantMonth!]}.` : 'No workable planting month for these crops.'}</h2>
