@@ -314,6 +314,17 @@ def verify(artifact: Path, profiles: Path) -> None:
         assert shrinkage_report["selectedCropRegionalScales"] == calibration["selectedCropRegionalScales"]
         assert shrinkage_report["candidate"] == calibration["productionBlendRadii"]
 
+    asymmetric_interval_development = artifact.parents[1] / "evaluation/asymmetric-interval-development-v12.json"
+    if asymmetric_interval_development.exists():
+        asymmetric_report = json.loads(asymmetric_interval_development.read_text())
+        assert not asymmetric_report["gate"]["passed"]
+        assert asymmetric_report["protocol"]["finalYearsOpenedForDecision"] == []
+        assert asymmetric_report["protocol"]["lowerTailShareCandidates"] == [.1, .25, .4, .5, .6, .75, .9]
+        assert asymmetric_report["gate"]["checks"]["atLeastOneCandidatePassesCoverage"]
+        assert not asymmetric_report["gate"]["checks"]["atLeastOneCandidateAdvances"]
+        assert asymmetric_report["selectedCandidate"] is None
+        assert asymmetric_report["decision"] == "reject asymmetric intervals; retain atlas v11"
+
     trend_validation = artifact.parents[1] / "evaluation/trend-validation-v1.json"
     if trend_validation.exists():
         trend_report = json.loads(trend_validation.read_text())

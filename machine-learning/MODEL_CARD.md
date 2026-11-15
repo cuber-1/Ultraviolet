@@ -284,6 +284,15 @@ grouped-bootstrap rank-delta interval was −0.0013 to −0.0005. The candidate 
 rejected and atlas v11 remains production. See
 `evaluation/trend-development-v1.md` and `evaluation/trend-validation-v1.md`.
 
+A subsequent development-only study tested signed-residual asymmetric
+uncertainty intervals. Seven fixed tail allocations were screened using
+pre-2018 calibration residuals, 2018–2020 development, and 2021–2022 stability.
+The advancement gate required nominal pooled/crop/region coverage and at least
+0.5% narrower 80% and 90% bands on both blocks. No candidate cleared both
+requirements. No 2023–2025 metric entered candidate selection or the
+advancement gate, and Atlas v11's symmetric intervals remain in production. See
+`evaluation/asymmetric-interval-development-v12.md`.
+
 Rebuilding the full forward-year atlas with the promoted prior improved pooled
 Spearman from 0.7871 to 0.7914. On identical 2019–2025 rows, 16-year-history
 Spearman improved from 0.8405 to 0.8465 and MAE from 0.1199 to 0.1168. Fresh

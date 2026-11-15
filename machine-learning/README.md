@@ -298,6 +298,21 @@ opened: confirmation rank/MAE changed by −0.0010/+0.0002 and locked 2023–202
 by −0.0009/+0.0001. Its grouped-bootstrap rank interval was entirely negative.
 Atlas v11 therefore remains unchanged; see `evaluation/trend-validation-v1.md`.
 
+The next development-only experiment replaced symmetric absolute-error radii
+with signed residual quantiles and screened seven fixed lower/upper tail
+allocations. Candidates had to preserve pooled, crop, and region coverage while
+narrowing both 80% and 90% intervals by at least 0.5% on both 2018–2020
+development and 2021–2022 stability. No allocation passed both gates, so the
+experiment was rejected without including any 2023–2025 metric in selection or
+the advancement gate, and Atlas v11 remains unchanged. Reproduce it with:
+
+```bash
+npm run ml:develop:asymmetric-intervals
+```
+
+See `evaluation/asymmetric-interval-development-v12.md` and its presentation
+PNG for the coverage/width tradeoff.
+
 The builder uses the filtered USDA Quick Stats and Census county files from the
 national observed-validation download. It writes atlas v11, a forward-year
 validation report, and a presentation PNG under `evaluation/`. Atlas v11 uses
