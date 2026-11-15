@@ -32,7 +32,7 @@ artifact instead, use the full setup below. Because the repository is private,
 the installer uses an authenticated GitHub CLI session (`gh auth login`) or a
 `GITHUB_TOKEN`.
 
-Runtime API v0.15.0 keeps the validated v0.9.1 estimator and hardens every direct
+Runtime API v0.16.0 keeps the validated v0.9.1 estimator and hardens every direct
 and HTTP prediction path with the same finite coordinate, soil-pH, boolean,
 climate-shape, and 20-year history limits. Startup validates the artifact's
 internal model/metadata contract. `GET /health` returns the artifact SHA-256 and
@@ -269,7 +269,12 @@ uncertainty search retains neighbor-disagreement scaling for spring wheat only:
 it reduces development mean 90% width 8.0%. On locked outcomes, mean width
 falls from 0.665 to 0.617 while coverage remains 85.2% / 92.6%. Western locked
 coverage improves to 81.9% / 89.4% and its mean 90% width falls from 0.702 to
-0.608. Silage retains α=0 because no candidate cleared the 1% development-width
+0.613. Region-conditioned pre-2018 groups with at least 50 errors per
+region/history cell clear a separate 1% promotion floor
+for spring wheat, reducing development width 1.3% and locked pooled width from
+0.617 to 0.608 without changing 92.6% coverage. Silage retains pooled groups
+because regional calibration widens its development intervals, and retains α=0
+because no candidate cleared the 1% development-width
 floor. Its intervals achieve 82.2% / 89.9% coverage with mean 90% width 0.750.
 The 690-record artifact keeps
 `bu/acre` and `tons/acre` explicit and publishes only crop-region pairs with at

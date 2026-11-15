@@ -918,36 +918,49 @@ def nearest_evidence(crop: str, latitude: float, longitude: float, path: Path, m
     bucket = distance_bucket(distance)
     production_calibration = production_blend.get("intervalCalibration", {})
     calibration_groups = production_calibration.get("groups") or transfer.get("groups", [])
-    calibration = next((item for item in calibration_groups if (
+    evidence_region = STATE_TO_CENSUS_REGION[record["state"]]
+    matching_calibrations = [item for item in calibration_groups if (
         item["crop"] == crop_key and item["historyBucket"] == history_bucket(effective_history)
-    )), None)
+    )]
+    calibration = next(
+        (item for item in matching_calibrations if item.get("region") == evidence_region),
+        next((item for item in matching_calibrations if item.get("region", "all") == "all"), None),
+    )
     if calibration and prior:
         interval_scales = production_calibration.get("selectedRegionalScales", {}).get(
-            STATE_TO_CENSUS_REGION[record["state"]],
+            evidence_region,
             transfer.get("selectedRegionalScalesByCrop", {}).get(crop_key, {}).get(
-                STATE_TO_CENSUS_REGION[record["state"]], {"scale80": 1.0, "scale90": 1.0},
+                evidence_region, {"scale80": 1.0, "scale90": 1.0},
             ),
         )
         normalized = "normalizedErrorP80" in calibration
         base80 = calibration["normalizedErrorP80"] if normalized else calibration["absoluteErrorP80"]
         base90 = calibration["normalizedErrorP90"] if normalized else calibration["absoluteErrorP90"]
         disagreement_alpha = float(calibration.get("disagreementAlpha", 0.0))
-        disagreement_factor = 1 + disagreement_alpha * neighbor_disagreement
+        reported_expected = round(expected, 4)
+        reported_disagreement = round(neighbor_disagreement, 4)
+        disagreement_factor = 1 + disagreement_alpha * reported_disagreement
         prior.update({
-            "expectedPercentile": round(expected, 4),
-            "interval80": [round(max(0.0, expected - base80 * disagreement_factor * interval_scales["scale80"]), 4), round(min(1.0, expected + base80 * disagreement_factor * interval_scales["scale80"]), 4)],
-            "interval90": [round(max(0.0, expected - base90 * disagreement_factor * interval_scales["scale90"]), 4), round(min(1.0, expected + base90 * disagreement_factor * interval_scales["scale90"]), 4)],
+            "expectedPercentile": reported_expected,
+            "interval80": [round(max(0.0, reported_expected - base80 * disagreement_factor * interval_scales["scale80"]), 4), round(min(1.0, reported_expected + base80 * disagreement_factor * interval_scales["scale80"]), 4)],
+            "interval90": [round(max(0.0, reported_expected - base90 * disagreement_factor * interval_scales["scale90"]), 4), round(min(1.0, reported_expected + base90 * disagreement_factor * interval_scales["scale90"]), 4)],
             "intervalMethod": (
                 "local-regional-blend-conformal" if used_regional_blend
                 else "region-gated-local-conformal"
             ) if production_calibration.get("groups") else (
-                "disagreement-scaled-spatial-conformal" if disagreement_alpha > 0
-                else "spatial-neighborhood-conformal"
+                (
+                    "region-conditioned-disagreement-scaled-spatial-conformal"
+                    if disagreement_alpha > 0 else "region-conditioned-spatial-conformal"
+                ) if calibration.get("region", "all") != "all" else (
+                    "disagreement-scaled-spatial-conformal" if disagreement_alpha > 0
+                    else "spatial-neighborhood-conformal"
+                )
             ),
             "distanceBucket": bucket,
             "calibrationExamples": calibration["examples"], "neighborCount": neighbor_count,
             "effectiveHistoryCount": effective_history, "effectiveHistoryBucket": history_bucket(effective_history),
-            "neighborDisagreement": round(neighbor_disagreement, 4),
+            "calibrationRegion": calibration.get("region", "all"),
+            "neighborDisagreement": reported_disagreement,
             "disagreementAlpha": disagreement_alpha,
         })
     regional_neighbors = [{

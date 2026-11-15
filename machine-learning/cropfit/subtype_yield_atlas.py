@@ -21,6 +21,7 @@ FINAL_YEARS = (2023, 2024, 2025)
 SCALE_CANDIDATES = (1.0, 1.05, 1.1, 1.15, 1.2, 1.25, 1.33, 1.4, 1.5)
 DISAGREEMENT_ALPHA_CANDIDATES = (0.0, .5, 1.0, 2.0, 3.0, 5.0, 8.0, 10.0)
 MIN_DEVELOPMENT_WIDTH_REDUCTION = .01
+MIN_REGIONAL_CALIBRATION_EXAMPLES = 50
 DEFAULT_RECENCY_WEIGHT = .8
 RECENCY_WEIGHT_CANDIDATES = (0.0, .25, .5, .8, 1.0)
 MIN_DEVELOPMENT_TEMPORAL_SPEARMAN_GAIN = .005
@@ -186,15 +187,21 @@ def paired_rank_gain_interval(nearest: list[dict], selected: list[dict], seed: i
     return [round(float(value), 4) for value in np.quantile(deltas, [.025, .975])]
 
 
+def calibration_group(table: dict, crop: str, bucket: str, region: str) -> dict:
+    return table.get((crop, region, bucket), table[(crop, None, bucket)])
+
+
 def interval_metrics(
-    items: list[dict], table: dict[tuple[str, str], dict], scales: dict[str, dict],
+    items: list[dict], table: dict, scales: dict[str, dict],
     regional_scales: dict[str, dict[str, dict]] | None = None,
 ) -> dict:
     hits80, hits90, widths80, widths90 = [], [], [], []
     for item in items:
-        calibration = table[(item["crop"], history_bucket(item["historyCount"]))]
-        crop_scales = scales[item["crop"]]
         region = STATE_TO_CENSUS_REGION[item["state"]]
+        calibration = calibration_group(
+            table, item["crop"], history_bucket(item["historyCount"]), region,
+        )
+        crop_scales = scales[item["crop"]]
         region_scales = (regional_scales or {}).get(item["crop"], {}).get(region, {"scale80": 1.0, "scale90": 1.0})
         disagreement_factor = 1 + calibration.get("disagreementAlpha", 0.0) * item["neighborDisagreement"]
         radius80 = calibration["normalizedErrorP80"] * disagreement_factor * crop_scales["scale80"] * region_scales["scale80"]
@@ -215,21 +222,29 @@ def interval_metrics(
     }
 
 
-def crop_calibration_table(calibration_examples: list[dict], crop: str, disagreement_alpha: float) -> dict:
-    grouped: dict[str, list[float]] = defaultdict(list)
+def crop_calibration_table(
+    calibration_examples: list[dict], crop: str, disagreement_alpha: float,
+    regional_overrides: set[str] | None = None,
+) -> dict:
+    grouped: dict[tuple[str | None, str], list[float]] = defaultdict(list)
     for item in calibration_examples:
         if item["crop"] != crop:
             continue
         normalization = 1 + disagreement_alpha * item["neighborDisagreement"]
-        grouped[history_bucket(item["historyCount"])].append(item["absoluteError"] / normalization)
+        bucket = history_bucket(item["historyCount"])
+        error = item["absoluteError"] / normalization
+        grouped[(None, bucket)].append(error)
+        region = STATE_TO_CENSUS_REGION[item["state"]]
+        if region in (regional_overrides or set()):
+            grouped[(region, bucket)].append(error)
     return {
-        (crop, bucket): {
-            "crop": crop, "historyBucket": bucket, "examples": len(errors),
+        (crop, region, bucket): {
+            "crop": crop, "region": region or "all", "historyBucket": bucket, "examples": len(errors),
             "normalizedErrorP80": round(conformal_quantile(errors, .8), 4),
             "normalizedErrorP90": round(conformal_quantile(errors, .9), 4),
             "disagreementAlpha": disagreement_alpha,
         }
-        for bucket, errors in grouped.items()
+        for (region, bucket), errors in grouped.items()
     }
 
 
@@ -388,7 +403,7 @@ def build(data: Path) -> tuple[dict, dict]:
             ) >= 50 for years in (DEVELOPMENT_YEARS, STABILITY_YEARS, FINAL_YEARS))
         ]
 
-    table: dict[tuple[str, str], dict] = {}
+    table: dict = {}
     unit_scales = {}
     selected_regional_scales: dict[str, dict[str, dict]] = {}
     selection = []
@@ -396,6 +411,9 @@ def build(data: Path) -> tuple[dict, dict]:
     selected_disagreement_alphas = {}
     disagreement_baselines = {}
     disagreement_scale_selection = []
+    selected_calibration_scopes = {}
+    calibration_scope_baselines = {}
+    calibration_scope_selection = []
     for crop in CROP_METADATA:
         crop_examples = [item for item in examples if item["crop"] == crop]
         candidates = []
@@ -426,17 +444,78 @@ def build(data: Path) -> tuple[dict, dict]:
         width_reduction = 1 - narrowest["development"]["meanWidth90"] / baseline["development"]["meanWidth90"]
         selected = narrowest if width_reduction >= MIN_DEVELOPMENT_WIDTH_REDUCTION else baseline
         alpha = selected["disagreementAlpha"]
-        selected_table, crop_scales, scale_selection, regional_scales, regional_selection = candidate_details[alpha]
+        pooled_table, pooled_scales, pooled_scale_selection, pooled_regional_scales, pooled_regional_selection = candidate_details[alpha]
+        calibration_scope_baselines[crop] = (pooled_table, pooled_scales, pooled_regional_scales)
+        regional_table = crop_calibration_table(
+            calibration_examples, crop, alpha, set(supported_regions[crop]),
+        )
+        regional_crop_scales, regional_scale_report, regional_scales_candidate, regional_selection_candidate = select_crop_interval_scales(
+            crop, crop_examples, regional_table, supported_regions[crop],
+        )
+        development_items = [item for item in crop_examples if item["year"] in DEVELOPMENT_YEARS]
+        stability_items = [item for item in crop_examples if item["year"] in STABILITY_YEARS]
+        pooled_development = interval_metrics(
+            development_items, pooled_table, {crop: pooled_scales}, {crop: pooled_regional_scales},
+        )
+        pooled_stability = interval_metrics(
+            stability_items, pooled_table, {crop: pooled_scales}, {crop: pooled_regional_scales},
+        )
+        regional_development = interval_metrics(
+            development_items, regional_table, {crop: regional_crop_scales}, {crop: regional_scales_candidate},
+        )
+        regional_stability = interval_metrics(
+            stability_items, regional_table, {crop: regional_crop_scales}, {crop: regional_scales_candidate},
+        )
+        scope_width_reduction = 1 - regional_development["meanWidth90"] / pooled_development["meanWidth90"]
+        minimum_regional_examples = min(
+            group["examples"] for (group_crop, region, _), group in regional_table.items()
+            if group_crop == crop and region is not None
+        )
+        use_regional_calibration = (
+            scope_width_reduction >= MIN_DEVELOPMENT_WIDTH_REDUCTION
+            and minimum_regional_examples >= MIN_REGIONAL_CALIBRATION_EXAMPLES
+            and regional_development["coverage80"] >= .78 and regional_development["coverage90"] >= .88
+            and regional_stability["coverage80"] >= .78 and regional_stability["coverage90"] >= .88
+        )
+        if use_regional_calibration:
+            selected_table = regional_table
+            crop_scales = regional_crop_scales
+            scale_selection = regional_scale_report
+            regional_scales = regional_scales_candidate
+            regional_selection = regional_selection_candidate
+            selected_scope = "region-conditioned"
+        else:
+            selected_table = pooled_table
+            crop_scales = pooled_scales
+            scale_selection = pooled_scale_selection
+            regional_scales = pooled_regional_scales
+            regional_selection = pooled_regional_selection
+            selected_scope = "pooled"
         table.update(selected_table)
         unit_scales[crop] = crop_scales
         selection.append(scale_selection)
         selected_regional_scales[crop] = regional_scales
         regional_scale_selection.extend(regional_selection)
         selected_disagreement_alphas[crop] = alpha
+        selected_calibration_scopes[crop] = selected_scope
         disagreement_scale_selection.append({
             "crop": crop, "candidates": candidates, "selected": alpha,
             "developmentWidthReduction": round(max(0.0, width_reduction if selected is narrowest else 0.0), 4),
             "minimumDevelopmentWidthReduction": MIN_DEVELOPMENT_WIDTH_REDUCTION,
+        })
+        calibration_scope_selection.append({
+            "crop": crop,
+            "candidates": {
+                "pooled": {"development": pooled_development, "stability": pooled_stability},
+                "region-conditioned": {"development": regional_development, "stability": regional_stability},
+            },
+            "selected": selected_scope,
+            "developmentWidthReduction": round(
+                max(0.0, scope_width_reduction if use_regional_calibration else 0.0), 4,
+            ),
+            "minimumDevelopmentWidthReduction": MIN_DEVELOPMENT_WIDTH_REDUCTION,
+            "minimumRegionalCalibrationExamples": MIN_REGIONAL_CALIBRATION_EXAMPLES,
+            "smallestRegionalCalibrationGroup": minimum_regional_examples,
         })
 
     per_crop = []
@@ -498,6 +577,11 @@ def build(data: Path) -> tuple[dict, dict]:
         disagreement_baseline_final = interval_metrics(
             final_examples, baseline_table, {crop: baseline_scales}, {crop: baseline_regional},
         )
+        scope_baseline_table, scope_baseline_scales, scope_baseline_regional = calibration_scope_baselines[crop]
+        calibration_scope_baseline_final = interval_metrics(
+            final_examples, scope_baseline_table,
+            {crop: scope_baseline_scales}, {crop: scope_baseline_regional},
+        )
         item = {
             "crop": crop,
             "nearestCountySignal": baseline_signal, "signal": signal,
@@ -509,7 +593,12 @@ def build(data: Path) -> tuple[dict, dict]:
             "temporalComparison": temporal_comparison,
             "disagreementCalibrationComparison": {
                 "baselineAlpha": 0.0, "selectedAlpha": selected_disagreement_alphas[crop],
-                "finalBaseline": disagreement_baseline_final, "finalSelected": selected_final,
+                "finalBaseline": disagreement_baseline_final,
+                "finalSelected": calibration_scope_baseline_final,
+            },
+            "calibrationScopeComparison": {
+                "baselineScope": "pooled", "selectedScope": selected_calibration_scopes[crop],
+                "finalBaseline": calibration_scope_baseline_final, "finalSelected": selected_final,
             },
             "development": interval_metrics([item for item in crop_examples if item["year"] in DEVELOPMENT_YEARS], table, unit_scales, selected_regional_scales),
             "stability": interval_metrics([item for item in crop_examples if item["year"] in STABILITY_YEARS], table, unit_scales, selected_regional_scales),
@@ -547,6 +636,11 @@ def build(data: Path) -> tuple[dict, dict]:
                 or item["disagreementCalibrationComparison"]["finalSelected"]["meanWidth90"]
                 < item["disagreementCalibrationComparison"]["finalBaseline"]["meanWidth90"]
             )
+            and (
+                item["calibrationScopeComparison"]["selectedScope"] == "pooled"
+                or item["calibrationScopeComparison"]["finalSelected"]["meanWidth90"]
+                < item["calibrationScopeComparison"]["finalBaseline"]["meanWidth90"]
+            )
             and item["development"]["coverage80"] >= .78 and item["development"]["coverage90"] >= .88
             and item["stability"]["coverage80"] >= .78 and item["stability"]["coverage90"] >= .88
             and .75 <= item["final"]["coverage80"] <= .9
@@ -575,16 +669,26 @@ def build(data: Path) -> tuple[dict, dict]:
         )
         for item in temporal_selection
     )
+    calibration_scope_gate = all(
+        item["selected"] == "pooled"
+        or (
+            item["developmentWidthReduction"] >= item["minimumDevelopmentWidthReduction"]
+            and item["smallestRegionalCalibrationGroup"] >= item["minimumRegionalCalibrationExamples"]
+        )
+        for item in calibration_scope_selection
+    )
     gate_passed = (
         accepted_crops == ["silage corn", "spring wheat"]
-        and disagreement_gate and temporal_gate
+        and disagreement_gate and temporal_gate and calibration_scope_gate
     )
     report = {
         "name": "USDA crop-subtype yield atlas v1 validation",
         "calibrationYears": list(CALIBRATION_YEARS), "developmentYears": list(DEVELOPMENT_YEARS),
         "stabilityYears": list(STABILITY_YEARS), "finalTestYears": list(FINAL_YEARS),
         "calibrationExamples": len(calibration_examples),
-        "calibrationGroups": [table[key] for key in sorted(table)],
+        "calibrationGroups": [
+            table[key] for key in sorted(table, key=lambda value: (value[0], value[1] or "", value[2]))
+        ],
         "neighborhoodSelection": neighborhood_selection,
         "selectedNeighborhoods": selected_neighborhoods,
         "distanceOnlyNeighborhoods": distance_only_neighborhoods,
@@ -593,13 +697,15 @@ def build(data: Path) -> tuple[dict, dict]:
         "scaleSelection": selection, "selectedScales": unit_scales, "perCrop": per_crop,
         "disagreementScaleSelection": disagreement_scale_selection,
         "selectedDisagreementAlphas": selected_disagreement_alphas,
+        "calibrationScopeSelection": calibration_scope_selection,
+        "selectedCalibrationScopes": selected_calibration_scopes,
         "regionalScaleSelection": regional_scale_selection,
         "selectedRegionalScales": selected_regional_scales,
         "supportedRegionsByCrop": supported_regions,
         "acceptedCrops": accepted_crops,
         "gate": {
             "passed": gate_passed,
-            "rule": "Select neighborhood size, distance power, and history-reliability power on 2018-2020 only. Promote a crop-specific temporal blend only after at least +0.005 development Spearman with lower MAE and no rank or MAE regression in 2021-2022 stability. Select neighbor-disagreement scaling only when it reduces development mean 90% width by at least 1%; stability still sets coverage scales. Leave-one-county-out transfer within 100 km then needs final N >=100, Spearman >=0.50 with grouped-bootstrap lower >0.30; paired-bootstrap rank-gain lower >0; positive rank gain and MAE reduction over one nearest county in development, stability, and locked final blocks; no rank or MAE regression versus the best development-selected distance-only candidate in any block. Regional interval multipliers selected on development/stability must reach 80%/90%; locked pooled coverage must be 75-90%/87-96%, and every region needs final N >=50, 80% coverage >=70%, 90% coverage 85-98%, and mean 90% width <=0.90.",
+            "rule": "Select neighborhood size, distance power, and history-reliability power on 2018-2020 only. Promote a crop-specific temporal blend only after at least +0.005 development Spearman with lower MAE and no rank or MAE regression in 2021-2022 stability. Select neighbor-disagreement scaling and region-conditioned calibration only when each reduces development mean 90% width by at least 1%; regional calibration also needs at least 50 pre-2018 errors per region/history group, and stability still sets coverage scales. Leave-one-county-out transfer within 100 km then needs final N >=100, Spearman >=0.50 with grouped-bootstrap lower >0.30; paired-bootstrap rank-gain lower >0; positive rank gain and MAE reduction over one nearest county in development, stability, and locked final blocks; no rank or MAE regression versus the best development-selected distance-only candidate in any block. Regional interval multipliers selected on development/stability must reach 80%/90%; locked pooled coverage must be 75-90%/87-96%, and every region needs final N >=50, 80% coverage >=70%, 90% coverage 85-98%, and mean 90% width <=0.90.",
         },
         "interpretation": "Nearby-county subtype ordering and uncertainty only; not parcel yield, revenue, or purchase returns.",
     }
@@ -622,9 +728,10 @@ def build(data: Path) -> tuple[dict, dict]:
         expected = observed_prior_prediction(
             items, 2026, recency_weight=selected_recency_weights[crop],
         )
-        calibration = table[(crop, history_bucket(len(items)))]
+        region = STATE_TO_CENSUS_REGION[latest["state"]]
+        calibration = calibration_group(table, crop, history_bucket(len(items)), region)
         scales = unit_scales[crop]
-        region_scales = selected_regional_scales[crop][STATE_TO_CENSUS_REGION[latest["state"]]]
+        region_scales = selected_regional_scales[crop][region]
         records.append({
             "crop": crop, "fips": fips, "state": latest["state"], "county": latest["county"],
             "latitude": latest["latitude"], "longitude": latest["longitude"],
@@ -640,8 +747,14 @@ def build(data: Path) -> tuple[dict, dict]:
                 "interval90": [round(max(0.0, expected - calibration["normalizedErrorP90"] * scales["scale90"] * region_scales["scale90"]), 4), round(min(1.0, expected + calibration["normalizedErrorP90"] * scales["scale90"] * region_scales["scale90"]), 4)],
                 "historyBucket": history_bucket(len(items)), "calibrationExamples": calibration["examples"],
                 "intervalMethod": (
-                    "base-normalized-spatial-conformal"
-                    if calibration["disagreementAlpha"] > 0 else "spatial-neighborhood-conformal"
+                    "region-conditioned-base-normalized-spatial-conformal"
+                    if selected_calibration_scopes[crop] == "region-conditioned"
+                    and calibration["disagreementAlpha"] > 0
+                    else "region-conditioned-spatial-conformal"
+                    if selected_calibration_scopes[crop] == "region-conditioned"
+                    else "base-normalized-spatial-conformal"
+                    if calibration["disagreementAlpha"] > 0
+                    else "spatial-neighborhood-conformal"
                 ),
                 "disagreementAlpha": calibration["disagreementAlpha"],
                 "neighborDisagreement": 0.0,
@@ -661,13 +774,19 @@ def build(data: Path) -> tuple[dict, dict]:
             "distanceOnlyNeighborhoodByCrop": distance_only_neighborhoods,
             "selectedRecencyWeightsByCrop": selected_recency_weights,
             "selectedDisagreementAlphasByCrop": selected_disagreement_alphas,
+            "selectedCalibrationScopesByCrop": selected_calibration_scopes,
             "selectedRegionalScalesByCrop": selected_regional_scales,
             "supportedRegionsByCrop": supported_regions,
             "groups": [{
-                **table[(crop, bucket)],
-                "normalizedErrorP80": round(table[(crop, bucket)]["normalizedErrorP80"] * unit_scales[crop]["scale80"], 4),
-                "normalizedErrorP90": round(table[(crop, bucket)]["normalizedErrorP90"] * unit_scales[crop]["scale90"], 4),
-            } for crop in accepted_crops for bucket in ("1", "2-3", "4+")],
+                **table[key],
+                "normalizedErrorP80": round(
+                    table[key]["normalizedErrorP80"] * unit_scales[table[key]["crop"]]["scale80"], 4,
+                ),
+                "normalizedErrorP90": round(
+                    table[key]["normalizedErrorP90"] * unit_scales[table[key]["crop"]]["scale90"], 4,
+                ),
+            } for key in sorted(table, key=lambda value: (value[0], value[1] or "", value[2]))
+            if table[key]["crop"] in accepted_crops],
             "gate": report["gate"],
         },
         "predictionMethod": {
@@ -736,6 +855,22 @@ def markdown(report: dict, records: int) -> str:
         lines.append(
             f'| {item["crop"]} | {comparison["selectedAlpha"]:.1f} | '
             f'{selections[item["crop"]]["developmentWidthReduction"]:.1%} | '
+            f'{comparison["finalSelected"]["coverage90"]:.1%} | '
+            f'{comparison["finalSelected"]["meanWidth90"]:.3f} | '
+            f'{comparison["finalBaseline"]["meanWidth90"]:.3f} |'
+        )
+    lines += [
+        "", "## Region-conditioned calibration", "",
+        "Regional conformal groups are retained only after at least a 1% development-width reduction and at least 50 pre-2018 errors per region/history group; pooled groups remain available as fallback.", "",
+        "| Crop subtype | Selected scope | Development width reduction | Locked 90% coverage | Locked mean 90% width | Pooled width |",
+        "|---|---|---:|---:|---:|---:|",
+    ]
+    scope_selections = {item["crop"]: item for item in report["calibrationScopeSelection"]}
+    for item in report["perCrop"]:
+        comparison = item["calibrationScopeComparison"]
+        lines.append(
+            f'| {item["crop"]} | {comparison["selectedScope"]} | '
+            f'{scope_selections[item["crop"]]["developmentWidthReduction"]:.1%} | '
             f'{comparison["finalSelected"]["coverage90"]:.1%} | '
             f'{comparison["finalSelected"]["meanWidth90"]:.3f} | '
             f'{comparison["finalBaseline"]["meanWidth90"]:.3f} |'

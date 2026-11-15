@@ -14,7 +14,7 @@
 > Optional: `ML_SOIL_PH` (default 6.5), `ML_IRRIGATED` (default true).
 
 For grain corn, soybean, winter wheat, silage corn, and non-durum spring wheat,
-CropFit API v0.15.0 also returns optional
+CropFit API v0.16.0 also returns optional
 `observedYieldEvidence` from nearby USDA reporting counties within 100 km.
 Atlas v9 includes 2010–2025 history plus a calibrated observed-yield percentile
 prior with 80% and 90% uncertainty intervals. The prior blends 80% exponential
@@ -41,6 +41,13 @@ Spring-wheat uncertainty expands with disagreement among its five neighbors;
 the scaling parameter is retained only after clearing a 1% development-width
 reduction floor and stability coverage gates. Silage uncertainty remains
 disagreement-neutral because it did not clear that floor.
+Spring wheat also uses region-conditioned pre-2018 conformal groups only after
+every region/history cell reaches 50 errors, the groups clear a separate 1%
+development-width floor, and they preserve stability coverage.
+Silage retains pooled calibration because its regional candidate is wider.
+`observedYieldPrior.calibrationRegion` reports the exact group used (`Midwest`,
+`West`, or `all`), and returned interval endpoints are reconstructed from the
+reported expected percentile and neighbor disagreement without hidden precision.
 Its region-specific interval multipliers were selected on development and
 stability years before the final block was opened. Only crop-region pairs with
 at least 50 examples in all three blocks are published. Yield history carries
@@ -91,7 +98,7 @@ results "Crop calendar · model offline". The UI and Deep Agent keep working.
 Failed health probes are not cached, so a recovered primary is redetected as
 CropFit on the next request rather than receiving the generic API payload.
 
-CropFit API v0.15.0 with the v0.9.1 production model artifact is the supported
+CropFit API v0.16.0 with the v0.9.1 production model artifact is the supported
 runtime; the generic contract below is for any other model you want to plug in.
 
 ## `GET /health`

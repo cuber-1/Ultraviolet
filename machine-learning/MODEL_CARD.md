@@ -46,7 +46,7 @@ rejected; that experiment did not replace the 120-tree v0.6 champion. See
 
 ## Out-of-distribution ceiling
 
-API v0.15.0 retains the v0.6.1 safety ceiling that caps the ML score by the exact
+API v0.16.0 retains the v0.6.1 safety ceiling that caps the ML score by the exact
 seasonal and establishment EcoCrop suitability already computed for
 limiting-factor explanations. This is a one-sided safety constraint: the
 ensemble still determines underprediction but cannot claim suitability above
@@ -215,7 +215,11 @@ intervals against one nearest county stay above zero (+0.047 to +0.194 and
 spring wheat only after an 8.0% mean-width reduction clears a predeclared 1%
 floor. On locked outcomes, its mean 90% width falls from 0.665 to 0.617 while
 coverage remains 85.2% / 92.6%; Western coverage is 81.9% / 89.4% with width
-0.608 instead of 0.702. Silage retains α=0 and reaches 82.2% / 89.9% with
+0.613 instead of 0.702. Spring-wheat region-conditioned groups, each backed by
+at least 50 pre-2018 errors, then clear a
+separate 1% development-width floor and narrow locked pooled width from 0.617
+to 0.608 at the same 92.6% coverage. Silage retains pooled calibration because
+its regional candidate is wider. It retains α=0 and reaches 82.2% / 89.9% with
 mean 90% width 0.750. The separate
 690-record atlas preserves explicit `bu/acre` and `tons/acre` units and excludes
 crop-region pairs without at least 50 examples in every validation block. See
@@ -223,7 +227,7 @@ crop-region pairs without at least 50 examples in every validation block. See
 
 ## Inference request safety
 
-API v0.15.0 bounds caller-supplied climate to 12 or 24 ordered months and at
+API v0.16.0 bounds caller-supplied climate to 12 or 24 ordered months and at
 most 20 complete history years. Temperature, precipitation, and solar inputs
 must be finite and remain within documented physical limits. Invalid caller
 data returns HTTP 422 instead of being mislabeled as a model/upstream failure;
@@ -257,7 +261,7 @@ reuse a stale prediction. The cache is a bounded 2,048-entry LRU, and CI checks
 key sensitivity, revision invalidation, model isolation, expiry, and
 least-recently-used eviction.
 
-API v0.15.0 exposes its API+training-run+artifact-hash revision and the full
+API v0.16.0 exposes its API+training-run+artifact-hash revision and the full
 artifact SHA-256 through `/health`. The browser proxy reads the revision once
 per prediction request. Startup rejects artifacts missing the fitted ensemble,
 model identity, or a consistent feature contract. Direct and HTTP inference
