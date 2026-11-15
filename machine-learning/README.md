@@ -109,6 +109,16 @@ hard-zero cases to dominate the aggregate:
 npm run ml:evaluate:scenario-shift
 ```
 
+The reproducible v0.10 density experiment doubles fitting coverage and reduces
+the ensemble to 32 trees. It passes every frozen grouped-split gate but is not
+promoted because a separate scenario-shift gate catches a 0.99% deployed-MAE
+regression:
+
+```bash
+npm run ml:evaluate:density-refinement
+npm run ml:evaluate:density-shift
+```
+
 Training refuses to replace the production artifact unless frozen MAE, p90,
 R², held-out-profile-count, and conformal-coverage thresholds all pass. The
 artifact and metadata are written atomically, so interruption cannot leave a

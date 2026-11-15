@@ -38,6 +38,15 @@ The locked 132-row batch latency ratio was 0.99× because parallel-dispatch
 overhead dominates tiny batches. Timings and RSS are machine-dependent; Apple
 Silicon installation and loopback inference remain CI requirements.
 
+A v0.10 density candidate doubled fitting coverage to 240 scenarios per crop
+while reducing the ensemble to 32 trees. It won all seven frozen
+confirmation/final splits, reducing locked MAE 10.9% and p90 error 10.3%, with
+a 9.5% smaller artifact. It was still rejected: on an independent
+Latin-hypercube shift test, raw MAE improved only 4.83% against a declared 5%
+floor and deployed seasonal-ceiling MAE regressed 0.99%. The production model
+therefore remains v0.9.1. See `evaluation/density-refinement-validation-v0.10.md`
+and `evaluation/density-shift-validation-v0.10.md`.
+
 An 80-tree compact candidate reduced serialized estimator size to about 67% of
 the champion, but failed the frozen accuracy tolerance on all seven fresh
 seeds: mean MAE regressed 4.1% and mean p90 error regressed 5.9%. It was

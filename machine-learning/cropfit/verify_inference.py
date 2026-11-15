@@ -341,6 +341,22 @@ def verify(artifact: Path, profiles: Path) -> None:
         assert density_report["summary"]["candidateSerializedSizeBytes"] <= 72_000_000
         assert density_report["protocol"]["fixedEvaluation"].startswith("Both models use identical")
 
+    refinement_validation = artifact.parents[1] / "evaluation/density-refinement-validation-v0.10.json"
+    if refinement_validation.exists():
+        refinement_report = json.loads(refinement_validation.read_text())
+        assert refinement_report["gate"]["passed"]
+        assert refinement_report["summary"]["lockedSeedWins"] == refinement_report["summary"]["lockedSeeds"] == 7
+        assert refinement_report["summary"]["lockedMeanMaeImprovementPercent"] >= 10
+        assert refinement_report["summary"]["lockedMeanP90ImprovementPercent"] >= 10
+        assert refinement_report["summary"]["candidateSerializedSizeBytes"] < refinement_report["summary"]["championSerializedSizeBytes"]
+
+    density_shift_validation = artifact.parents[1] / "evaluation/density-shift-validation-v0.10.json"
+    if density_shift_validation.exists():
+        density_shift_report = json.loads(density_shift_validation.read_text())
+        assert not density_shift_report["gate"]["passed"]
+        assert density_shift_report["gains"]["deployedMaePercent"] < 0
+        assert density_shift_report["protocol"]["candidate"].startswith("v0.10 candidate")
+
     shift_validation = artifact.parents[1] / "evaluation/scenario-shift-validation-v0.9.1.json"
     if shift_validation.exists():
         shift_report = json.loads(shift_validation.read_text())

@@ -1,0 +1,98 @@
+{
+  "name": "CropFit v0.10 independent density-shift validation",
+  "target": "EcoCrop mechanistic screening teacher; not observed yield",
+  "protocol": {
+    "profiles": 373,
+    "scenariosPerProfile": 64,
+    "examples": 23872,
+    "generator": "Independently seeded scipy LatinHypercube over the same physical support; not the training generator.",
+    "champion": "v0.9.1 reconstructed with 120 fitting scenarios per crop and 70 Extra Trees",
+    "candidate": "v0.10 candidate reconstructed with 240 fitting scenarios per crop and 32 Extra Trees",
+    "heldOutPolicy": "Production-seed test crop profiles only; candidate selected without this shifted set.",
+    "declaredGate": "Against the exact v0.9.1 estimator, all raw and deployed error gains must be >=5% on independently generated Latin-hypercube scenarios; irrigated, rainfed, and active MAE must each improve; active coverage must remain within 2 points of nominal on both frozen-random and shifted tests."
+  },
+  "championV09": {
+    "examples": 23872,
+    "mae": 0.01471,
+    "p90AbsoluteError": 0.04045,
+    "maximumAbsoluteError": 2.24673,
+    "deployedMae": 0.00607,
+    "deployedP90AbsoluteError": 0.00064,
+    "deployedMaximumAbsoluteError": 0.84157,
+    "subgroups": {
+      "irrigated": {
+        "examples": 11936,
+        "mae": 0.01538,
+        "p90AbsoluteError": 0.04266
+      },
+      "rainfed": {
+        "examples": 11936,
+        "mae": 0.01404,
+        "p90AbsoluteError": 0.03656
+      },
+      "active": {
+        "examples": 5026,
+        "mae": 0.06983,
+        "p90AbsoluteError": 0.17452
+      },
+      "hardZero": {
+        "examples": 18846,
+        "mae": 1e-05,
+        "p90AbsoluteError": 0.0
+      }
+    }
+  },
+  "candidateV010": {
+    "examples": 23872,
+    "mae": 0.014,
+    "p90AbsoluteError": 0.03667,
+    "maximumAbsoluteError": 1.61483,
+    "deployedMae": 0.00613,
+    "deployedP90AbsoluteError": 0.00013,
+    "deployedMaximumAbsoluteError": 0.97897,
+    "subgroups": {
+      "irrigated": {
+        "examples": 11936,
+        "mae": 0.01472,
+        "p90AbsoluteError": 0.04267
+      },
+      "rainfed": {
+        "examples": 11936,
+        "mae": 0.01328,
+        "p90AbsoluteError": 0.03077
+      },
+      "active": {
+        "examples": 5026,
+        "mae": 0.06651,
+        "p90AbsoluteError": 0.1724
+      },
+      "hardZero": {
+        "examples": 18846,
+        "mae": 0.0,
+        "p90AbsoluteError": 0.0
+      }
+    }
+  },
+  "gains": {
+    "maePercent": 4.83,
+    "p90Percent": 9.34,
+    "deployedMaePercent": -0.99,
+    "deployedP90Percent": 79.69
+  },
+  "activeCoverage": {
+    "frozenRandom": {
+      "p80": 0.7982,
+      "p90": 0.9007
+    },
+    "independentShift": {
+      "p80": 0.7969,
+      "meanRadius80": 0.0954,
+      "p90": 0.8969,
+      "meanRadius90": 0.1263
+    }
+  },
+  "gate": {
+    "passed": false,
+    "rule": "Against the exact v0.9.1 estimator, all raw and deployed error gains must be >=5% on independently generated Latin-hypercube scenarios; irrigated, rainfed, and active MAE must each improve; active coverage must remain within 2 points of nominal on both frozen-random and shifted tests."
+  }
+}
