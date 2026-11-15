@@ -43,6 +43,12 @@ independent shift and strong averages do not override that failure. Production
 therefore remains the six-feature v0.11 model. See
 `evaluation/interaction-compaction-validation-v0.12.md`.
 
+A six-feature smoothing follow-up also failed. Increasing to 72 trees with
+`min_samples_leaf=2` improved mean MAE 10.15% and reduced size 7.18%, but only
+4/10 fresh seeds cleared every gate. Independent-shift p90 improved just 1.93%
+against a 5% floor, while deployed maximum error worsened from 0.698 to 1.200.
+See `evaluation/leaf-smoothing-validation-v0.12.md`.
+
 Version 0.9 increases generated fitting coverage from 72 to 120 scenarios per
 training crop while preserving the exact v0.8 validation and held-out rows. The
 denser fitting data lets the ensemble shrink from 120 to 70 trees. Across two

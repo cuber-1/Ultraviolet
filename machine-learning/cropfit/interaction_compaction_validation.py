@@ -58,16 +58,31 @@ def relative_gains(champion: dict, candidate: dict) -> dict:
     }
 
 
-def evaluate(profiles_path: Path) -> dict:
+def evaluate(
+    profiles_path: Path,
+    fit_pair_fn=fit_pair,
+    confirmation_seeds: list[int] = CONFIRMATION_SEEDS,
+    final_seeds: list[int] = FINAL_SEEDS,
+    shift_seed: int = SHIFT_SEED,
+    mean_gain_floor: float = 25,
+    shift_gain_floor: float = 20,
+    maximum_size_bytes: int = 40_000_000,
+    latency_ceiling: float = 1.0,
+    validation_name: str = "CropFit interaction-only compaction validation v0.12 candidate",
+    protocol_champion: str = "v0.11.0, six range-relative features, 40 Extra Trees, min_samples_leaf=1",
+    protocol_candidate: str = "two transparent interaction features, 60 Extra Trees, min_samples_leaf=2",
+    candidate_features: list[str] = INTERACTION_FEATURE_NAMES,
+    selection: str | None = None,
+) -> dict:
     profiles = load_profiles(profiles_path)
     results = []
     sizes = None
-    for seed in CONFIRMATION_SEEDS + FINAL_SEEDS:
-        models, x, y, groups, indices = fit_pair(profiles, seed)
+    for seed in confirmation_seeds + final_seeds:
+        models, x, y, groups, indices = fit_pair_fn(profiles, seed)
         validation, test = indices
         item = {
             "seed": seed,
-            "phase": "confirmation" if seed in CONFIRMATION_SEEDS else "final",
+            "phase": "confirmation" if seed in confirmation_seeds else "final",
             "testProfiles": len(np.unique(groups[test])),
         }
         for name in ("championV011", "interactionCandidate"):
@@ -114,10 +129,10 @@ def evaluate(profiles_path: Path) -> dict:
     final_p90_gain = mean_gain(final, "p90Percent")
     latency_ratio = float(np.mean([item["latencyRatio"] for item in results]))
 
-    shift_models, shift_x, shift_y, shift_groups, shift_indices = fit_pair(profiles, SHIFT_SEED)
+    shift_models, shift_x, shift_y, shift_groups, shift_indices = fit_pair_fn(profiles, shift_seed)
     shift_validation, shift_test = shift_indices
     shifted_x, shifted_y, irrigated = shifted_examples(
-        profiles, np.unique(shift_groups[shift_test]), seed=SHIFT_SEED,
+        profiles, np.unique(shift_groups[shift_test]), seed=shift_seed,
     )
     shifted = {}
     for name in ("championV011", "interactionCandidate"):
@@ -126,7 +141,7 @@ def evaluate(profiles_path: Path) -> dict:
             shift_models[name]["model"], shifted_x[:, columns], shifted_y, irrigated,
         )
     candidate_model = shift_models["interactionCandidate"]["model"]
-    candidate_shift_x = shift_x[:, INTERACTION_COLUMNS]
+    candidate_shift_x = shift_x[:, shift_models["interactionCandidate"]["columns"]]
     quantiles = validation_quantiles(
         candidate_model, candidate_shift_x, shift_y, shift_validation, active_only=True,
     )
@@ -144,7 +159,7 @@ def evaluate(profiles_path: Path) -> dict:
     )
     shift_gains = relative_gains(shifted["championV011"], shifted["interactionCandidate"])
     shift_gate = (
-        min(shift_gains.values()) >= 20
+        min(shift_gains.values()) >= shift_gain_floor
         and shifted["interactionCandidate"]["deployedMaximumAbsoluteError"]
         < shifted["championV011"]["deployedMaximumAbsoluteError"]
         and all(
@@ -164,40 +179,40 @@ def evaluate(profiles_path: Path) -> dict:
     gate = {
         "passed": (
             all(item["passedPerSeedGate"] for item in results)
-            and all_mae_gain >= 25 and all_p90_gain >= 25
-            and final_mae_gain >= 25 and final_p90_gain >= 25
-            and latency_ratio <= 1.0
+            and all_mae_gain >= mean_gain_floor and all_p90_gain >= mean_gain_floor
+            and final_mae_gain >= mean_gain_floor and final_p90_gain >= mean_gain_floor
+            and latency_ratio <= latency_ceiling
             and sizes["interactionCandidate"] < sizes["championV011"]
-            and sizes["interactionCandidate"] <= 40_000_000
+            and sizes["interactionCandidate"] <= maximum_size_bytes
             and shift_gate
         ),
         "rule": (
             "Every fresh grouped seed must improve MAE, p90, and deployed maximum error; preserve "
             "API-served active 80%/90% coverage within 3 points; and tighten both active intervals. "
-            "All-seed and final-only mean MAE/p90 gains must each be >=25%; mean API latency must "
-            "not increase; compressed size must be smaller than v0.11 and <=40 MB. A separate "
-            "Latin-hypercube shift must improve raw MAE, raw p90, and deployed MAE by >=20%, "
+            f"All-seed and final-only mean MAE/p90 gains must each be >={mean_gain_floor:g}%; mean API latency must "
+            f"be <={latency_ceiling:g}x; compressed size must be smaller than v0.11 and <={maximum_size_bytes / 1_000_000:g} MB. A separate "
+            f"Latin-hypercube shift must improve raw MAE, raw p90, and deployed MAE by >={shift_gain_floor:g}%, "
             "improve irrigated/rainfed/active MAE and deployed maximum error, and preserve active "
             "coverage within 2 points of nominal."
         ),
     }
     return {
-        "name": "CropFit interaction-only compaction validation v0.12 candidate",
+        "name": validation_name,
         "protocol": {
             "target": "EcoCrop mechanistic screening teacher; not observed yield",
-            "champion": "v0.11.0, six range-relative features, 40 Extra Trees, min_samples_leaf=1",
-            "candidate": "two transparent interaction features, 60 Extra Trees, min_samples_leaf=2",
-            "candidateFeatures": INTERACTION_FEATURE_NAMES,
-            "selection": (
+            "champion": protocol_champion,
+            "candidate": protocol_candidate,
+            "candidateFeatures": candidate_features,
+            "selection": selection or (
                 "Development seeds 20270201-20270203 compared two-feature forests with 32-60 trees "
                 "and leaf sizes 1-3. The 60-tree/leaf-2 candidate was the strongest option that "
                 "improved mean and tail error while remaining substantially smaller. Seeds in this "
                 "report were reserved until after that choice."
             ),
             "fixedEvaluation": "Both models use identical fitting, validation, held-out profiles, and scenario rows.",
-            "confirmationSeeds": CONFIRMATION_SEEDS,
-            "finalSeeds": FINAL_SEEDS,
-            "shiftSeed": SHIFT_SEED,
+            "confirmationSeeds": confirmation_seeds,
+            "finalSeeds": final_seeds,
+            "shiftSeed": shift_seed,
             "declaredGate": gate["rule"],
         },
         "results": results,
@@ -216,7 +231,7 @@ def evaluate(profiles_path: Path) -> dict:
             ),
         },
         "independentShift": {
-            "seed": SHIFT_SEED,
+            "seed": shift_seed,
             "profiles": len(np.unique(shift_groups[shift_test])),
             "examples": len(shifted_y),
             **shifted,
@@ -231,10 +246,13 @@ def evaluate(profiles_path: Path) -> dict:
     }
 
 
-def markdown(report: dict) -> str:
+def markdown(
+    report: dict,
+    introduction: str = "The candidate keeps only the two transparent interaction features and uses leaf smoothing to improve tail safety. Training density and evaluation rows are unchanged from v0.11.",
+) -> str:
     lines = [
         "# CropFit interaction-only compaction validation", "",
-        "The candidate keeps only the two transparent interaction features and uses leaf smoothing to improve tail safety. Training density and evaluation rows are unchanged from v0.11.", "",
+        introduction, "",
         "| Phase | Seed | v0.11 MAE | Candidate MAE | MAE gain | p90 gain | Max deployed error | Active 80% | Active 90% |",
         "|---|---:|---:|---:|---:|---:|---:|---:|---:|",
     ]
@@ -261,15 +279,22 @@ def markdown(report: dict) -> str:
     return "\n".join(lines)
 
 
-def plot(report: dict, output: Path) -> None:
+def plot(
+    report: dict,
+    output: Path,
+    figure_title: str = "CropFit v0.12 candidate rejected · one deployed-tail regression",
+    heldout_title: str = "Two-feature held-out gains",
+    tail_title: str = "Tail gate fails on seed 18",
+) -> None:
     results = report["results"]
     labels = [str(item["seed"])[-2:] for item in results]
     x = np.arange(len(results))
     figure, axes = plt.subplots(1, 3, figsize=(18, 5.2))
     axes[0].plot(x, [item["gains"]["maePercent"] for item in results], marker="o", label="MAE gain", color="#315d49")
     axes[0].plot(x, [item["gains"]["p90Percent"] for item in results], marker="o", label="p90 gain", color="#6f9551")
-    axes[0].axhline(25, color="#d98352", linestyle="--", label="mean gate")
-    axes[0].set(xticks=x, xticklabels=labels, xlabel="fresh seed suffix", ylabel="Error reduction (%)", title="Two-feature held-out gains")
+    mean_floor = float(report["gate"]["rule"].split("mean MAE/p90 gains must each be >=", 1)[1].split("%", 1)[0])
+    axes[0].axhline(mean_floor, color="#d98352", linestyle="--", label="mean gate")
+    axes[0].set(xticks=x, xticklabels=labels, xlabel="fresh seed suffix", ylabel="Error reduction (%)", title=heldout_title)
     axes[0].legend(); axes[0].grid(alpha=.18)
     axes[1].plot(x, [item["interactionCandidate"]["activeCalibration"]["coverage80"] for item in results], marker="o", label="active 80%", color="#d98352")
     axes[1].plot(x, [item["interactionCandidate"]["activeCalibration"]["coverage90"] for item in results], marker="o", label="active 90%", color="#315d49")
@@ -281,9 +306,9 @@ def plot(report: dict, output: Path) -> None:
     candidate_max = [item["interactionCandidate"]["deployedMaximumAbsoluteError"] for item in results]
     axes[2].bar(x - width / 2, champion_max, width, color="#8fae82", label="v0.11")
     axes[2].bar(x + width / 2, candidate_max, width, color="#315d49", label="candidate")
-    axes[2].set(xticks=x, xticklabels=labels, xlabel="fresh seed suffix", ylabel="Maximum deployed error", title="Tail gate fails on seed 18")
+    axes[2].set(xticks=x, xticklabels=labels, xlabel="fresh seed suffix", ylabel="Maximum deployed error", title=tail_title)
     axes[2].legend(); axes[2].grid(axis="y", alpha=.18)
-    figure.suptitle("CropFit v0.12 candidate rejected · one deployed-tail regression", fontweight="bold")
+    figure.suptitle(figure_title, fontweight="bold")
     figure.text(.5, .01, "Unseen crop profiles · no crop identity or target feature · not observed yield accuracy", ha="center", color="#555555")
     figure.tight_layout(rect=(0, .04, 1, .94))
     output.parent.mkdir(parents=True, exist_ok=True)

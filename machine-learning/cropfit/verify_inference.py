@@ -443,6 +443,16 @@ def verify(artifact: Path, profiles: Path) -> None:
         assert failed[0]["interactionCandidate"]["deployedMaximumAbsoluteError"] > failed[0]["championV011"]["deployedMaximumAbsoluteError"]
         assert interaction_report["independentShift"]["passed"]
 
+    leaf_smoothing_validation = artifact.parents[1] / "evaluation/leaf-smoothing-validation-v0.12.json"
+    if leaf_smoothing_validation.exists():
+        smoothing_report = json.loads(leaf_smoothing_validation.read_text())
+        assert not smoothing_report["gate"]["passed"]
+        assert smoothing_report["summary"]["seedWins"] == 4
+        assert smoothing_report["summary"]["seeds"] == 10
+        assert not smoothing_report["independentShift"]["passed"]
+        assert smoothing_report["independentShift"]["gains"]["p90Percent"] < 5
+        assert smoothing_report["independentShift"]["interactionCandidate"]["deployedMaximumAbsoluteError"] > smoothing_report["independentShift"]["championV011"]["deployedMaximumAbsoluteError"]
+
     from .trained_api import PredictionRequest, predict as api_predict
 
     valid_climate = climate(20.0)
