@@ -248,6 +248,17 @@ def verify(artifact: Path, profiles: Path) -> None:
         ] == ["wheat"]
         assert all(item["spearmanGain"] >= 0 and item["maeReduction"] >= 0 for item in blend_report["perYearFinal"])
 
+    interval_scaling_validation = artifact.parents[1] / "evaluation/interval-scaling-validation-v11-candidate.json"
+    if interval_scaling_validation.exists():
+        interval_report = json.loads(interval_scaling_validation.read_text())
+        assert not interval_report["gate"]["passed"]
+        assert interval_report["gate"]["checks"]["pooledWidthReductionAtLeast4Percent"]
+        assert not interval_report["gate"]["checks"]["regionalFinal"]
+        assert interval_report["meanWidth90Reduction"] >= .04
+        western_final = next(item for item in interval_report["perRegionFinal"] if item["region"] == "West")
+        assert western_final["coverage90"] > .98
+        assert interval_report["decision"] == "reject; retain atlas v10 regional interval scales"
+
     if atlas.exists():
         assert evidence["observedYieldPrior"]["expectedPercentile"] != evidence["regionalNeighbors"][0]["expectedPercentile"]
         assert abs(sum(item["weight"] for item in evidence["regionalNeighbors"]) - 1) < .0001

@@ -115,7 +115,7 @@ rejected; that experiment did not replace the 120-tree v0.6 champion. See
 
 ## Out-of-distribution ceiling
 
-API v0.20.0 retains the v0.6.1 safety ceiling that caps the ML score by the exact
+API v0.20.1 retains the v0.6.1 safety ceiling that caps the ML score by the exact
 seasonal and establishment EcoCrop suitability already computed for
 limiting-factor explanations. This is a one-sided safety constraint: the
 ensemble still determines underprediction but cannot claim suitability above
@@ -317,7 +317,7 @@ crop-region pairs without at least 50 examples in every validation block. See
 
 ## Inference request safety
 
-API v0.20.0 bounds caller-supplied climate to 12 or 24 ordered months and at
+API v0.20.1 bounds caller-supplied climate to 12 or 24 ordered months and at
 most 20 complete history years. Temperature, precipitation, and solar inputs
 must be finite and remain within documented physical limits. Invalid caller
 data returns HTTP 422 instead of being mislabeled as a model/upstream failure;
@@ -351,12 +351,14 @@ reuse a stale prediction. The cache is a bounded 2,048-entry LRU, and CI checks
 key sensitivity, revision invalidation, model isolation, expiry, and
 least-recently-used eviction.
 
-API v0.20.0 exposes its API+training-run+artifact-hash revision and the full
+API v0.20.1 exposes its API+training-run+artifact-hash revision and the full
 artifact SHA-256 through `/health`. The browser proxy reads the revision once
 per prediction request. Startup rejects artifacts missing the fitted ensemble,
 model identity, or a consistent feature contract. Direct and HTTP inference
 share finite coordinate, geographic, soil-pH, boolean irrigation, climate, and
-history-size checks. If revision health is unavailable, model predictions
+history-size checks. The same health response publishes the regression task,
+Extra Trees estimator, 25-feature engineering vocabulary, and six selected
+production features. If revision health is unavailable, model predictions
 continue but bypass the cache until provenance is verified.
 
 ## Local-plus-regional yield evidence

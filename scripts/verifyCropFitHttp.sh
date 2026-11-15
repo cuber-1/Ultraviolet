@@ -58,12 +58,22 @@ climate = [{"month": month, "temperatureC": 22, "precipitationMmDay": 3, "solarM
 payload = {"crop": "corn", "latitude": 29.76, "longitude": -95.37, "soilPh": 6.5, "irrigated": True, "climate": climate, "climateHistory": [climate] * 10}
 health = requests.get(f"{base}/health", timeout=10).json()
 assert health["status"] == "ok" and health["requestLimits"]["historyYearsMax"] == 20
-assert health["apiVersion"] == "0.20.0"
+assert health["apiVersion"] == "0.20.1"
 assert health["revision"].startswith(f'{health["apiVersion"]}:')
 assert health["model"] == "CropFit EcoCrop surrogate v0.11.0"
 assert len(health["artifactSha256"]) == 64
 assert health["revision"].endswith(health["artifactSha256"][:12])
 assert health["metrics"]["mae"] == .0106
+contract = health["modelContract"]
+assert contract["task"] == "regression" and contract["estimator"] == "ExtraTreesRegressor"
+assert contract["candidateFeatureCount"] == len(contract["candidateFeatureNames"]) == 25
+assert contract["selectedFeatureCount"] == len(contract["selectedFeatureNames"]) == 6
+assert contract["selectedFeatureNames"] == [
+    "temperature_range_fit", "water_range_fit", "ph_range_fit", "solar_range_fit",
+    "temperature_water_interaction", "ph_solar_interaction",
+]
+assert sum(len(items) for items in contract["featureGroups"].values()) == 25
+assert contract["usesCropIdentity"] is False and contract["usesCoordinatesDirectly"] is False
 atlas = health["evidence"]["historicalYieldAtlas"]
 assert atlas["name"] == "USDA county yield atlas v10"
 assert atlas["predictionMethod"]["halfLifeYears"] == 3.0 and atlas["predictionMethod"]["recencyWeight"] == .8

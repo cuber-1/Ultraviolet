@@ -9,6 +9,7 @@ from typing import Annotated
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field, StrictBool
 
+from .features import FEATURE_NAMES
 from .inference import CLIMATE_HISTORY_END_YEAR, CLIMATE_HISTORY_START_YEAR, CLIMATE_HISTORY_YEARS, MAX_CLIMATE_HISTORY_YEARS, CropFitPredictor
 from .yield_atlas import load_atlas, nearest_evidence
 
@@ -17,7 +18,7 @@ ROOT = Path(__file__).resolve().parents[1]
 YIELD_ATLAS = ROOT / "evaluation/yield-atlas-v10.json"
 SUBTYPE_YIELD_ATLAS = ROOT / "evaluation/yield-atlas-subtypes-v1.json"
 SUBTYPE_CROPS = {"silage corn", "spring wheat"}
-app = FastAPI(title="Ultraviolet CropFit", version="0.20.0")
+app = FastAPI(title="Ultraviolet CropFit", version="0.20.1")
 
 ClimateSeries = Annotated[list[dict], Field(min_length=12, max_length=24)]
 ClimateYear = Annotated[list[dict], Field(min_length=12, max_length=12)]
@@ -89,11 +90,28 @@ def observed_evidence() -> dict:
 @app.get("/health")
 def health():
     model = predictor()
+    selected_features = list(model.metadata.get("featureNames", []))
     return {
         "status": "ok", "mode": "trained", "apiVersion": app.version,
         "revision": f'{app.version}:{model.metadata.get("runId", "unknown")}:{model.artifact_sha256[:12]}',
         "artifactSha256": model.artifact_sha256,
         "model": model.metadata["model"], "metrics": model.metadata["metrics"],
+        "modelContract": {
+            "task": "regression",
+            "predictionTarget": "EcoCrop mechanistic suitability score from 0 to 100",
+            "estimator": model.metadata.get("modelParameters", {}).get("estimator", type(model.model).__name__),
+            "candidateFeatureCount": len(FEATURE_NAMES),
+            "candidateFeatureNames": FEATURE_NAMES,
+            "selectedFeatureCount": len(selected_features),
+            "selectedFeatureNames": selected_features,
+            "featureGroups": {
+                "siteConditions": FEATURE_NAMES[:5],
+                "cropRequirements": FEATURE_NAMES[5:19],
+                "engineeredCompatibility": FEATURE_NAMES[19:],
+            },
+            "usesCropIdentity": False,
+            "usesCoordinatesDirectly": False,
+        },
         "requestLimits": {"climateMonths": [12, 24], "historyYearsMax": MAX_CLIMATE_HISTORY_YEARS},
         "climateHistory": {
             "source": "NASA POWER Agroclimatology",
