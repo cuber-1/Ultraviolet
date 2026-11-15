@@ -19,6 +19,24 @@ YEARS = tuple(range(2010, 2026))
 LEGACY_YEARS = tuple(range(2018, 2026))
 CALIBRATION_END_YEAR = 2017
 UNCERTAINTY_TEST_YEARS = tuple(range(2018, 2026))
+PRIOR_RECENCY_HALF_LIFE_YEARS = 3.0
+PRIOR_RECENCY_WEIGHT = 0.8
+
+
+def observed_prior_prediction(
+    history: list[dict],
+    prediction_year: int,
+    half_life_years: float = PRIOR_RECENCY_HALF_LIFE_YEARS,
+    recency_weight: float = PRIOR_RECENCY_WEIGHT,
+) -> float:
+    """Shrink a recency-weighted county prior toward its stable long-history mean."""
+    values = np.asarray([item["yieldPercentileWithinCropYear"] for item in history], dtype=float)
+    ages = np.asarray([prediction_year - item["year"] for item in history], dtype=float)
+    if not len(values) or np.any(ages <= 0):
+        raise ValueError("Observed-prior history must precede the prediction year.")
+    baseline = float(np.mean(values))
+    recency = float(np.average(values, weights=np.power(.5, ages / half_life_years)))
+    return (1 - recency_weight) * baseline + recency_weight * recency
 
 
 def rows_from_quickstats(data: Path) -> list[dict]:
@@ -54,20 +72,21 @@ def forward_examples(rows: list[dict], years: tuple[int, ...], history_start: in
     examples = []
     published = {}
     for test_year in years[1:]:
-        history: dict[tuple[str, str], list[float]] = defaultdict(list)
+        history: dict[tuple[str, str], list[dict]] = defaultdict(list)
         for row in rows:
             if history_start <= row["year"] < test_year:
-                history[(row["crop"], row["fips"])].append(row["yieldPercentileWithinCropYear"])
+                history[(row["crop"], row["fips"])].append(row)
         test_rows = [row for row in rows if row["year"] == test_year]
         published[test_year] = len(test_rows)
         for row in test_rows:
             values = history.get((row["crop"], row["fips"]), [])
             if values:
+                prediction = observed_prior_prediction(values, test_year)
                 examples.append({
                     **row,
-                    "prediction": float(np.mean(values)),
+                    "prediction": prediction,
                     "historyCount": len(values),
-                    "absoluteError": abs(float(np.mean(values)) - row["yieldPercentileWithinCropYear"]),
+                    "absoluteError": abs(prediction - row["yieldPercentileWithinCropYear"]),
                 })
     return examples, published
 
@@ -103,7 +122,7 @@ def temporal_validation(rows: list[dict]) -> dict:
             "perCrop": per_crop,
         })
     return {
-        "method": "For each test year, average only earlier within-crop/year county percentiles; no future year enters its prediction.",
+        "method": "For each test year, blend an exponential recency estimate with the long-history county mean using only earlier within-crop/year percentiles; no future year enters its prediction.",
         "years": results,
         "pooled": point_summary(examples),
     }
@@ -201,7 +220,7 @@ def uncertainty_calibration(rows: list[dict]) -> tuple[dict, dict[tuple[str, str
         and all(item["coverage90"] >= .85 for item in per_crop)
     )
     report = {
-        "method": "Crop- and history-count-conditional split conformal absolute-error intervals around the earlier-year county mean.",
+        "method": "Crop- and history-count-conditional split conformal absolute-error intervals around the shrunken recency prior.",
         "calibrationYears": list(range(YEARS[1], CALIBRATION_END_YEAR + 1)),
         "testYears": list(UNCERTAINTY_TEST_YEARS),
         "calibrationExamples": len(calibration),
@@ -226,7 +245,7 @@ def build_atlas(rows: list[dict], validation: dict, comparison: dict, uncertaint
         yields = np.asarray([item["yieldBushelsPerAcre"] for item in items])
         last = max(items, key=lambda item: item["year"])
         calibration = calibration_table[(crop, history_bucket(len(items)))]
-        expected = float(np.mean(percentiles))
+        expected = observed_prior_prediction(items, YEARS[-1] + 1)
         interval80 = [max(0.0, expected - calibration["absoluteErrorP80"]), min(1.0, expected + calibration["absoluteErrorP80"])]
         interval90 = [max(0.0, expected - calibration["absoluteErrorP90"]), min(1.0, expected + calibration["absoluteErrorP90"])]
         records.append({
@@ -251,9 +270,16 @@ def build_atlas(rows: list[dict], validation: dict, comparison: dict, uncertaint
             "latest": {"year": last["year"], "yieldBushelsPerAcre": last["yieldBushelsPerAcre"]},
         })
     return {
-        "name": "USDA county yield atlas v2", "evidenceGrade": "observed-county-prior",
+        "name": "USDA county yield atlas v3", "evidenceGrade": "observed-county-prior",
         "scope": "contiguous U.S. counties excluding California; corn, soybean, and wheat; 2010–2025",
         "source": "USDA NASS Quick Stats published county yields",
+        "predictionMethod": {
+            "name": "shrunken exponential recency prior",
+            "forecastYear": YEARS[-1] + 1,
+            "halfLifeYears": PRIOR_RECENCY_HALF_LIFE_YEARS,
+            "recencyWeight": PRIOR_RECENCY_WEIGHT,
+            "longHistoryWeight": round(1 - PRIOR_RECENCY_WEIGHT, 10),
+        },
         "crops": sorted(CROP_NAMES.values()), "years": list(YEARS), "records": records,
         "validation": validation["pooled"],
         "historyWindowComparison": comparison,
@@ -264,8 +290,8 @@ def build_atlas(rows: list[dict], validation: dict, comparison: dict, uncertaint
 
 def markdown(validation: dict, comparison: dict, uncertainty: dict, atlas: dict) -> str:
     lines = [
-        "# USDA county yield atlas v2 validation", "",
-        "The atlas stores each county's historical percentile within crop and year. The retrospective forward-year test predicts each year using only earlier years for that county.", "",
+        "# USDA county yield atlas v3 validation", "",
+        "The atlas stores each county's historical percentile within crop and year. Its production prior blends 80% three-year-half-life recency weighting with 20% of the stable long-history mean. The retrospective forward-year test predicts each year using only earlier years for that county.", "",
         "| Test year | Covered / published | Coverage | Spearman | Grouped 95% interval | Percentile MAE |",
         "|---:|---:|---:|---:|---:|---:|",
     ]
@@ -306,7 +332,7 @@ def plot(comparison: dict, uncertainty: dict, output: Path) -> None:
     axes[1].set(ylim=(65, 100), ylabel="observed coverage (%)", xlabel="test year", xticks=interval_years, title="Intervals calibrated on 2011–2017 only")
     axes[1].grid(alpha=.18); axes[1].legend(loc="lower right")
     axes[1].text(.02, .04, f'Pooled coverage\n80% band: {uncertainty["pooled"]["coverage80"]:.1%}\n90% band: {uncertainty["pooled"]["coverage90"]:.1%}', transform=axes[1].transAxes, fontsize=9, color="#315d49", bbox={"facecolor": "white", "edgecolor": "#d8dfda", "alpha": .9, "pad": 6})
-    figure.suptitle("USDA observed-yield prior v2 · temporal validation", fontweight="bold")
+    figure.suptitle("USDA observed-yield prior v3 · temporal validation", fontweight="bold")
     figure.text(.5, .01, "County-level corn, soybean, wheat · not a parcel yield forecast", ha="center", color="#555555")
     figure.tight_layout(rect=(0, .04, 1, 1)); figure.savefig(output, dpi=180); plt.close(figure)
 
@@ -360,9 +386,9 @@ def main() -> None:
     root = Path(__file__).resolve().parents[1]
     parser = argparse.ArgumentParser()
     parser.add_argument("--data", type=Path, default=root / "data/raw/observed-validation/national")
-    parser.add_argument("--atlas", type=Path, default=root / "evaluation/yield-atlas-v2.json")
-    parser.add_argument("--validation", type=Path, default=root / "evaluation/yield-atlas-validation-v2.json")
-    parser.add_argument("--plot", type=Path, default=root / "evaluation/yield-atlas-validation-v2.png")
+    parser.add_argument("--atlas", type=Path, default=root / "evaluation/yield-atlas-v3.json")
+    parser.add_argument("--validation", type=Path, default=root / "evaluation/yield-atlas-validation-v3.json")
+    parser.add_argument("--plot", type=Path, default=root / "evaluation/yield-atlas-validation-v3.png")
     args = parser.parse_args()
     rows = rows_from_quickstats(args.data)
     validation = temporal_validation(rows)

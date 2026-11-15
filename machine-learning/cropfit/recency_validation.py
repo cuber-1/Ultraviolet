@@ -8,16 +8,17 @@ from pathlib import Path
 import numpy as np
 from scipy.stats import spearmanr
 
-from .yield_atlas import rows_from_quickstats
+from .yield_atlas import observed_prior_prediction, rows_from_quickstats
 
 
 DEVELOPMENT_YEARS = (2018, 2019, 2020)
 CONFIRMATION_YEARS = (2021, 2022)
 FINAL_TEST_YEARS = (2023, 2024, 2025)
 HALF_LIFE_CANDIDATES = (1, 2, 3, 5, 8, 16)
+RECENCY_WEIGHT_CANDIDATES = (.2, .4, .6, .8)
 
 
-def forward_predictions(rows: list[dict], half_life: float | None) -> list[dict]:
+def forward_predictions(rows: list[dict], half_life: float | None, recency_weight: float = 1.0) -> list[dict]:
     history: dict[tuple[str, str], list[dict]] = defaultdict(list)
     for row in rows:
         history[(row["crop"], row["fips"])].append(row)
@@ -28,13 +29,10 @@ def forward_predictions(rows: list[dict], half_life: float | None) -> list[dict]
             if index == 0 or item["year"] not in (*DEVELOPMENT_YEARS, *CONFIRMATION_YEARS, *FINAL_TEST_YEARS):
                 continue
             earlier = items[:index]
-            values = np.asarray([row["yieldPercentileWithinCropYear"] for row in earlier])
             if half_life is None:
-                prediction = float(np.mean(values))
+                prediction = float(np.mean([row["yieldPercentileWithinCropYear"] for row in earlier]))
             else:
-                ages = np.asarray([item["year"] - row["year"] for row in earlier], dtype=float)
-                weights = np.power(.5, ages / half_life)
-                prediction = float(np.average(values, weights=weights))
+                prediction = observed_prior_prediction(earlier, item["year"], half_life, recency_weight)
             examples.append({
                 "year": item["year"], "crop": item["crop"], "fips": item["fips"],
                 "actual": item["yieldPercentileWithinCropYear"], "prediction": prediction,
@@ -92,13 +90,15 @@ def validate(data: Path) -> dict:
     candidates = []
     predictions = {}
     for half_life in HALF_LIFE_CANDIDATES:
-        candidate = forward_predictions(rows, half_life)
-        predictions[half_life] = candidate
-        base_dev, candidate_dev = matched(baseline, candidate, DEVELOPMENT_YEARS)
-        candidates.append({"halfLifeYears": half_life, **comparison(base_dev, candidate_dev)})
+        for recency_weight in RECENCY_WEIGHT_CANDIDATES:
+            candidate = forward_predictions(rows, half_life, recency_weight)
+            predictions[(half_life, recency_weight)] = candidate
+            base_dev, candidate_dev = matched(baseline, candidate, DEVELOPMENT_YEARS)
+            candidates.append({"halfLifeYears": half_life, "recencyWeight": recency_weight, **comparison(base_dev, candidate_dev)})
     selected = max(candidates, key=lambda item: (item["recency"]["spearman"], -item["recency"]["maePercentile"]))
     half_life = selected["halfLifeYears"]
-    candidate = predictions[half_life]
+    recency_weight = selected["recencyWeight"]
+    candidate = predictions[(half_life, recency_weight)]
     base_confirmation, candidate_confirmation = matched(baseline, candidate, CONFIRMATION_YEARS)
     confirmation = comparison(base_confirmation, candidate_confirmation)
     base_final, candidate_final = matched(baseline, candidate, FINAL_TEST_YEARS)
@@ -122,12 +122,12 @@ def validate(data: Path) -> dict:
         and all(item["spearmanDelta"] >= 0 for item in per_year)
     )
     return {
-        "name": "USDA observed-prior recency validation v1",
+        "name": "USDA observed-prior recency validation v2",
         "target": "next-year county yield percentile within crop and year",
         "baseline": "unweighted mean of all earlier county percentiles",
-        "candidate": "exponentially weighted mean of earlier county percentiles",
+        "candidate": "exponential recency estimate shrunk toward the unweighted long-history mean",
         "developmentYears": list(DEVELOPMENT_YEARS), "candidateSelection": candidates,
-        "selectedHalfLifeYears": half_life,
+        "selectedHalfLifeYears": half_life, "selectedRecencyWeight": recency_weight,
         "confirmationYears": list(CONFIRMATION_YEARS), "confirmation": confirmation,
         "finalTestYears": list(FINAL_TEST_YEARS), "finalTest": final_test,
         "perCropFinalTest": per_crop, "perYearFinalTest": per_year,
@@ -142,9 +142,9 @@ def validate(data: Path) -> dict:
 def markdown(report: dict) -> str:
     final = report["finalTest"]
     lines = [
-        "# USDA observed-prior recency validation v1", "",
+        "# USDA observed-prior recency validation v2", "",
         f'**Production gate: {"PASS" if report["gate"]["passed"] else "NOT PASSED"}**', "",
-        f'The half-life was selected on 2018–2020 only. Selected: **{report["selectedHalfLifeYears"]} years**.', "",
+        f'The half-life and shrinkage weight were selected on 2018–2020 only. Selected: **{report["selectedHalfLifeYears"]} years**, with **{report["selectedRecencyWeight"]:.0%} recency / {1 - report["selectedRecencyWeight"]:.0%} long-history**.', "",
         f'On the locked 2023–2025 test ({final["observations"]:,} rows), Spearman changed from **{final["baseline"]["spearman"]:.4f}** to **{final["recency"]["spearman"]:.4f}** (delta {final["spearmanDelta"]:+.4f}; grouped-bootstrap 95% interval {final["spearmanDeltaBootstrap95"][0]:+.4f} to {final["spearmanDeltaBootstrap95"][1]:+.4f}). Percentile MAE changed by {final["maeDelta"]:+.4f}.', "",
         "| Crop | N | Baseline rho | Recency rho | Delta | MAE delta |", "|---|---:|---:|---:|---:|---:|",
     ]
@@ -161,7 +161,9 @@ def plot(report: dict, output: Path) -> None:
     crops = report["perCropFinalTest"]
     years = report["perYearFinalTest"]
     figure, axes = plt.subplots(1, 2, figsize=(12, 4.8))
-    axes[0].plot([item["halfLifeYears"] for item in candidates], [item["recency"]["spearman"] for item in candidates], marker="o", color="#315d49", label="recency prior")
+    for weight in RECENCY_WEIGHT_CANDIDATES:
+        subset = [item for item in candidates if item["recencyWeight"] == weight]
+        axes[0].plot([item["halfLifeYears"] for item in subset], [item["recency"]["spearman"] for item in subset], marker="o", label=f"{weight:.0%} recency")
     axes[0].axhline(candidates[0]["baseline"]["spearman"], color="#777", linestyle="--", label="unweighted baseline")
     axes[0].axvline(report["selectedHalfLifeYears"], color="#d98352", linestyle=":", label="selected")
     axes[0].set(xlabel="history half-life (years)", ylabel="development Spearman", title="Selection · 2018–2020 only", xticks=list(HALF_LIFE_CANDIDATES)); axes[0].grid(alpha=.18); axes[0].legend()
@@ -170,7 +172,7 @@ def plot(report: dict, output: Path) -> None:
     bars = axes[1].bar(labels, deltas, color=["#315d49" if value >= 0 else "#d98352" for value in deltas])
     axes[1].bar_label(bars, fmt="%+.4f", padding=3, fontsize=8); axes[1].axhline(0, color="#777", linewidth=.8)
     axes[1].set(ylabel="recency minus baseline Spearman", title="Locked test · 2023–2025"); axes[1].grid(axis="y", alpha=.18)
-    figure.suptitle("USDA county-prior recency test", fontweight="bold")
+    figure.suptitle("USDA county-prior shrinkage test", fontweight="bold")
     figure.text(.5, .01, report["interpretation"], ha="center", color="#555", fontsize=9)
     figure.tight_layout(rect=(0, .05, 1, 1)); figure.savefig(output, dpi=180); plt.close(figure)
 
@@ -179,13 +181,13 @@ def main() -> None:
     root = Path(__file__).resolve().parents[1]
     parser = argparse.ArgumentParser()
     parser.add_argument("--data", type=Path, default=root / "data/raw/observed-validation/national")
-    parser.add_argument("--output", type=Path, default=root / "evaluation/recency-validation-v1.json")
+    parser.add_argument("--output", type=Path, default=root / "evaluation/recency-validation-v2.json")
     args = parser.parse_args()
     report = validate(args.data)
     args.output.write_text(json.dumps(report, indent=2) + "\n")
     args.output.with_suffix(".md").write_text(markdown(report))
     plot(report, args.output.with_suffix(".png"))
-    print(json.dumps({"selectedHalfLifeYears": report["selectedHalfLifeYears"], "confirmation": report["confirmation"], "finalTest": report["finalTest"], "gate": report["gate"]}, indent=2))
+    print(json.dumps({"selectedHalfLifeYears": report["selectedHalfLifeYears"], "selectedRecencyWeight": report["selectedRecencyWeight"], "confirmation": report["confirmation"], "finalTest": report["finalTest"], "gate": report["gate"]}, indent=2))
 
 
 if __name__ == "__main__":

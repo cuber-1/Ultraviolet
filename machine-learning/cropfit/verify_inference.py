@@ -81,7 +81,7 @@ def verify(artifact: Path, profiles: Path) -> None:
     else:
         raise AssertionError("invalid second-year climate was accepted")
 
-    atlas = artifact.parents[1] / "evaluation/yield-atlas-v2.json"
+    atlas = artifact.parents[1] / "evaluation/yield-atlas-v3.json"
     if atlas.exists():
         atlas_report = load_atlas(str(atlas.resolve()))
         assert atlas_report["years"] == list(range(2010, 2026))
@@ -91,8 +91,9 @@ def verify(artifact: Path, profiles: Path) -> None:
         assert evidence and evidence["county"] == "Fort Bend County" and evidence["observations"] == 14
         assert evidence["latest"]["year"] == 2025
         assert [item["year"] for item in evidence["history"]][-3:] == [2023, 2024, 2025]
-        assert evidence["observedYieldPrior"]["interval80"][0] <= evidence["meanPercentile"] <= evidence["observedYieldPrior"]["interval80"][1]
-        assert evidence["observedYieldPrior"]["expectedPercentile"] == evidence["meanPercentile"], "failed recency candidate entered production"
+        expected = evidence["observedYieldPrior"]["expectedPercentile"]
+        assert evidence["observedYieldPrior"]["interval80"][0] <= expected <= evidence["observedYieldPrior"]["interval80"][1]
+        assert atlas_report["predictionMethod"] == {"name": "shrunken exponential recency prior", "forecastYear": 2026, "halfLifeYears": 3.0, "recencyWeight": .8, "longHistoryWeight": .2}
         assert evidence["observedYieldPrior"]["interval90"][0] <= evidence["observedYieldPrior"]["interval80"][0]
         assert evidence["observedYieldPrior"]["interval90"][1] >= evidence["observedYieldPrior"]["interval80"][1]
         assert nearest_evidence("tomato", 29.7604, -95.3698, atlas) is None
@@ -111,13 +112,14 @@ def verify(artifact: Path, profiles: Path) -> None:
         assert ranking_report["productionGate"]["passed"]
         assert ranking_report["priorVsClimateFinalTest"]["priorAdvantageBootstrap95"][0] > 0
 
-    recency_validation = artifact.parents[1] / "evaluation/recency-validation-v1.json"
+    recency_validation = artifact.parents[1] / "evaluation/recency-validation-v2.json"
     if recency_validation.exists():
         recency_report = json.loads(recency_validation.read_text())
         assert recency_report["selectedHalfLifeYears"] == 3
-        assert not recency_report["gate"]["passed"]
+        assert recency_report["selectedRecencyWeight"] == .8
+        assert recency_report["gate"]["passed"]
         assert recency_report["finalTest"]["spearmanDeltaBootstrap95"][0] > 0
-        assert any(item["spearmanDelta"] < 0 for item in recency_report["perYearFinalTest"])
+        assert all(item["spearmanDelta"] >= 0 and item["maeDelta"] <= 0 for item in recency_report["perYearFinalTest"])
 
     uncertainty_validation = artifact.parents[1] / "evaluation/uncertainty-validation-v0.5.1.json"
     if uncertainty_validation.exists():

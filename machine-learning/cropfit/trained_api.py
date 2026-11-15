@@ -14,8 +14,8 @@ from .yield_atlas import load_atlas, nearest_evidence
 
 
 ROOT = Path(__file__).resolve().parents[1]
-YIELD_ATLAS = ROOT / "evaluation/yield-atlas-v2.json"
-app = FastAPI(title="Ultraviolet CropFit", version="0.6.2")
+YIELD_ATLAS = ROOT / "evaluation/yield-atlas-v3.json"
+app = FastAPI(title="Ultraviolet CropFit", version="0.6.3")
 
 ClimateSeries = Annotated[list[dict], Field(min_length=12, max_length=24)]
 ClimateYear = Annotated[list[dict], Field(min_length=12, max_length=12)]
@@ -65,8 +65,9 @@ def observed_evidence() -> dict:
     if YIELD_ATLAS.exists():
         atlas = load_atlas(str(YIELD_ATLAS.resolve()))
         evidence["historicalYieldAtlas"] = {
-            "available": True, "records": len(atlas["records"]), "crops": atlas["crops"],
+            "available": True, "name": atlas["name"], "records": len(atlas["records"]), "crops": atlas["crops"],
             "years": atlas["years"], "validation": atlas["validation"],
+            "predictionMethod": atlas.get("predictionMethod"),
             "historyWindowComparison": atlas.get("historyWindowComparison"),
             "uncertaintyValidation": atlas.get("uncertaintyValidation"),
         }

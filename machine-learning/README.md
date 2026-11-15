@@ -173,10 +173,12 @@ npm run ml:build:yield-atlas
 ```
 
 The builder uses the filtered USDA Quick Stats and Census county files from the
-national observed-validation download. It writes atlas v2, a forward-year
-validation report, and a presentation PNG under `evaluation/`. The report
-compares the 16-year and legacy 8-year histories on identical future rows and
-tests conformal intervals calibrated on 2011–2017 against 2018–2025 outcomes.
+national observed-validation download. It writes atlas v3, a forward-year
+validation report, and a presentation PNG under `evaluation/`. Atlas v3 uses
+the development-selected 80% three-year-half-life recency / 20% long-history
+prior. The report compares the 16-year and legacy 8-year histories on identical
+future rows and tests conformal intervals calibrated on 2011–2017 against
+2018–2025 outcomes.
 
 ## Validate rural ranking evidence
 
@@ -208,7 +210,8 @@ npm run ml:benchmark:atlas
 npm run ml:benchmark:inference
 ```
 
-The recency command tests exponential history weighting under fixed temporal
-splits and does not alter the production atlas unless every gate passes. The
+The recency command tests shrinkage toward exponential history weighting under
+fixed temporal splits. The v2 gate passes on confirmation and locked final
+years, and its selected prior is used by atlas v3. The
 benchmark compares the cached haversine spatial index with exact brute force
 and verifies identical nearest counties for each supported crop.

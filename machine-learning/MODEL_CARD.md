@@ -101,17 +101,17 @@ below the predeclared 0.30 threshold. Corn and 2019 were negative. See
 
 CropFit also returns a separate USDA observed county prior for corn, soybeans,
 and wheat when a published county centroid is within 100 km. This evidence does
-not alter CropFit suitability or ranking. Atlas v2 contains 5,562 county-crop
-records from 2010–2025 and adds crop/history-count conditional conformal
-uncertainty bands.
+not alter CropFit suitability or ranking. Atlas v3 contains 5,562 county-crop
+records from 2010–2025, uses a validated shrunken-recency prior, and includes
+crop/history-count conditional conformal uncertainty bands.
 
 On the same 21,908 2019–2025 county-year rows, extending the available history
-from 2018 back to 2010 improved pooled Spearman from 0.819 to 0.841 and reduced
-percentile MAE from 0.127 to 0.120. Coverage increased from 21,908 to 23,311
+from 2018 back to 2010 improved pooled Spearman from 0.819 to 0.847 and reduced
+percentile MAE from 0.126 to 0.117. Coverage increased from 21,908 to 23,311
 rows. Uncertainty was calibrated on 2011–2017 only; across 26,589 later
-2018–2025 outcomes, nominal 80% and 90% intervals covered 83.5% and 92.3%.
+2018–2025 outcomes, nominal 80% and 90% intervals covered 84.1% and 92.5%.
 This measures persistence of county yield ranks, not parcel yield forecasting.
-See `evaluation/yield-atlas-validation-v2.md`.
+See `evaluation/yield-atlas-validation-v3.md`.
 
 ## Rural regional ranking
 
@@ -144,13 +144,21 @@ soybeans, and wheat. See `evaluation/crop-expansion-validation-v1.md`.
 
 ## Recency experiment
 
-A three-year exponential half-life was selected on 2018–2020. It improved the
-locked 2023–2025 pooled county-rank Spearman from 0.8269 to 0.8346 (delta
-+0.0077; grouped-bootstrap 95% interval +0.0052 to +0.0102) and reduced
-percentile MAE by 0.0041. It was not promoted because confirmation Spearman
-regressed by 0.0003 and 2024 regressed by 0.0019, violating the predeclared
-no-regression gate. The production atlas retains the unweighted historical
-mean. See `evaluation/recency-validation-v1.md`.
+Atlas v3 shrinks an exponential recency estimate toward the stable long-history
+mean. The half-life and shrinkage weight were selected on 2018–2020 only: 80%
+three-year-half-life recency and 20% long-history mean. Confirmation Spearman
+improved from 0.8497 to 0.8513 while MAE fell from 0.1167 to 0.1150. On the
+locked 2023–2025 test, Spearman improved from 0.8269 to 0.8352 (delta +0.0083;
+grouped-bootstrap 95% interval +0.0061 to +0.0104) and MAE fell by 0.0040.
+Every supported crop and every final-test year improved both rank and MAE, so
+the predeclared production gate passed. See
+`evaluation/recency-validation-v2.md`.
+
+Rebuilding the full forward-year atlas with the promoted prior improved pooled
+Spearman from 0.7871 to 0.7914. On identical 2019–2025 rows, 16-year-history
+Spearman improved from 0.8405 to 0.8465 and MAE from 0.1199 to 0.1168. Fresh
+split-conformal calibration covered 84.1% and 92.5% at the nominal 80% and 90%
+levels. See `evaluation/yield-atlas-validation-v3.md`.
 
 Atlas lookup now uses a cached exact haversine spatial index instead of scanning
 all 5,562 records per request. The reproducible benchmark and exact-identity
@@ -193,7 +201,7 @@ reuse a stale prediction. The cache is a bounded 2,048-entry LRU, and CI checks
 key sensitivity, revision invalidation, model isolation, expiry, and
 least-recently-used eviction.
 
-API v0.6.2 exposes its API+training-run revision through `/health`. The browser
+API v0.6.3 exposes its API+training-run revision through `/health`. The browser
 proxy reads it once per prediction request. If revision health is unavailable,
 model predictions continue but bypass the cache until provenance is verified.
 
