@@ -36,6 +36,12 @@ export type GeometryEvidence = {
   dsmCollections: string[];
   dtmCollections: string[];
   reason: string | null;
+  /** Whether surrounding buildings and trees were sampled (older saved runs: undefined). */
+  neighborsChecked?: boolean;
+  neighborTallerCount?: number | null;
+  neighborMaxAboveRoofM?: number | null;
+  /** Growing area that would meet the sun target if the neighbors were not there. */
+  neighborLossSqft?: number | null;
 };
 
 export type SunlightEvidence = {

@@ -47,6 +47,9 @@ export function shadowVector(sun: SunPosition, obstructionHeightM: number): Shad
 function shaded(x: number, y: number, sun: SunPosition, obstruction: Obstruction) {
   if (sun.altitude <= 0) return true;
   const vector = shadowVector(sun, obstruction.heightM)!;
+  // Cheap reject: the point must sit inside the box swept by the shadow.
+  if (x < obstruction.x + Math.min(0, vector.dx) || x > obstruction.x + obstruction.width + Math.max(0, vector.dx)
+    || y < obstruction.y + Math.min(0, vector.dy) || y > obstruction.y + obstruction.depth + Math.max(0, vector.dy)) return false;
   const samples = Math.max(1, Math.ceil(vector.lengthM / 1.5));
   for (let i = 0; i <= samples; i += 1) {
     const t = i / samples;

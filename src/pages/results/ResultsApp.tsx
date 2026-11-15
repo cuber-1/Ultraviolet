@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { ArrowRight, Heart, Home, Layers, LineChart, Map as MapIcon, Pencil, RotateCcw, Sparkles, Star, Trash2, X } from 'lucide-react';
+import { ArrowRight, FileJson2, FileText, FolderOpen, Heart, Home, Layers, LineChart, Map as MapIcon, NotebookPen, Pencil, RotateCcw, Sparkles, Star, Trash2, X } from 'lucide-react';
 import Wordmark from '../../components/Wordmark';
 import { ActivityFeed, AgentTrace } from './AgentTrace';
 import { CLASSES, CROP_COLORS, classify } from '../../components/charts/DeepAgentCharts';
@@ -11,6 +11,7 @@ import { addFavorite, loadFavorites, removeFavorite, type Favorite } from '../..
 import type { AgentComparison, SearchResult } from '../../services/vexcel';
 import './ResultsApp.css';
 import MapsLink from '../../components/MapsLink';
+import { assessSiteReadiness, type SiteReadiness } from '../../services/siteReadiness';
 
 type View = 'deck' | 'saved' | 'insights' | 'agent';
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
@@ -26,7 +27,7 @@ type Props = {
   savedAt: string | null;
   onEdit: () => void;
   onRerun: () => void;
-  onOpen: (id: string) => void;
+  onOpen: (id: string, tab?: string) => void;
   onMap?: () => void;
   onHome?: () => void;
 };
@@ -53,12 +54,13 @@ export default function ResultsApp({ brief, criteria, comparison, top, insights,
     const starts = predictions.filter((item) => item.plantMonth !== null).map((item) => item.plantMonth!).sort((a, b) => ((a - brief.preferredMonth + 12) % 12) - ((b - brief.preferredMonth + 12) % 12));
     const hours = simulation?.perDate.map((item) => item.meanHours).filter((value): value is number => value !== null) ?? [];
     const sunlit = simulation?.sharedAreaSqft ?? null;
+    const readiness = assessSiteReadiness(result, simulation, criteria.targetAreaSqft);
     return {
       result, rank: rank + 1, predictions,
       name: roofTitle(result, addresses.get(result.id)).name,
       address: roofTitle(result, addresses.get(result.id)).line,
       food: estimateFood(sunlit, crops, new Set(predictions.filter((item) => item.source === 'ml' && item.plantMonth === null).map((item) => item.cropId))),
-      sunlit, fit, start: (starts[0] ?? null) as number | null,
+      sunlit, fit, start: (starts[0] ?? null) as number | null, readiness,
       meanHours: hours.length ? hours.reduce((a, b) => a + b, 0) / hours.length : null,
       why: firstSentence(comparison.narrative?.explanations.find((item) => item.candidateId === result.id)?.explanation),
       cls: classify(sunlit, fit, criteria.targetAreaSqft),
@@ -132,7 +134,17 @@ export default function ResultsApp({ brief, criteria, comparison, top, insights,
 
     {view === 'agent' && <main className="ra-agent">
       <h1>What the Deep Agent did</h1>
-      <p>Every prompt, model turn, and tool call from this search, in order. The same run is traced in LangSmith.</p>
+      <p>The first agent gathered property, imagery, geometry, sunlight, and crop evidence with live tools. After the search, Ultraviolet turned that evidence into a small virtual workspace so the follow-up Deep Agent can answer from the same facts instead of starting over. The complete run is also traced in LangSmith.</p>
+      <section className="ra-evidence-workspace">
+        <header><FolderOpen size={24} /><div><h2>Search evidence becomes the agent’s workspace</h2><p>These files are generated from this completed search and mounted inside the follow-up agent’s virtual filesystem.</p></div></header>
+        <div className="ra-evidence-files">
+          <article><FileText size={19} /><div><code>/evidence/summary.md</code><span>Ranked roof table with sun, crop fit, listings, and tours</span></div></article>
+          <article><FileJson2 size={19} /><div><code>/evidence/roofs.json</code><span>Detailed roof geometry, obstacles, height, monthly crop fit, and explanations</span></div></article>
+          <article><FileJson2 size={19} /><div><code>/evidence/criteria.json</code><span>Your location, crops, dates, area target, sunlight target, and notes</span></div></article>
+          <article><NotebookPen size={19} /><div><code>/notes/preferences.md</code><span>Conversation preferences the agent records and respects in later questions</span></div></article>
+        </div>
+        <small>The initial search uses live tools. “Ask Ultraviolet” reads the saved evidence first and only reruns crop scoring or sunlight simulation when a question requires new evidence.</small>
+      </section>
       {(comparison.trace ?? []).some((event) => event.kind === 'activity') && <><h2 className="feed-heading">Activity</h2><ActivityFeed events={comparison.trace ?? []} /></>}
       {comparison.narrative?.notesInterpretation && <><h2 className="feed-heading">How the agent read your notes</h2><p className="ra-notes-read">{comparison.narrative.notesInterpretation}</p></>}
       <h2 className="feed-heading">Full trace</h2>
@@ -141,11 +153,32 @@ export default function ResultsApp({ brief, criteria, comparison, top, insights,
   </div>;
 }
 
-type Roof = { food: ReturnType<typeof estimateFood>; result: SearchResult; rank: number; name: string; address: string; sunlit: number | null; fit: number | null; start: number | null; meanHours: number | null; why: string | null; cls: keyof typeof CLASSES; predictions: NonNullable<AgentComparison['predictions']> };
+type Shot = { src: string; label: string };
+/** Top-down Vexcel ortho plus the four oblique (angled) views; a missing oblique falls back to another ortho view. */
+function PhotoCollage({ result, name }: { result: SearchResult; name: string }) {
+  const areaM2 = (result.property?.roofAreaSqft ?? 20_000) * .092903;
+  const radius = Math.round(Math.min(180, Math.max(50, Math.sqrt(areaM2) * 1.15)));
+  const oblique = (dir: string) => `/api/vexcel/oblique?lat=${result.lat}&lon=${result.lon}&dir=${dir}&radiusM=${radius}`;
+  const fallbacks: Shot[] = [
+    { src: `${result.imageryUrl}&bands=irg`, label: 'Infrared' },
+    { src: `${result.imageryUrl}&radiusM=180`, label: 'Neighborhood' },
+    { src: `${result.imageryUrl}&radiusM=110`, label: 'Block' },
+    { src: `${result.imageryUrl}&radiusM=30`, label: 'Roof detail' },
+  ];
+  const [shots, setShots] = useState<Shot[]>(() => ['north', 'east', 'south', 'west'].map((dir) => ({ src: oblique(dir), label: `From the ${dir}` })));
+  const [spare, setSpare] = useState(0);
+  const failed = (index: number) => { setShots((items) => items.map((item, i) => i === index ? fallbacks[spare % fallbacks.length] : item)); setSpare((value) => value + 1); };
+  return <div className="ra-collage">
+    <figure className="main"><img src={result.imageryUrl} alt={`Top-down aerial view of ${name}`} draggable={false} /><figcaption>Top-down</figcaption></figure>
+    {shots.map((shot, index) => <figure key={index}><img src={shot.src} alt={`${shot.label} view of ${name}`} draggable={false} loading="lazy" onError={() => failed(index)} /><figcaption>{shot.label}</figcaption></figure>)}
+  </div>;
+}
+
+type Roof = { food: ReturnType<typeof estimateFood>; result: SearchResult; rank: number; name: string; address: string; sunlit: number | null; fit: number | null; start: number | null; meanHours: number | null; why: string | null; cls: keyof typeof CLASSES; predictions: NonNullable<AgentComparison['predictions']>; readiness: SiteReadiness };
 
 function Deck({ roofs, index, total, criteria, crops, cropNames, savedIds, onIndex, onSave, onOpen, onShowSaved }: {
   roofs: Roof[]; index: number; total: number; criteria: Props['criteria']; crops: string[]; cropNames: string[]; savedIds: Set<string>;
-  onIndex: (i: number) => void; onSave: (roof: Roof) => void; onOpen: (id: string) => void; onShowSaved: () => void;
+  onIndex: (i: number) => void; onSave: (roof: Roof) => void; onOpen: (id: string, tab?: string) => void; onShowSaved: () => void;
 }) {
   const [dx, setDx] = useState(0);
   const [exit, setExit] = useState<'left' | 'right' | null>(null);
@@ -159,7 +192,7 @@ function Deck({ roofs, index, total, criteria, crops, cropNames, savedIds, onInd
   }, [exit, index, onIndex, onSave, roof]);
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
-      if (event.target instanceof HTMLInputElement) return;
+      if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement || (event.target instanceof HTMLElement && event.target.closest('.ask-side'))) return;
       if (event.key === 'ArrowLeft') decide('left');
       if (event.key === 'ArrowRight') decide('right');
       if ((event.key === 'Enter' || event.key === 'ArrowUp') && roof) onOpen(roof.result.id);
@@ -186,7 +219,7 @@ function Deck({ roofs, index, total, criteria, crops, cropNames, savedIds, onInd
       onPointerMove={(event) => { if (start.current !== null) setDx(event.clientX - start.current); }}
       onPointerUp={() => { const moved = dx; start.current = null; if (moved > 120) decide('right'); else if (moved < -120) decide('left'); else setDx(0); }}>
       <div className="ra-photo">
-        <img src={roof.result.imageryUrl} alt={`Aerial view of ${roof.name}`} draggable={false} />
+        <PhotoCollage key={roof.result.id} result={roof.result} name={roof.name} />
         <span className="ra-stamp save" style={{ opacity: Math.max(0, Math.min(1, dx / 120)) }}>Save</span>
         <span className="ra-stamp pass" style={{ opacity: Math.max(0, Math.min(1, -dx / 120)) }}>Pass</span>
         <span className="ra-class"><i style={{ background: CLASSES[roof.cls].color }} />{CLASSES[roof.cls].label}</span>
@@ -200,6 +233,11 @@ function Deck({ roofs, index, total, criteria, crops, cropNames, savedIds, onInd
           <div><strong>{roof.sunlit === null ? '—' : `${fmt(roof.sunlit)}`}<small> ft²</small></strong><span>{meets ? 'in full sun, meets your area' : `in ${criteria.targetHours}h+ sun`}</span></div>
           <div><strong>{roof.fit === null ? '—' : Math.round(roof.fit)}</strong><span>crop fit</span></div>
           <div><strong>{roof.start === null ? '—' : MONTHS[roof.start].slice(0, 3)}</strong><span>start</span></div>
+        </div>
+        <div className="ra-readiness">
+          <span>Site readiness</span>
+          <div><i className="green">{roof.readiness.counts.green} green</i><i className="red">{roof.readiness.counts.red} red</i><i className="unknown">{roof.readiness.counts.caution + roof.readiness.counts.unknown} review</i></div>
+          <button onClick={() => onOpen(roof.result.id, 'readiness')}>Review flags <ArrowRight size={15} /></button>
         </div>
         <ul className="ra-crops">{crops.map((id, i) => { const item = roof.predictions.find((p) => p.cropId === id); return <li key={id}><i style={{ background: CROP_COLORS[i % CROP_COLORS.length] }} />{cropNames[i]}<b>{item ? Math.round(item.suitability * 100) : '—'}</b></li>; })}</ul>
         {roof.why && <p className="ra-why">{roof.why}</p>}

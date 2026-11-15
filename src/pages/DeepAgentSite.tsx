@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, Box, CalendarDays, Cpu, ExternalLink, LayoutGrid, MapPin, Sun } from 'lucide-react';
+import { ArrowLeft, Box, CalendarDays, Cpu, ExternalLink, LayoutGrid, MapPin, ShieldCheck, Sun } from 'lucide-react';
 import { SiteWorkspace } from './AgriculturePage';
 import RoofPreview3D from '../components/RoofPreview3D';
 import { CLASSES, ComponentBars, CropTimeline, PlantingCurveChart, classify, CROP_COLORS } from '../components/charts/DeepAgentCharts';
@@ -8,9 +8,10 @@ import { cropById, estimateFood, formatLbs, type Crop } from '../services/cropPl
 import { roofTitle, useAddresses } from '../services/addresses';
 import './DeepAgentSite.css';
 import MapsLink from '../components/MapsLink';
+import SiteReadinessPanel from '../components/SiteReadinessPanel';
 
 export type SiteCrop = { id: string; name: string };
-type Tab = 'overview' | 'sun' | 'model' | 'calendar' | 'tour';
+type Tab = 'overview' | 'readiness' | 'sun' | 'model' | 'calendar' | 'tour';
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 const fmt = (value: number) => new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(value);
 /** Sun score 0-100: 60 pts for area (full when twice the requested area meets the sun target), 40 pts for average direct-sun hours (full at 12 h). */
@@ -22,13 +23,13 @@ export function sunScore(sunlitSqft: number | null, targetSqft: number, meanHour
 }
 const shortDate = (date: string) => new Date(`${date}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
-export default function DeepAgentSite({ result, rank, total, simulation, predictions, crops, criteria, explanation, mlModel, preferredMonth, onClose }: {
+export default function DeepAgentSite({ result, rank, total, simulation, predictions, crops, criteria, explanation, mlModel, preferredMonth, initialTab, onClose }: {
   result: SearchResult; rank: number; total: number;
   simulation: SunlightEvidence | null; predictions: CropPrediction[]; crops: SiteCrop[];
   criteria: { dates: string[]; targetHours: number; targetAreaSqft: number };
-  explanation: string | null; mlModel: CropModelInfo | null; preferredMonth: number; onClose: () => void;
+  explanation: string | null; mlModel: CropModelInfo | null; preferredMonth: number; initialTab?: string | null; onClose: () => void;
 }) {
-  const [tab, setTab] = useState<Tab>('overview');
+  const [tab, setTab] = useState<Tab>(initialTab === 'readiness' ? 'readiness' : 'overview');
   const addresses = useAddresses([{ id: result.id, lat: result.lat, lon: result.lon, known: Boolean(result.costar?.buildingName || result.costar?.address) }]);
   const title = roofTitle(result, addresses.get(result.id));
   const name = title.name;
@@ -46,7 +47,7 @@ export default function DeepAgentSite({ result, rank, total, simulation, predict
   const starts = predictions.filter((item) => item.plantMonth !== null).sort((a, b) => ((a.plantMonth! - preferredMonth + 12) % 12) - ((b.plantMonth! - preferredMonth + 12) % 12));
   const cropName = (id: string) => crops.find((crop) => crop.id === id)?.name ?? id;
   const tabs: Array<{ key: Tab; label: string; icon: typeof Sun }> = [
-    { key: 'overview', label: 'Overview', icon: LayoutGrid }, { key: 'sun', label: 'Sun coverage', icon: Sun },
+    { key: 'overview', label: 'Overview', icon: LayoutGrid }, { key: 'readiness', label: 'Red & green flags', icon: ShieldCheck }, { key: 'sun', label: 'Sun coverage', icon: Sun },
     { key: 'model', label: 'ML model', icon: Cpu }, { key: 'calendar', label: 'Calendar', icon: CalendarDays },
     ...(result.costar?.matterport.length ? [{ key: 'tour' as Tab, label: '3D tour', icon: Box }] : []),
   ];
@@ -85,6 +86,8 @@ export default function DeepAgentSite({ result, rank, total, simulation, predict
         </div>
       </section>
     </main>}
+
+    {tab === 'readiness' && <SiteReadinessPanel result={result} simulation={simulation} targetAreaSqft={criteria.targetAreaSqft} />}
 
     {tab === 'sun' && <main className="das-sun">
       <div className="das-sun-bar">

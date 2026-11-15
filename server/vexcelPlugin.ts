@@ -4,6 +4,7 @@ import { resolve } from 'node:path';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { geometryBounds, geometryRequiredRadius, insideMetricGeometry, metricPointToLonLat, roofWktToMetricGeometry, type MetricRoofGeometry } from '../src/services/roofGeometry';
 import { sharedMeetingArea, simulate, type AreaSelection, type Obstruction } from '../src/services/sunSimulation';
+import { neighborGrid, neighborModel } from '../src/services/neighbors';
 import { handleMonthlyClimate, monthlyClimateAt } from './monthlyClimate';
 import { handleRunsRoute } from './runStore';
 import { handleGeoRoute } from './geocode';
@@ -289,17 +290,25 @@ async function propertyAt(key: string, lat: number, lon: number) {
 }
 
 async function elevationsAt(key: string, points: Array<{ lat: number; lon: number }>) {
-  const line = `LINESTRING(${points.map((point) => `${point.lon} ${point.lat}`).join(',')})`;
-  const dsmParams = new URLSearchParams({ wkt: line, srid: '4326', layer: 'urban,wide-area', 'unit-system': 'metric' });
-  const dtmParams = new URLSearchParams({ wkt: line, srid: '4326', 'dem-priority': 'vexcel-dtm,public-dtm', 'unit-system': 'metric' });
-  const [dsmResponse, dtmResponse] = await Promise.all([vexcel(key, `dsm/elevation?${dsmParams}`), vexcel(key, `dtm/elevation?${dtmParams}`)]);
-  const dsm = await dsmResponse.json() as { wkt: string; collection?: string[]; layer?: string[] };
-  const dtm = await dtmResponse.json() as { wkt: string; collection?: string[]; layer?: string[] };
-  const dsmValues = parseElevationWkt(dsm.wkt);
-  const dtmValues = parseElevationWkt(dtm.wkt);
+  // The elevation endpoints take a LINESTRING in the query string, so long point lists go in chunks.
+  const chunks: Array<Array<{ lat: number; lon: number }>> = [];
+  for (let index = 0; index < points.length; index += 150) chunks.push(points.slice(index, index + 150));
+  const parts = await Promise.all(chunks.map(async (chunk) => {
+    const line = `LINESTRING(${chunk.map((point) => `${point.lon} ${point.lat}`).join(',')})`;
+    const dsmParams = new URLSearchParams({ wkt: line, srid: '4326', layer: 'urban,wide-area', 'unit-system': 'metric' });
+    const dtmParams = new URLSearchParams({ wkt: line, srid: '4326', 'dem-priority': 'vexcel-dtm,public-dtm', 'unit-system': 'metric' });
+    const [dsmResponse, dtmResponse] = await Promise.all([vexcel(key, `dsm/elevation?${dsmParams}`), vexcel(key, `dtm/elevation?${dtmParams}`)]);
+    const dsm = await dsmResponse.json() as { wkt: string; collection?: string[]; layer?: string[] };
+    const dtm = await dtmResponse.json() as { wkt: string; collection?: string[]; layer?: string[] };
+    const dsmValues = parseElevationWkt(dsm.wkt);
+    const dtmValues = parseElevationWkt(dtm.wkt);
+    return { samples: chunk.map((point, index) => ({ ...point, dsmM: dsmValues[index] ?? null, dtmM: dtmValues[index] ?? null })), dsm, dtm };
+  }));
+  const unique = (values: string[]) => [...new Set(values)];
   return {
-    samples: points.map((point, index) => ({ ...point, dsmM: dsmValues[index] ?? null, dtmM: dtmValues[index] ?? null })),
-    dsmCollection: dsm.collection ?? [], dsmLayer: dsm.layer ?? [], dtmCollection: dtm.collection ?? [], dtmLayer: dtm.layer ?? [],
+    samples: parts.flatMap((part) => part.samples),
+    dsmCollection: unique(parts.flatMap((part) => part.dsm.collection ?? [])), dsmLayer: unique(parts.flatMap((part) => part.dsm.layer ?? [])),
+    dtmCollection: unique(parts.flatMap((part) => part.dtm.collection ?? [])), dtmLayer: unique(parts.flatMap((part) => part.dtm.layer ?? [])),
   };
 }
 
@@ -414,6 +423,8 @@ type ResolvedGeometry = {
   roofGeometry: MetricRoofGeometry;
   roofBounds: { x: number; y: number; width: number; height: number };
   obstructions: Obstruction[];
+  /** Taller buildings and trees within NEIGHBOR_MARGIN_M of the roof, as shadow casters. */
+  neighborObstructions: Obstruction[];
 };
 
 async function resolveCandidateGeometry(key: string, candidate: AgentCandidate): Promise<ResolvedGeometry | null> {
@@ -438,7 +449,11 @@ async function resolveCandidateGeometry(key: string, candidate: AgentCandidate):
     if (insideMetricGeometry(x, y, roofGeometry)) cells.push({ x, y, ...metricPointToLonLat({ x, y }, candidate.lat, candidate.lon, imageRadiusM) });
   }
   if (cells.length < 2) return null;
-  const elevations = await elevationsAt(key, cells.map(({ lat, lon }) => ({ lat, lon })));
+  const ring = neighborGrid(roofBounds, roofGeometry, candidate.lat, candidate.lon, imageRadiusM);
+  const [elevations, ringElevations] = await Promise.all([
+    elevationsAt(key, cells.map(({ lat, lon }) => ({ lat, lon }))),
+    ring.cells.length >= 2 ? elevationsAt(key, ring.cells.map(({ lat, lon }) => ({ lat, lon }))).catch(() => null) : Promise.resolve(null),
+  ]);
   const valid = elevations.samples.map((sample, index) => ({ sample, cell: cells[index] })).filter((item) => item.cell && item.sample.dsmM !== null && item.sample.dtmM !== null);
   if (valid.length < 2) return null;
   const median = (values: number[]) => { const sorted = [...values].sort((a, b) => a - b); return sorted[Math.floor(sorted.length / 2)]; };
@@ -446,13 +461,15 @@ async function resolveCandidateGeometry(key: string, candidate: AgentCandidate):
   const groundM = median(valid.map((item) => item.sample.dtmM!));
   const obstructions = valid.filter((item) => item.sample.dsmM! - roofPlaneM >= .75).map((item) => ({ x: item.cell.x - cellWidth / 2, y: item.cell.y - cellDepth / 2, width: cellWidth, depth: cellDepth, heightM: item.sample.dsmM! - roofPlaneM }));
   const rawHeight = roofPlaneM - groundM;
+  const neighbors = ringElevations ? neighborModel(ring, ringElevations.samples, roofPlaneM, roofBounds) : null;
   return {
     evidence: {
       candidateId: candidate.id, available: true, roofAreaSqft, buildingHeightM: rawHeight >= 1 ? rawHeight : null,
       validSamples: valid.length, obstructionCount: obstructions.length,
       dsmCollections: elevations.dsmCollection, dtmCollections: elevations.dtmCollection, reason: null,
+      neighborsChecked: Boolean(neighbors), neighborTallerCount: neighbors?.tallerCount ?? null, neighborMaxAboveRoofM: neighbors?.maxAboveRoofM ?? null, neighborLossSqft: null,
     },
-    roofAreaSqft, roofWidthM, roofDepthM, roofGeometry, roofBounds, obstructions,
+    roofAreaSqft, roofWidthM, roofDepthM, roofGeometry, roofBounds, obstructions, neighborObstructions: neighbors?.casters ?? [],
   };
 }
 
@@ -472,16 +489,21 @@ async function simulateCandidate(key: string, candidate: AgentCandidate, dates: 
   if (!geometry) return { candidateId: candidate.id, dates, targetHours, targetAreaSqft, sharedAreaSqft: null, perDate: dates.map((date) => ({ date, areaMeetingTargetSqft: null, meanHours: null })), geometry: unavailableGeometry(candidate, 'Roof or DSM/DTM geometry is unavailable.') };
   const scale = Math.sqrt(Math.min(1, targetAreaSqft / geometry.roofAreaSqft));
   const selection: AreaSelection = { x: geometry.roofBounds.x + geometry.roofBounds.width * (1 - scale) / 2, y: geometry.roofBounds.y + geometry.roofBounds.height * (1 - scale) / 2, width: geometry.roofBounds.width * scale, height: geometry.roofBounds.height * scale };
-  const results = dates.map((date) => simulate({
+  const run = (obstructions: Obstruction[]) => dates.map((date) => simulate({
     date, minute: 720, timezoneOffsetHours: offsetForDate(date, timeZoneFor(candidate.lon)), lat: candidate.lat, lon: candidate.lon,
     roofAreaSqft: geometry.roofAreaSqft, roofWidthM: geometry.roofWidthM, roofDepthM: geometry.roofDepthM,
-    roofGeometry: geometry.roofGeometry, selection, obstructions: geometry.obstructions, targetHours,
+    roofGeometry: geometry.roofGeometry, selection, obstructions, targetHours,
   }));
+  // Neighbors are part of the real answer; the roof-only run shows how much they cost.
+  const results = run([...geometry.obstructions, ...geometry.neighborObstructions]);
+  const sharedAreaSqft = sharedMeetingArea(results, targetHours);
+  const roofOnly = geometry.neighborObstructions.length ? sharedMeetingArea(run(geometry.obstructions), targetHours) : sharedAreaSqft;
+  const neighborLossSqft = geometry.evidence.neighborsChecked && sharedAreaSqft !== null && roofOnly !== null ? Math.max(0, roofOnly - sharedAreaSqft) : null;
   return {
     candidateId: candidate.id, dates, targetHours, targetAreaSqft,
-    sharedAreaSqft: sharedMeetingArea(results, targetHours),
+    sharedAreaSqft,
     perDate: results.map((result, index) => ({ date: dates[index], areaMeetingTargetSqft: result.meetingTargetAreaSqft, meanHours: result.estimatedHours })),
-    geometry: geometry.evidence,
+    geometry: { ...geometry.evidence, neighborLossSqft },
   };
 }
 
@@ -615,7 +637,7 @@ export function vexcelApiPlugin(root: string) {
       }
       if (url.pathname === '/api/vexcel/elevation' && req.method === 'POST') {
         const input = await body(req);
-        const points = Array.isArray(input.points) ? input.points.slice(0, 196).map((point) => ({ lat: Number((point as JsonRecord).lat), lon: Number((point as JsonRecord).lon) })) : [];
+        const points = Array.isArray(input.points) ? input.points.slice(0, 600).map((point) => ({ lat: Number((point as JsonRecord).lat), lon: Number((point as JsonRecord).lon) })) : [];
         if (points.length < 2 || points.some((point) => !Number.isFinite(point.lat) || !Number.isFinite(point.lon))) return json(res, 400, { error: 'At least two valid sample points are required.' });
         return json(res, 200, await elevationsAt(key, points));
       }
@@ -743,6 +765,22 @@ export function vexcelApiPlugin(root: string) {
         } catch (error) {
           send({ type: 'error', error: error instanceof Error ? error.message : 'Agent comparison failed.' });
         } finally { res.end(); }
+        return;
+      }
+      if (url.pathname === '/api/vexcel/oblique') {
+        // Angled photo of the building from one compass direction (Vexcel "urban" layer only).
+        const lat = Number(url.searchParams.get('lat'));
+        const lon = Number(url.searchParams.get('lon'));
+        const direction = ['north', 'south', 'east', 'west'].includes(url.searchParams.get('dir') ?? '') ? url.searchParams.get('dir') : 'north';
+        const radiusM = Math.min(200, Math.max(25, Number(url.searchParams.get('radiusM')) || 60));
+        if (!Number.isFinite(lat) || !Number.isFinite(lon)) return json(res, 400, { error: 'Invalid coordinates.' });
+        const response = await vexcel(key, 'oriented/extract', { method: 'POST', body: JSON.stringify({ wkt: square(lat, lon, radiusM), srid: 4326, layer: 'urban', 'product-type': `oblique-${direction}`, rotation: 'natural', crop: 'bbox', 'image-format': 'jpeg', 'destination-dimensions': '900,620' }) });
+        const type = response.headers.get('content-type') || '';
+        if (!response.ok || !type.startsWith('image/')) return json(res, 404, { error: 'No oblique imagery here.' });
+        res.statusCode = 200;
+        res.setHeader('Content-Type', type);
+        res.setHeader('Cache-Control', 'private, max-age=3600');
+        res.end(Buffer.from(await response.arrayBuffer()));
         return;
       }
       if (url.pathname === '/api/vexcel/imagery') {

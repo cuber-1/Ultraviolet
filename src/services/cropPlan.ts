@@ -65,6 +65,14 @@ export type Brief = {
   preferredMonth: number; // 0-11
   /** Free-text notes the Deep Agent interprets (preferences, constraints). */
   notes?: string;
+  /** Demo button: replay the newest saved run that the crop model scored, at its original pace. */
+  demo?: boolean;
+};
+
+/** The search the Demo button replays (matches saved Houston runs scored by CropFit). */
+export const DEMO_BRIEF: Brief = {
+  scale: 'urban', areaSqft: 5000, crops: ['greens', 'microgreens', 'tomatoes'], urbanArea: 'Houston, Texas', preferredMonth: 3,
+  notes: 'I sell to restaurants downtown, so closer to the city center is better. Avoid roofs with a lot of HVAC.', demo: true,
 };
 
 export const ACRE_SQFT = 43_560;

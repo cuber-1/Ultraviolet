@@ -1,10 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
+import { ChevronLeft, ChevronRight, Play } from 'lucide-react';
+import { DEMO_BRIEF, saveBrief } from '../services/cropPlan';
 import { useNavigate } from 'react-router-dom';
 import Wordmark from '../components/Wordmark';
 import Showcase from '../components/Showcase';
 import './LandingPage.css';
 
 const CHARS = '·∿~=+−|/\\.:,;!?@#$%^&*()[]{}01<>≈≡∂∑∏√±×÷∞∠∆∇⊕⊗◦●○◆◇▲△▷▻';
+const CURSOR_GLYPHS = ['∆', '⊕', '∑', '◇', '∞', '∇', '≈', '○'];
+const SHOWCASE_STEPS = 3;
+const SHOWCASE_INTERVAL_MS = 6500;
 
 function buildGrid(columns: number, rows: number): string[][] {
   return Array.from({ length: rows }, () =>
@@ -14,6 +19,7 @@ function buildGrid(columns: number, rows: number): string[][] {
 
 function DataField() {
   const fieldRef = useRef<HTMLDivElement>(null);
+  const cursorRef = useRef<HTMLDivElement>(null);
   const gridRef = useRef<string[][]>([]);
   const frameRef = useRef<number>(0);
   const [, render] = useState(0);
@@ -51,9 +57,28 @@ function DataField() {
     };
     frameRef.current = requestAnimationFrame(animate);
 
+    const moveCursor = (event: PointerEvent) => {
+      if (event.pointerType === 'touch') return;
+      const node = fieldRef.current;
+      const cursor = cursorRef.current;
+      if (!node || !cursor) return;
+      const bounds = node.getBoundingClientRect();
+      const x = event.clientX - bounds.left;
+      const y = event.clientY - bounds.top;
+      node.style.setProperty('--cursor-x', `${x}px`);
+      node.style.setProperty('--cursor-y', `${y}px`);
+      cursor.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+      cursor.classList.add('visible');
+    };
+    const hideCursor = () => cursorRef.current?.classList.remove('visible');
+    window.addEventListener('pointermove', moveCursor, { passive: true });
+    document.documentElement.addEventListener('mouseleave', hideCursor);
+
     return () => {
       observer.disconnect();
       cancelAnimationFrame(frameRef.current);
+      window.removeEventListener('pointermove', moveCursor);
+      document.documentElement.removeEventListener('mouseleave', hideCursor);
     };
   }, []);
 
@@ -66,34 +91,34 @@ function DataField() {
           ))}
         </div>
       ))}
+      <div ref={cursorRef} className="data-cursor">
+        <div>{CURSOR_GLYPHS.map((glyph, index) => <span key={glyph} style={{ transform: `rotate(${index * 45}deg) translateY(-66px)` }}>{glyph}</span>)}</div>
+      </div>
     </div>
   );
 }
 
 export default function LandingPage() {
   const navigate = useNavigate();
-  // The hero stays pinned while the page scrolls through a tall track; scroll progress picks the showcase step.
-  const track = useRef<HTMLDivElement>(null);
   const [step, setStep] = useState(0);
+  const [cycle, setCycle] = useState(0);
+
   useEffect(() => {
-    const onScroll = () => {
-      const node = track.current; if (!node) return;
-      const total = node.offsetHeight - window.innerHeight;
-      const progress = total > 0 ? Math.min(1, Math.max(0, -node.getBoundingClientRect().top / total)) : 0;
-      setStep(Math.min(2, Math.floor(progress * 3)));
-    };
-    onScroll();
-    window.addEventListener('scroll', onScroll, { passive: true });
-    window.addEventListener('resize', onScroll);
-    return () => { window.removeEventListener('scroll', onScroll); window.removeEventListener('resize', onScroll); };
-  }, []);
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const timer = window.setInterval(() => setStep((current) => (current + 1) % SHOWCASE_STEPS), SHOWCASE_INTERVAL_MS);
+    return () => window.clearInterval(timer);
+  }, [cycle]);
+
+  const moveShowcase = (direction: -1 | 1) => {
+    setStep((current) => (current + direction + SHOWCASE_STEPS) % SHOWCASE_STEPS);
+    setCycle((current) => current + 1);
+  };
 
   return (
     <div className="landing-page">
-    <div className="landing-track" ref={track}>
     <div className="landing">
       <header className="landing-header">
-        <Wordmark />
+        <div className="landing-brand"><Wordmark /><button className="landing-demo" onClick={() => { saveBrief(DEMO_BRIEF); navigate('/plan', { state: { brief: DEMO_BRIEF, run: Date.now() } }); }} title="Replays a Houston search scored by the CropFit model"><Play size={12} fill="currentColor" /> Demo</button></div>
         <nav>
           <button onClick={() => navigate('/model')}>How it works</button>
           <button onClick={() => navigate('/agriculture/urban')}>Urban</button>
@@ -116,9 +141,14 @@ export default function LandingPage() {
           <button className="secondary" onClick={() => navigate('/agriculture/urban')}>Search rooftops directly</button>
         </div>
       </main>
-      <aside className="landing-showcase"><Showcase active={step} /></aside>
-      <button className="landing-scroll" onClick={() => window.scrollTo({ top: window.scrollY + window.innerHeight * .9, behavior: 'smooth' })}>{step < 2 ? 'Scroll to explore ↓' : 'Get started above ↑'}</button>
-    </div>
+      <aside className="landing-showcase">
+        <Showcase active={step} />
+        <div className="landing-showcase-controls">
+          <button onClick={() => moveShowcase(-1)} aria-label="Show previous dashboard feature"><ChevronLeft size={20} /></button>
+          <span className="mono">{String(step + 1).padStart(2, '0')} / {String(SHOWCASE_STEPS).padStart(2, '0')}</span>
+          <button onClick={() => moveShowcase(1)} aria-label="Show next dashboard feature"><ChevronRight size={20} /></button>
+        </div>
+      </aside>
     </div>
     </div>
   );

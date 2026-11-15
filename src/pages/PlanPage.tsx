@@ -82,7 +82,9 @@ export default function PlanPage() {
     try {
       if (input.scale === 'urban') {
         // Model offline but these exact answers were searched with it before: play that search back.
-        const recorded = input.notes || (await mlOnline(controller.signal)) ? null : await findModelRun<UrbanOutcome>(input, controller.signal).catch(() => null);
+        const recorded = input.demo
+          ? await findModelRun<UrbanOutcome>(input, controller.signal).catch(() => null)
+          : input.notes || (await mlOnline(controller.signal)) ? null : await findModelRun<UrbanOutcome>(input, controller.signal).catch(() => null);
         if (!live()) return;
         if (recorded) {
           const saved = recorded.outcome;
@@ -184,7 +186,7 @@ export default function PlanPage() {
   }, [running]);
 
   // Remember the results view (deck position, tab) so closing Details returns to the same place.
-  const openSite = useCallback((id: string) => navigate(`/plan?site=${encodeURIComponent(id)}&back=${encodeURIComponent(location.search)}`), [location.search, navigate]);
+  const openSite = useCallback((id: string, tab?: string) => navigate(`/plan?site=${encodeURIComponent(id)}${tab ? `&tab=${encodeURIComponent(tab)}` : ''}&back=${encodeURIComponent(location.search)}`), [location.search, navigate]);
   const backSearch = new URLSearchParams(location.search).get('back') ?? '';
 
   const pinAddresses = useAddresses(outcome?.kind === 'urban' ? outcome.top.map((result) => ({ id: result.id, lat: result.lat, lon: result.lon, known: Boolean(result.costar?.buildingName || result.costar?.address) })) : []);
@@ -201,7 +203,7 @@ export default function PlanPage() {
       crops={briefCrops(outcome.brief).map(({ id, name }) => ({ id, name }))}
       criteria={outcome.criteria} preferredMonth={outcome.brief.preferredMonth}
       explanation={outcome.comparison.narrative?.explanations.find((item) => item.candidateId === result.id)?.explanation ?? null}
-      mlModel={outcome.comparison.mlModel ?? null} onClose={() => navigate(`/plan${backSearch}`)} />;
+      mlModel={outcome.comparison.mlModel ?? null} initialTab={new URLSearchParams(location.search).get('tab')} onClose={() => navigate(`/plan${backSearch}`)} />;
   }
 
   const cancel = () => { requestRef.current?.abort(); setRunning(false); navigate('/start'); };

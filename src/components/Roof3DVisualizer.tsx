@@ -2,6 +2,7 @@ import { Suspense, useEffect, useMemo, useState } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { Edges, Line, OrbitControls, useTexture } from '@react-three/drei';
 import * as THREE from 'three';
+import type { NeighborBlock } from '../services/neighbors';
 import { shadowVector, type CellResult, type MetricPolygon, type MetricRoofGeometry, type Obstruction, type SunPosition } from '../services/sunSimulation';
 import './Roof3DVisualizer.css';
 
@@ -32,6 +33,10 @@ type Roof3DVisualizerProps = {
   roofDepthM: number;
   buildingHeightM: number | null;
   obstructions: Obstruction[];
+  /** Nearby buildings and trees sampled around the roof (ground-up heights). */
+  neighbors?: NeighborBlock[];
+  /** Neighbor caster indexes that shade the growing area at the current time. */
+  activeNeighbors?: Set<number>;
   cells: CellResult[];
   imageryUrl: string;
   surfaceLabel: string;
@@ -318,6 +323,7 @@ function Scene({ props, surfaceMode }: { props: Roof3DVisualizerProps; surfaceMo
   );
   const sunPosition = sunDirection.clone().multiplyScalar(span * 2.3);
   const outlineRings = props.roofGeometry.flatMap((polygon) => [polygon.outer, ...polygon.holes]);
+  const shadowSpan = Math.max(span, span / 2 + 48);
 
   return <>
     {surfaceMode === 'clean' && <CompassRose radius={span * .72} />}
@@ -329,10 +335,10 @@ function Scene({ props, surfaceMode }: { props: Roof3DVisualizerProps; surfaceMo
       castShadow
       shadow-mapSize-width={2048}
       shadow-mapSize-height={2048}
-      shadow-camera-left={-span}
-      shadow-camera-right={span}
-      shadow-camera-top={span}
-      shadow-camera-bottom={-span}
+      shadow-camera-left={-shadowSpan}
+      shadow-camera-right={shadowSpan}
+      shadow-camera-top={shadowSpan}
+      shadow-camera-bottom={-shadowSpan}
       shadow-camera-near={.1}
       shadow-camera-far={span * 6}
       shadow-bias={-.0004}
@@ -377,6 +383,16 @@ function Scene({ props, surfaceMode }: { props: Roof3DVisualizerProps; surfaceMo
         <Edges color={surfaceMode === 'clean' ? '#8f3000' : '#e85d04'} threshold={12} />
       </mesh>)}
     </group>
+
+    {props.neighbors?.map((block, index) => {
+      const shading = block.casterIndex !== null && Boolean(props.activeNeighbors?.has(block.casterIndex));
+      const taller = block.heightAboveRoofM >= 1;
+      const color = shading ? '#f36b16' : taller ? '#c9a27e' : '#d4cec7';
+      return <mesh key={`neighbor-${index}`} position={[block.x - centerX, block.heightAboveGroundM / 2, block.y - centerY]} castShadow={taller} receiveShadow>
+        <boxGeometry args={[block.size * .96, block.heightAboveGroundM, block.size * .96]} />
+        <meshStandardMaterial color={color} roughness={.8} transparent opacity={shading ? .92 : taller ? .78 : .5} depthWrite={shading || taller} />
+      </mesh>;
+    })}
 
     {surfaceMode === 'imagery' && <mesh position={[0, -.05, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
       <planeGeometry args={[span * 3.2, span * 3.2]} />
@@ -438,6 +454,11 @@ export default function Roof3DVisualizer(props: Roof3DVisualizerProps) {
       <strong>{isNight ? 'Night' : `${props.sun.altitude.toFixed(1)}° sun`}</strong>
       <small>{isNight ? `Sun below horizon · ${props.obstructions.length} measured features` : `${props.sun.azimuth.toFixed(0)}° azimuth · ${props.obstructions.length} measured features`}</small>
     </div>
+    {Boolean(props.neighbors?.length) && <div className="roof-3d-neighbors">
+      <span><i className="shading" /> Shading your beds now{props.activeNeighbors?.size ? ` · ${props.activeNeighbors.size}` : ''}</span>
+      <span><i className="taller" /> Taller than this roof</span>
+      <span><i className="lower" /> Lower, no shade</span>
+    </div>}
     <div className="roof-surface-mode" aria-label="Roof surface style">
       <button className={surfaceMode === 'imagery' ? 'active' : ''} onClick={() => setSurfaceMode('imagery')} aria-pressed={surfaceMode === 'imagery'}>Imagery</button>
       <button className={surfaceMode === 'clean' ? 'active' : ''} onClick={() => setSurfaceMode('clean')} aria-pressed={surfaceMode === 'clean'}>Clean roof</button>

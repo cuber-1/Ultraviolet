@@ -22,7 +22,7 @@ const STEPS = [
   { kicker: 'Your shortlist', title: 'Swipe your shortlist.', body: 'The Deep Agent ranks the best roofs. Go through them one at a time, save the ones you like, and dig into sun, model, and calendar details.' },
 ];
 
-/** Scroll-driven tour of the app's features on the home page, built from a stored demo run. */
+/** Carousel tour of the app's features on the home page, built from a stored demo run. */
 export default function Showcase({ active }: { active: number }) {
   const [demo, setDemo] = useState<DemoOutcome | null>(null);
   const [imageOk, setImageOk] = useState(true);

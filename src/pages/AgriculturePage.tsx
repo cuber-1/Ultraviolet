@@ -13,6 +13,7 @@ import './AgriculturePage.css';
 import './AgricultureEnhancements.css';
 import MapsLink from '../components/MapsLink';
 
+import { neighborGrid, neighborModel } from '../services/neighbors';
 const Roof3DVisualizer = lazy(() => import('../components/Roof3DVisualizer'));
 
 const ACCEPTANCE_GOAL = 'Find a rooftop with 5,000 square feet that gets at least six hours of direct sun in April and October.';
@@ -55,6 +56,8 @@ export function SiteWorkspace({ result, onClose, initialDate = '2026-04-15', ini
     }
     return { cells, cellWidth, cellDepth };
   }, [imageRadiusM, result.lat, result.lon, roofBounds, roofGeometry]);
+  const ringGrid = useMemo(() => neighborGrid(roofBounds, roofGeometry, result.lat, result.lon, imageRadiusM), [imageRadiusM, result.lat, result.lon, roofBounds, roofGeometry]);
+  const [ringElevations, setRingElevations] = useState<ElevationResponse | null>(null);
   const [elevations, setElevations] = useState<ElevationResponse | null>(null);
   const [elevationError, setElevationError] = useState<string | null>(null);
   const [elevationLoading, setElevationLoading] = useState(false);
@@ -67,6 +70,13 @@ export function SiteWorkspace({ result, onClose, initialDate = '2026-04-15', ini
       .finally(() => { if (!controller.signal.aborted) setElevationLoading(false); });
     return () => controller.abort();
   }, [elevationGrid]);
+  useEffect(() => {
+    setRingElevations(null);
+    if (ringGrid.cells.length < 2) return;
+    const controller = new AbortController();
+    fetchElevations(ringGrid.cells.map(({ lat, lon }) => ({ lat, lon })), controller.signal).then(setRingElevations).catch(() => { /* neighbors are optional */ });
+    return () => controller.abort();
+  }, [ringGrid]);
   const elevationModel = useMemo(() => {
     if (!elevations) return null;
     const valid = elevations.samples.map((sample, index) => ({ sample, cell: elevationGrid.cells[index] })).filter((item) => item.cell && item.sample.dsmM !== null && item.sample.dtmM !== null);
@@ -76,9 +86,11 @@ export function SiteWorkspace({ result, onClose, initialDate = '2026-04-15', ini
     const groundM = median(valid.map((item) => item.sample.dtmM!));
     const obstructions: Obstruction[] = valid.filter((item) => item.sample.dsmM! - roofPlaneM >= .75).map((item) => ({ x: item.cell.x - elevationGrid.cellWidth / 2, y: item.cell.y - elevationGrid.cellDepth / 2, width: elevationGrid.cellWidth, depth: elevationGrid.cellDepth, heightM: item.sample.dsmM! - roofPlaneM }));
     const rawBuildingHeightM = roofPlaneM - groundM;
-    return { roofPlaneM, groundM, buildingHeightM: rawBuildingHeightM >= 1 ? rawBuildingHeightM : null, obstructions, validSamples: valid.length };
-  }, [elevationGrid, elevations]);
-  const obstructions = elevations ? elevationModel?.obstructions ?? [] : null;
+    const neighbors = ringElevations ? neighborModel(ringGrid, ringElevations.samples, roofPlaneM, roofBounds) : null;
+    return { roofPlaneM, groundM, buildingHeightM: rawBuildingHeightM >= 1 ? rawBuildingHeightM : null, obstructions, neighbors, validSamples: valid.length };
+  }, [elevationGrid, elevations, ringElevations, ringGrid, roofBounds]);
+  // Roof features first, then neighbor casters: cell.blockedBy indexes into this combined list.
+  const obstructions = useMemo(() => elevations ? [...(elevationModel?.obstructions ?? []), ...(elevationModel?.neighbors?.casters ?? [])] : null, [elevationModel, elevations]);
   const initialSelection = useMemo<AreaSelection>(() => {
     const scale = Math.sqrt(Math.min(1, targetAreaSqft / roofArea));
     return { x: roofBounds.x + roofBounds.width * (1 - scale) / 2, y: roofBounds.y + roofBounds.height * (1 - scale) / 2, width: roofBounds.width * scale, height: roofBounds.height * scale };
@@ -96,6 +108,7 @@ export function SiteWorkspace({ result, onClose, initialDate = '2026-04-15', ini
   const timeZone = siteTimeZone(result.lon);
   const timezoneOffsetHours = offsetForDate(date, timeZone);
   const simulation = useMemo(() => simulate({ date, minute, timezoneOffsetHours, lat: result.lat, lon: result.lon, roofAreaSqft: roofArea, roofWidthM: roofWidth, roofDepthM: roofDepth, roofGeometry, selection, obstructions, targetHours }), [date, minute, timezoneOffsetHours, result.lat, result.lon, roofArea, roofWidth, roofDepth, roofGeometry, selection, obstructions, targetHours]);
+  const activeNeighborCasters = useMemo(() => { const roofCount = elevationModel?.obstructions.length ?? 0; return new Set(simulation.cells.flatMap((cell) => cell.blockedBy !== null && cell.blockedBy >= roofCount ? [cell.blockedBy - roofCount] : [])); }, [elevationModel, simulation.cells]);
   const activeShadowSources = useMemo(() => new Set(simulation.cells.flatMap((cell) => cell.blockedBy === null ? [] : [cell.blockedBy])), [simulation.cells]);
   const sunlightDirection = useMemo(() => {
     const azimuth = simulation.sun.azimuth * Math.PI / 180;
@@ -125,7 +138,7 @@ export function SiteWorkspace({ result, onClose, initialDate = '2026-04-15', ini
           {layer === 'sun' && <><div className="surface-switch"><button className={solarSurface === 'rgb' ? 'active' : ''} onClick={() => setSolarSurface('rgb')}>RGB</button><button className={solarSurface === 'irg' ? 'active' : ''} onClick={() => setSolarSurface('irg')}>CIR</button></div><div className="sun-view-switch"><button className={sunView === 'model' ? 'active' : ''} onClick={() => setSunView('model')}>3D</button><button className={sunView === 'analysis' ? 'active' : ''} onClick={() => setSunView('analysis')}>Plan</button></div></>}
         </div>
         {(layer === 'tour' && !tour) || (layer === 'infrared' && infraredFailed) ? <div className="unavailable-layer"><CircleAlert size={24} /><h3>{layer === 'infrared' ? 'Infrared unavailable' : 'No Matterport tour'}</h3><p>{layer === 'infrared' ? 'Vexcel did not return an IRG image for this location.' : 'This CoStar property has no Matterport attachment.'}</p><button onClick={() => setLayer('sun')}>View sunlight</button></div> : layer === 'tour' && tour ? <div className="tour-frame"><iframe title={tour.caption} src={`https://my.matterport.com/show/?m=${encodeURIComponent(tour.modelId)}&play=1&qs=1`} allowFullScreen allow="fullscreen; xr-spatial-tracking" /><span className="tour-source mono">COSTAR {costar?.propertyId} · {tour.caption}</span></div> : <div className="roof-stage">
-          {layer === 'sun' && sunView === 'model' && elevationModel ? <Suspense fallback={<div className="roof-3d-loading"><LoaderCircle className="spin" /> Loading roof</div>}><Roof3DVisualizer initialSurfaceMode={initialSurfaceMode} roofGeometry={roofGeometry} roofBounds={roofBounds} roofWidthM={roofWidth} roofDepthM={roofDepth} buildingHeightM={elevationModel.buildingHeightM} obstructions={elevationModel.obstructions} cells={simulation.cells} imageryUrl={solarSurface === 'irg' ? `${imageryUrl}&bands=irg` : imageryUrl} surfaceLabel={solarSurface === 'irg' ? 'CIR / IRG' : 'RGB'} sun={simulation.sun} localTime={`${timeLabel(minute)} local`} /></Suspense> : <>
+          {layer === 'sun' && sunView === 'model' && elevationModel ? <Suspense fallback={<div className="roof-3d-loading"><LoaderCircle className="spin" /> Loading roof</div>}><Roof3DVisualizer initialSurfaceMode={initialSurfaceMode} roofGeometry={roofGeometry} roofBounds={roofBounds} roofWidthM={roofWidth} roofDepthM={roofDepth} buildingHeightM={elevationModel.buildingHeightM} obstructions={elevationModel.obstructions} neighbors={elevationModel.neighbors?.blocks ?? []} activeNeighbors={activeNeighborCasters} cells={simulation.cells} imageryUrl={solarSurface === 'irg' ? `${imageryUrl}&bands=irg` : imageryUrl} surfaceLabel={solarSurface === 'irg' ? 'CIR / IRG' : 'RGB'} sun={simulation.sun} localTime={`${timeLabel(minute)} local`} /></Suspense> : <>
             {infraredActive ? <InfraredSurface src={`${imageryUrl}&bands=irg`} alt={`Denoised near-infrared intensity at ${result.lat}, ${result.lon}`} onError={() => setInfraredFailed(true)} /> : <img src={imageryUrl} alt={`Aerial imagery at ${result.lat}, ${result.lon}`} />}
             {infraredActive && <div className="infrared-note"><strong>NIR INTENSITY</strong><span>Denoised IRG red band · darker orange indicates stronger near-infrared response.</span></div>}
             <svg className={layer === 'sun' ? 'roof-overlay interactive' : 'roof-overlay'} viewBox={`0 0 ${roofWidth} ${roofDepth}`} preserveAspectRatio="xMidYMid meet" onPointerDown={(event) => { if (layer !== 'sun') return; dragStart.current = point(event); event.currentTarget.setPointerCapture(event.pointerId); }} onPointerMove={(event) => { if (layer !== 'sun' || !dragStart.current) return; const end = point(event); setSelection({ x: Math.min(dragStart.current.x, end.x), y: Math.min(dragStart.current.y, end.y), width: Math.max(1, Math.abs(end.x - dragStart.current.x)), height: Math.max(1, Math.abs(end.y - dragStart.current.y)) }); }} onPointerUp={() => { dragStart.current = null; }}>
@@ -146,7 +159,7 @@ export function SiteWorkspace({ result, onClose, initialDate = '2026-04-15', ini
 
         {costar ? <section className="costar-card"><header><div><span className="mono">COSTAR</span><strong>{costar.propertyType}{costar.buildingClass ? ` · Class ${costar.buildingClass}` : ''}</strong></div>{costar.photoUrl && <img src={costar.photoUrl} alt="" />}</header><dl><div><dt>Building area</dt><dd>{formatArea(costar.grossBuildingAreaSqft)}</dd></div><div><dt>Stories</dt><dd>{costar.stories ?? '—'}</dd></div><div><dt>Built</dt><dd>{costar.yearBuilt ?? '—'}</dd></div><div><dt>Rating</dt><dd>{costar.buildingRating ? `${costar.buildingRating} / 5` : '—'}</dd></div></dl>{costar.apartment && <div className="costar-strip"><span>{costar.apartment.availableUnits} of {costar.apartment.units ?? '—'} units available</span>{costar.apartment.minRent && <span>${costar.apartment.minRent.toLocaleString()}–${costar.apartment.maxRent?.toLocaleString()} rent</span>}</div>}<div className="listing-line"><i className={costar.listing?.active ? 'active' : ''} /><span>{costar.listing ? `${costar.listing.statuses.join(', ')} · ${costar.listing.types.join(', ')}` : 'No commercial listing record'}</span><span>{costar.matterport.length} tours</span></div></section> : <div className="costar-missing"><span className="mono">COSTAR</span><p>No property is within 125 m. Aerial and sunlight views are still available.</p></div>}
 
-        <div className="source-status"><span>{result.property ? <CheckCircle2 /> : <CircleAlert />} {roofGeometry.length ? `${roofGeometry.length} Vexcel roof ${roofGeometry.length === 1 ? 'surface' : 'surfaces'} · full WKT outline` : 'Roof outline unavailable'}</span><span>{elevationLoading ? <LoaderCircle className="spin" /> : elevationModel ? <CheckCircle2 /> : <CircleAlert />} {elevationLoading ? 'Reading elevation' : elevationModel ? `${elevationModel.validSamples} elevation points · ${elevationModel.obstructions.length} roof features` : elevationError || 'Elevation unavailable'}</span></div>
+        <div className="source-status"><span>{result.property ? <CheckCircle2 /> : <CircleAlert />} {roofGeometry.length ? `${roofGeometry.length} Vexcel roof ${roofGeometry.length === 1 ? 'surface' : 'surfaces'} · full WKT outline` : 'Roof outline unavailable'}</span><span>{elevationLoading ? <LoaderCircle className="spin" /> : elevationModel ? <CheckCircle2 /> : <CircleAlert />} {elevationLoading ? 'Reading elevation' : elevationModel ? `${elevationModel.validSamples} elevation points · ${elevationModel.obstructions.length} roof features${elevationModel.neighbors ? ` · ${elevationModel.neighbors.tallerCount} taller neighbor points` : ''}` : elevationError || 'Elevation unavailable'}</span></div>
 
         <div className="date-row"><label><CalendarDays size={14} /> Date<input type="date" value={date} onChange={(event) => setDate(event.target.value)} /></label><div><button onClick={() => setDate('2026-04-15')}>Apr 15</button><button onClick={() => setDate('2026-06-21')}>Jun 21</button><button onClick={() => setDate('2026-10-15')}>Oct 15</button><button onClick={() => setDate('2026-12-15')}>Dec 15</button></div></div>
         <div className="time-control"><div><button onClick={() => setPlaying((value) => !value)}>{playing ? <Pause size={15} /> : <Play size={15} />}</button><strong>{timeLabel(minute)}</strong><span>{timeZone.replace('America/', '')} · {simulation.sun.altitude > 0 ? `${simulation.sun.altitude.toFixed(1)}° / ${simulation.sun.azimuth.toFixed(0)}°` : 'Night · sun below horizon'}</span></div><input type="range" min="0" max="1439" step="5" value={minute} onChange={(event) => setMinute(Number(event.target.value))} /></div>
