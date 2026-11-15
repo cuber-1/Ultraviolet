@@ -169,11 +169,17 @@ pre-existing `1e-6` numerical floor and keeps float64 precision only for its
 tiny fitting matrix. It fixes the exposed bad seed, stays below 0.000007
 maximum error on three new development seeds, and exactly matches all 23,872
 exposed runtime-shaped scores after normal 0.1-point API rounding. A second
-fresh protocol is committed in `cropfit/log_linear_floor_validation.py`; its
-new confirmation, final, and shift seeds remain unopened.
+fresh protocol then passed all gates: 10/10 grouped seeds improved MAE and p90
+by more than 99.99%, maximum raw error remained below 0.000006, the independent
+runtime-shaped shift required only 0.001-point serialized radii, and all served
+scores matched at 0.1-point precision. The 389-byte candidate is now eligible
+for a separately tested runtime/artifact migration. Production remains v0.11
+until that migration lands. See
+`evaluation/log-linear-floor-validation-v0.12.1.md`.
 
 ```bash
 npm run ml:develop:log-linear-floor
+npm run ml:evaluate:log-linear-floor
 ```
 
 Training refuses to replace the production artifact unless frozen MAE, p90,

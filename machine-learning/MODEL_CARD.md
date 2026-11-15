@@ -93,8 +93,15 @@ error from 0.000327 to 0.0000065. Three new development seeds stay below
 0.000006, retain nominal active coverage, and learn the same positive unit-sum
 elasticities. All 23,872 exposed runtime-shaped scores match the teacher after
 normal 0.1-point API rounding. A second fresh protocol, including an explicit
-measurement-floor policy, is committed with its seeds unopened. See
-`evaluation/log-linear-floor-development-v0.12.1.md`.
+measurement-floor policy, then passed all gates on 10/10 new grouped seeds and
+an independent runtime-shaped shift. Mean MAE/p90 gains are 99.997%/99.996%,
+maximum raw error stays below 0.000006, active random-row calibration remains
+nominal, serialized radii are 0.001/0.001, and all shifted served scores match
+at 0.1-point precision. The candidate serializes to 389 bytes versus 63.8 MB.
+It is eligible for a separate runtime/artifact migration; production remains
+v0.11 until that migration passes. See
+`evaluation/log-linear-floor-development-v0.12.1.md` and
+`evaluation/log-linear-floor-validation-v0.12.1.md`.
 
 Version 0.9 increases generated fitting coverage from 72 to 120 scenarios per
 training crop while preserving the exact v0.8 validation and held-out rows. The
