@@ -61,12 +61,14 @@ assert health["revision"].startswith(f'{health["apiVersion"]}:')
 assert health["model"] == "CropFit EcoCrop surrogate v0.6"
 assert health["metrics"]["mae"] == .0894
 atlas = health["evidence"]["historicalYieldAtlas"]
-assert atlas["name"] == "USDA county yield atlas v5"
+assert atlas["name"] == "USDA county yield atlas v6"
 assert atlas["predictionMethod"]["halfLifeYears"] == 3.0 and atlas["predictionMethod"]["recencyWeight"] == .8
 assert atlas["validation"]["spearman"] == .7914 and atlas["uncertaintyValidation"]["gate"]["passed"]
 assert atlas["spatialTransferValidation"]["gate"]["passed"]
 assert atlas["spatialTransferValidation"]["selectedNeighborhood"] == {"maxNeighbors": 8, "distancePower": 2.0, "distanceOffsetKm": 5.0}
 assert atlas["spatialTransferValidation"]["finalSignal"]["regionalNeighborhood"]["spearman"] == .806
+assert atlas["spatialTransferValidation"]["productionBlend"]["selectedWeights"] == {"ownCountyPrior": .85, "regionalNeighborhood": .15}
+assert atlas["spatialTransferValidation"]["productionBlend"]["gate"]["passed"]
 assert health["climateHistory"] == {"source": "NASA POWER Agroclimatology", "startYear": 2016, "endYear": 2025, "years": 10}
 prediction = requests.post(f"{base}/predict", json=payload, timeout=30)
 prediction.raise_for_status()
@@ -74,7 +76,7 @@ prediction_body = prediction.json()
 assert prediction_body["observedYieldEvidence"]["county"] == "Fort Bend County"
 assert prediction_body["observedYieldEvidence"]["observedYieldPrior"]["intervalMethod"] == "spatial-neighborhood-conformal"
 assert prediction_body["observedYieldEvidence"]["observedYieldPrior"]["distanceBucket"] == "25-50"
-assert 1 <= prediction_body["observedYieldEvidence"]["observedYieldPrior"]["neighborCount"] <= 8
+assert 1 <= prediction_body["observedYieldEvidence"]["observedYieldPrior"]["neighborCount"] <= 9
 assert len(prediction_body["observedYieldEvidence"]["regionalNeighbors"]) == prediction_body["observedYieldEvidence"]["observedYieldPrior"]["neighborCount"] == 6
 assert prediction_body["confidence"] == .8
 assert prediction_body["expectedAbsoluteError"]["p80"] <= prediction_body["expectedAbsoluteError"]["p90"]
@@ -95,5 +97,5 @@ for crop, scientific_name in representatives.items():
     assert response.json()["profile"]["scientific_name"] == scientific_name
 invalid = requests.post(f"{base}/predict", json={**payload, "climate": climate[:11]}, timeout=10)
 assert invalid.status_code == 422
-print(f'CropFit HTTP verified: API {health["apiVersion"]}, model v0.6, atlas v5 regional prior, seasonal boundary ceiling, 2016-2025 climate window, 16-choice coverage, USDA evidence, input bounds')
+print(f'CropFit HTTP verified: API {health["apiVersion"]}, model v0.6, atlas v6 local + regional prior, seasonal boundary ceiling, 2016-2025 climate window, 16-choice coverage, USDA evidence, input bounds')
 PY

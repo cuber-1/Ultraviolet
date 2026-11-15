@@ -24,6 +24,7 @@ PRIOR_RECENCY_WEIGHT = 0.8
 SPATIAL_TRANSFER_MAX_DISTANCE_KM = 100.0
 SPATIAL_NEIGHBOR_CANDIDATES = tuple((neighbors, power) for neighbors in (2, 3, 5, 8) for power in (0.0, 0.5, 1.0, 2.0))
 SPATIAL_DISTANCE_OFFSET_KM = 5.0
+PRODUCTION_REGIONAL_WEIGHT_CANDIDATES = (0.0, 0.05, 0.1, 0.15, 0.2, 0.25, 0.33, 0.5)
 
 
 def observed_prior_prediction(
@@ -279,6 +280,7 @@ def spatial_transfer_validation(rows: list[dict]) -> tuple[dict, dict[tuple[str,
             targets = [row for row in rows if row["year"] == test_year and row["crop"] == crop]
             if len(sources) < 2 or not targets:
                 continue
+            sources_by_fips = {item["fips"]: item for item in sources}
             tree = BallTree(np.radians([[item["latitude"], item["longitude"]] for item in sources]), metric="haversine")
             distances, indices = tree.query(
                 np.radians([[item["latitude"], item["longitude"]] for item in targets]),
@@ -294,9 +296,11 @@ def spatial_transfer_validation(rows: list[dict]) -> tuple[dict, dict[tuple[str,
                 neighbors = [item for item in candidates if item["distanceKm"] <= SPATIAL_TRANSFER_MAX_DISTANCE_KM]
                 if not neighbors:
                     continue
+                own = sources_by_fips.get(target["fips"])
                 examples.append({
                     **target, "neighbors": neighbors, "nearestPrediction": neighbors[0]["prediction"],
                     "distanceKm": neighbors[0]["distanceKm"], "distanceBucket": distance_bucket(neighbors[0]["distanceKm"]),
+                    "ownPrediction": own["prediction"] if own else None,
                 })
 
     def basic_summary(items: list[dict], prediction_key: str = "prediction") -> dict:
@@ -336,10 +340,53 @@ def spatial_transfer_validation(rows: list[dict]) -> tuple[dict, dict[tuple[str,
             "maeDelta": round(candidate["maePercentile"] - baseline["maePercentile"], 4),
         }
 
+    production_examples = [item for item in examples if item["ownPrediction"] is not None]
+    production_candidates = []
+    for regional_weight in PRODUCTION_REGIONAL_WEIGHT_CANDIDATES:
+        candidates = [{
+            **item, "productionPrediction": (1 - regional_weight) * item["ownPrediction"] + regional_weight * item["prediction"],
+        } for item in production_examples if item["year"] in (2018, 2019, 2020)]
+        production_candidates.append({
+            "regionalWeight": regional_weight,
+            **basic_summary([{**item, "prediction": item["productionPrediction"]} for item in candidates]),
+        })
+    production_selected = min(production_candidates, key=lambda item: (item["maePercentile"], -item["spearman"]))
+    for item in production_examples:
+        item["productionPrediction"] = (
+            (1 - production_selected["regionalWeight"]) * item["ownPrediction"]
+            + production_selected["regionalWeight"] * item["prediction"]
+        )
+
+    def production_comparison(items: list[dict]) -> dict:
+        baseline = basic_summary([{**item, "prediction": item["ownPrediction"]} for item in items])
+        candidate = basic_summary([{**item, "prediction": item["productionPrediction"]} for item in items])
+        return {
+            "observations": len(items), "ownCountyPrior": baseline, "blendedPrior": candidate,
+            "spearmanDelta": round(candidate["spearman"] - baseline["spearman"], 4),
+            "maeDelta": round(candidate["maePercentile"] - baseline["maePercentile"], 4),
+        }
+
     def paired_bootstrap_delta(items: list[dict], seed: int = 20261115) -> list[float]:
         actual = np.asarray([item["yieldPercentileWithinCropYear"] for item in items])
         baseline = np.asarray([item["nearestPrediction"] for item in items])
         candidate = np.asarray([item["prediction"] for item in items])
+        groups = np.asarray([f'{item["crop"]}:{item["fips"]}' for item in items])
+        unique, inverse = np.unique(groups, return_inverse=True)
+        indices = [np.flatnonzero(inverse == index) for index in range(len(unique))]
+        random = np.random.default_rng(seed)
+        deltas = []
+        for _ in range(2000):
+            selection = np.concatenate([indices[index] for index in random.integers(0, len(unique), len(unique))])
+            deltas.append(float(
+                spearmanr(candidate[selection], actual[selection]).statistic
+                - spearmanr(baseline[selection], actual[selection]).statistic
+            ))
+        return [round(float(value), 4) for value in np.quantile(deltas, [.025, .975])]
+
+    def production_bootstrap_delta(items: list[dict], seed: int = 20261116) -> list[float]:
+        actual = np.asarray([item["yieldPercentileWithinCropYear"] for item in items])
+        baseline = np.asarray([item["ownPrediction"] for item in items])
+        candidate = np.asarray([item["productionPrediction"] for item in items])
         groups = np.asarray([f'{item["crop"]}:{item["fips"]}' for item in items])
         unique, inverse = np.unique(groups, return_inverse=True)
         indices = [np.flatnonzero(inverse == index) for index in range(len(unique))]
@@ -367,11 +414,11 @@ def spatial_transfer_validation(rows: list[dict]) -> tuple[dict, dict[tuple[str,
         for key, errors in grouped.items()
     }
 
-    def scored(items: list[dict]) -> dict:
+    def scored(items: list[dict], prediction_key: str = "prediction") -> dict:
         hits80, hits90, widths80, widths90 = [], [], [], []
         for item in items:
             calibration_item = table[(item["crop"], history_bucket(item["effectiveHistoryCount"]))]
-            prediction = item["prediction"]; actual = item["yieldPercentileWithinCropYear"]
+            prediction = item[prediction_key]; actual = item["yieldPercentileWithinCropYear"]
             intervals = []
             for key in ("absoluteErrorP80", "absoluteErrorP90"):
                 radius = calibration_item[key]
@@ -391,6 +438,21 @@ def spatial_transfer_validation(rows: list[dict]) -> tuple[dict, dict[tuple[str,
     final_comparison["spearmanDeltaBootstrap95"] = paired_bootstrap_delta(final)
     per_crop_signal = [{"crop": crop, **comparison([item for item in final if item["crop"] == crop])} for crop in sorted(CROP_NAMES.values())]
     per_year_signal = [{"year": year, **comparison([item for item in final if item["year"] == year])} for year in (2023, 2024, 2025)]
+    production_confirmation = [item for item in production_examples if item["year"] in (2021, 2022)]
+    production_final = [item for item in production_examples if item["year"] in (2023, 2024, 2025)]
+    production_confirmation_comparison = production_comparison(production_confirmation)
+    production_final_comparison = production_comparison(production_final)
+    production_final_comparison["spearmanDeltaBootstrap95"] = production_bootstrap_delta(production_final)
+    production_per_crop = [{"crop": crop, **production_comparison([item for item in production_final if item["crop"] == crop])} for crop in sorted(CROP_NAMES.values())]
+    production_per_year = [{"year": year, **production_comparison([item for item in production_final if item["year"] == year])} for year in (2023, 2024, 2025)]
+    production_intervals = scored(production_final, "productionPrediction")
+    production_passed = (
+        production_confirmation_comparison["spearmanDelta"] > 0 and production_confirmation_comparison["maeDelta"] < 0
+        and production_final_comparison["spearmanDelta"] > 0 and production_final_comparison["spearmanDeltaBootstrap95"][0] > 0
+        and production_final_comparison["maeDelta"] < 0
+        and all(item["spearmanDelta"] > 0 and item["maeDelta"] <= 0 for item in (*production_per_crop, *production_per_year))
+        and .80 <= production_intervals["coverage80"] <= .87 and .88 <= production_intervals["coverage90"] <= .94
+    )
     pooled_uncertainty = scored(test)
     per_crop_uncertainty = [{"crop": crop, **scored([item for item in test if item["crop"] == crop])} for crop in sorted(CROP_NAMES.values())]
     covered = len(examples) / eligible
@@ -414,15 +476,28 @@ def spatial_transfer_validation(rows: list[dict]) -> tuple[dict, dict[tuple[str,
         "confirmationYears": [2021, 2022], "confirmation": confirmation_comparison,
         "finalTestYears": [2023, 2024, 2025], "finalSignal": final_comparison,
         "perCropFinalSignal": per_crop_signal, "perYearFinalSignal": per_year_signal,
+        "productionBlend": {
+            "method": "Treat the nearest reporting county as the local prior and blend a development-selected share of the leave-one-county-out regional neighborhood.",
+            "candidateSelection": production_candidates,
+            "selectedWeights": {"ownCountyPrior": round(1 - production_selected["regionalWeight"], 2), "regionalNeighborhood": production_selected["regionalWeight"]},
+            "confirmation": production_confirmation_comparison, "finalSignal": production_final_comparison,
+            "perCropFinalSignal": production_per_crop, "perYearFinalSignal": production_per_year,
+            "finalIntervals": production_intervals,
+            "gate": {
+                "passed": production_passed,
+                "rule": "Confirmation and final rank improve and MAE falls; final grouped-bootstrap rank-delta lower bound >0; every crop/year rank improves with non-worse MAE; recentered coverage remains 80-87%/88-94%.",
+            },
+        },
         "calibrationYears": list(range(YEARS[1], CALIBRATION_END_YEAR + 1)), "testYears": list(UNCERTAINTY_TEST_YEARS),
         "groups": [table[key] for key in sorted(table)],
         "uncertainty": {"pooled": pooled_uncertainty, "perCrop": per_crop_uncertainty},
         "gate": {
             "passed": passed,
-            "rule": "Coverage within 100 km >=99%; confirmation and final neighborhood rank must improve and MAE fall; final rank-delta bootstrap lower >0; every crop/year improves both; test coverage 80-87%/88-94%, mean 90% width <=0.60, every crop >=88% 90%-coverage.",
+            "rule": "Coverage within 100 km >=99%; confirmation and final neighborhood rank must improve and MAE fall; final rank-delta bootstrap lower >0; every crop/year improves both; test coverage 80-87%/88-94%, mean 90% width <=0.60, every crop >=88% 90%-coverage; production blend gate must pass.",
         },
         "interpretation": "Validates regional county-prior aggregation and its uncertainty, not parcel yield, revenue, or purchase returns.",
     }
+    report["gate"]["passed"] = report["gate"]["passed"] and production_passed
     return report, table
 
 
@@ -462,7 +537,7 @@ def build_atlas(rows: list[dict], validation: dict, comparison: dict, uncertaint
             "latest": {"year": last["year"], "yieldBushelsPerAcre": last["yieldBushelsPerAcre"]},
         })
     return {
-        "name": "USDA county yield atlas v5", "evidenceGrade": "observed-regional-prior",
+        "name": "USDA county yield atlas v6", "evidenceGrade": "observed-local-regional-blend",
         "scope": "contiguous U.S. counties excluding California; corn, soybean, and wheat; 2010–2025",
         "source": "USDA NASS Quick Stats published county yields",
         "predictionMethod": {
@@ -477,13 +552,13 @@ def build_atlas(rows: list[dict], validation: dict, comparison: dict, uncertaint
         "historyWindowComparison": comparison,
         "uncertaintyValidation": uncertainty,
         "spatialTransferValidation": spatial_transfer,
-        "disclaimer": "Observed regional county prior with retrospectively calibrated temporal and spatial-transfer uncertainty; not a parcel yield forecast, causal estimate, or purchase recommendation.",
+        "disclaimer": "Observed local-plus-regional county prior with retrospectively calibrated temporal and spatial-transfer uncertainty; not a parcel yield forecast, causal estimate, or purchase recommendation.",
     }
 
 
 def markdown(validation: dict, comparison: dict, uncertainty: dict, spatial_transfer: dict, atlas: dict) -> str:
     lines = [
-        "# USDA county yield atlas v5 validation", "",
+        "# USDA county yield atlas v6 validation", "",
         "The atlas stores each county's historical percentile within crop and year. Its production prior blends 80% three-year-half-life recency weighting with 20% of the stable long-history mean. The retrospective forward-year test predicts each year using only earlier years for that county.", "",
         "| Test year | Covered / published | Coverage | Spearman | Grouped 95% interval | Percentile MAE |",
         "|---:|---:|---:|---:|---:|---:|",
@@ -500,8 +575,9 @@ def markdown(validation: dict, comparison: dict, uncertainty: dict, spatial_tran
         f'The interval calibrator uses only 2011–2017 forward errors. On 2018–2025, the nominal 80% interval covered **{intervals["coverage80"]:.1%}** and the nominal 90% interval covered **{intervals["coverage90"]:.1%}** of {intervals["observations"]:,} later outcomes. Mean 90% interval width was {intervals["meanWidth90"]:.3f} percentile units. Gate: **{"PASS" if uncertainty["gate"]["passed"] else "NOT PASSED"}**.',
         "", "## Spatial transfer", "",
         f'In the leave-one-county-out test, {spatial_transfer["coveredExamples"]:,} of {spatial_transfer["eligibleExamples"]:,} target county-years had reporting neighbors within 100 km ({spatial_transfer["coverage"]:.1%}). Development selection chose up to {spatial_transfer["selectedNeighborhood"]["maxNeighbors"]} counties with inverse-distance power {spatial_transfer["selectedNeighborhood"]["distancePower"]:.0f}. On locked 2023–2025 outcomes, regional aggregation reached Spearman **{spatial_transfer["finalSignal"]["regionalNeighborhood"]["spearman"]:.3f}** versus {spatial_transfer["finalSignal"]["nearestCounty"]["spearman"]:.3f} for one nearest county (delta {spatial_transfer["finalSignal"]["spearmanDelta"]:+.3f}; paired 95% interval {spatial_transfer["finalSignal"]["spearmanDeltaBootstrap95"][0]:+.3f} to {spatial_transfer["finalSignal"]["spearmanDeltaBootstrap95"][1]:+.3f}).',
+        "", f'For production queries, the development-selected blend keeps {spatial_transfer["productionBlend"]["selectedWeights"]["ownCountyPrior"]:.0%} on the nearest county and adds {spatial_transfer["productionBlend"]["selectedWeights"]["regionalNeighborhood"]:.0%} from surrounding counties. On locked outcomes, Spearman changed from {spatial_transfer["productionBlend"]["finalSignal"]["ownCountyPrior"]["spearman"]:.4f} to **{spatial_transfer["productionBlend"]["finalSignal"]["blendedPrior"]["spearman"]:.4f}** (delta {spatial_transfer["productionBlend"]["finalSignal"]["spearmanDelta"]:+.4f}; grouped-bootstrap 95% interval {spatial_transfer["productionBlend"]["finalSignal"]["spearmanDeltaBootstrap95"][0]:+.4f} to {spatial_transfer["productionBlend"]["finalSignal"]["spearmanDeltaBootstrap95"][1]:+.4f}).',
         f'Transfer intervals calibrated on 2011–2017 covered **{spatial_transfer["uncertainty"]["pooled"]["coverage80"]:.1%}** and **{spatial_transfer["uncertainty"]["pooled"]["coverage90"]:.1%}** on 2018–2025. Gate: **{"PASS" if spatial_transfer["gate"]["passed"] else "NOT PASSED"}**.',
-        "", f'The production atlas contains {len(atlas["records"]):,} county-crop records. It is an observed regional prior with calibrated temporal and spatial-transfer uncertainty, not a parcel yield forecast.',
+        "", f'The production atlas contains {len(atlas["records"]):,} county-crop records. It is an observed local-plus-regional prior with calibrated temporal and spatial-transfer uncertainty, not a parcel yield forecast.',
         "", "> County averages combine weather, soil, genetics, management, reporting, and economics. They must not be interpreted as parcel-specific production or investment advice.", "",
     ]
     return "\n".join(lines)
@@ -533,10 +609,12 @@ def plot(comparison: dict, uncertainty: dict, spatial_transfer: dict, output: Pa
     axes[2].bar(positions - width / 2, [item["coverage80"] * 100 for item in transfer], width, color="#557f2d", label="80% interval")
     axes[2].bar(positions + width / 2, [item["coverage90"] * 100 for item in transfer], width, color="#315d49", label="90% interval")
     axes[2].axhline(80, color="#557f2d", alpha=.4, linestyle=":"); axes[2].axhline(90, color="#315d49", alpha=.4, linestyle=":")
-    axes[2].set(xticks=positions, xticklabels=[item["crop"] for item in transfer], ylim=(70, 100), ylabel="observed coverage (%)", title="Regional-neighborhood bands")
+    axes[2].set(xticks=positions, xticklabels=[item["crop"] for item in transfer], ylim=(70, 100), ylabel="observed coverage (%)", title="Regional transfer + production blend")
     axes[2].grid(axis="y", alpha=.18); axes[2].legend(loc="lower right")
     axes[2].text(.02, .04, f'2023–2025 regional ρ {spatial_transfer["finalSignal"]["regionalNeighborhood"]["spearman"]:.3f}\nΔ {spatial_transfer["finalSignal"]["spearmanDelta"]:+.3f} vs nearest · gate {"PASS" if spatial_transfer["gate"]["passed"] else "NOT PASSED"}', transform=axes[2].transAxes, fontsize=9, color="#315d49", bbox={"facecolor": "white", "edgecolor": "#d8dfda", "alpha": .9, "pad": 6})
-    figure.suptitle("USDA observed-yield prior v5 · temporal and spatial validation", fontweight="bold")
+    production = spatial_transfer["productionBlend"]
+    axes[2].text(.02, .96, f'Production 85% local + 15% regional\nρ {production["finalSignal"]["ownCountyPrior"]["spearman"]:.4f} → {production["finalSignal"]["blendedPrior"]["spearman"]:.4f} · Δ CI {production["finalSignal"]["spearmanDeltaBootstrap95"][0]:+.4f} to {production["finalSignal"]["spearmanDeltaBootstrap95"][1]:+.4f}', transform=axes[2].transAxes, va="top", fontsize=8.5, color="#315d49", bbox={"facecolor": "white", "edgecolor": "#d8dfda", "alpha": .9, "pad": 5})
+    figure.suptitle("USDA observed-yield prior v6 · temporal, transfer, and production-blend validation", fontweight="bold")
     figure.text(.5, .01, "County-level corn, soybean, wheat · not a parcel yield forecast", ha="center", color="#555555")
     figure.tight_layout(rect=(0, .04, 1, 1)); figure.savefig(output, dpi=180); plt.close(figure)
 
@@ -578,14 +656,25 @@ def nearest_evidence(crop: str, latitude: float, longitude: float, path: Path, m
     transfer = atlas.get("spatialTransferValidation", {})
     neighborhood = transfer.get("selectedNeighborhood", {"maxNeighbors": 1, "distancePower": 0.0, "distanceOffsetKm": SPATIAL_DISTANCE_OFFSET_KM})
     max_neighbors = int(neighborhood["maxNeighbors"])
-    distances, indices = tree.query(np.radians([[latitude, longitude]]), k=min(max_neighbors, len(records)))
+    production_blend = transfer.get("productionBlend", {})
+    query_neighbors = max_neighbors + 1 if production_blend.get("gate", {}).get("passed") else max_neighbors
+    distances, indices = tree.query(np.radians([[latitude, longitude]]), k=min(query_neighbors, len(records)))
     neighbors = [{
         "record": records[int(index)], "prediction": records[int(index)]["observedYieldPrior"]["expectedPercentile"],
         "historyCount": records[int(index)]["observations"], "distanceKm": float(distance * 6371.0),
     } for distance, index in zip(distances[0], indices[0], strict=True) if float(distance * 6371.0) <= max_distance_km]
     if not neighbors:
         return None
-    expected, neighbor_count, effective_history, weights = aggregate_neighbor_prior(neighbors, max_neighbors, float(neighborhood["distancePower"]))
+    if production_blend.get("gate", {}).get("passed") and len(neighbors) > 1:
+        primary, regional = neighbors[0], neighbors[1:]
+        regional_expected, regional_count, regional_history, regional_weights = aggregate_neighbor_prior(regional, max_neighbors, float(neighborhood["distancePower"]))
+        regional_weight = float(production_blend["selectedWeights"]["regionalNeighborhood"])
+        expected = (1 - regional_weight) * primary["prediction"] + regional_weight * regional_expected
+        weights = [1 - regional_weight, *[regional_weight * weight for weight in regional_weights]]
+        neighbor_count = 1 + regional_count
+        effective_history = round((1 - regional_weight) * primary["historyCount"] + regional_weight * regional_history)
+    else:
+        expected, neighbor_count, effective_history, weights = aggregate_neighbor_prior(neighbors, max_neighbors, float(neighborhood["distancePower"]))
     record = neighbors[0]["record"]
     distance = neighbors[0]["distanceKm"]
     prior = dict(record.get("observedYieldPrior", {}))
@@ -600,7 +689,7 @@ def nearest_evidence(crop: str, latitude: float, longitude: float, path: Path, m
             "interval90": [round(max(0.0, expected - calibration["absoluteErrorP90"]), 4), round(min(1.0, expected + calibration["absoluteErrorP90"]), 4)],
             "intervalMethod": "spatial-neighborhood-conformal", "distanceBucket": bucket,
             "calibrationExamples": calibration["examples"], "neighborCount": neighbor_count,
-            "effectiveHistoryBucket": history_bucket(effective_history),
+            "effectiveHistoryCount": effective_history, "effectiveHistoryBucket": history_bucket(effective_history),
         })
     regional_neighbors = [{
         "county": item["record"]["county"], "state": item["record"]["state"], "fips": item["record"]["fips"],
@@ -618,9 +707,9 @@ def main() -> None:
     root = Path(__file__).resolve().parents[1]
     parser = argparse.ArgumentParser()
     parser.add_argument("--data", type=Path, default=root / "data/raw/observed-validation/national")
-    parser.add_argument("--atlas", type=Path, default=root / "evaluation/yield-atlas-v5.json")
-    parser.add_argument("--validation", type=Path, default=root / "evaluation/yield-atlas-validation-v5.json")
-    parser.add_argument("--plot", type=Path, default=root / "evaluation/yield-atlas-validation-v5.png")
+    parser.add_argument("--atlas", type=Path, default=root / "evaluation/yield-atlas-v6.json")
+    parser.add_argument("--validation", type=Path, default=root / "evaluation/yield-atlas-validation-v6.json")
+    parser.add_argument("--plot", type=Path, default=root / "evaluation/yield-atlas-validation-v6.png")
     args = parser.parse_args()
     rows = rows_from_quickstats(args.data)
     validation = temporal_validation(rows)
@@ -640,6 +729,8 @@ def main() -> None:
         "uncertainty": uncertainty["pooled"],
         "uncertaintyGate": uncertainty["gate"],
         "spatialTransfer": {"coverage": spatial_transfer["coverage"], "finalSignal": spatial_transfer["finalSignal"], "uncertainty": spatial_transfer["uncertainty"]["pooled"]},
+        "productionBlend": spatial_transfer["productionBlend"]["finalSignal"],
+        "productionBlendGate": spatial_transfer["productionBlend"]["gate"],
         "spatialTransferGate": spatial_transfer["gate"],
     }, indent=2))
 

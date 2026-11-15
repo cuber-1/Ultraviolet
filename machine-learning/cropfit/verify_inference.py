@@ -81,13 +81,15 @@ def verify(artifact: Path, profiles: Path) -> None:
     else:
         raise AssertionError("invalid second-year climate was accepted")
 
-    atlas = artifact.parents[1] / "evaluation/yield-atlas-v5.json"
+    atlas = artifact.parents[1] / "evaluation/yield-atlas-v6.json"
     if atlas.exists():
         atlas_report = load_atlas(str(atlas.resolve()))
         assert atlas_report["years"] == list(range(2010, 2026))
         assert atlas_report["historyWindowComparison"]["gate"]["passed"]
         assert atlas_report["uncertaintyValidation"]["gate"]["passed"]
         assert atlas_report["spatialTransferValidation"]["gate"]["passed"]
+        assert atlas_report["spatialTransferValidation"]["productionBlend"]["gate"]["passed"]
+        assert atlas_report["spatialTransferValidation"]["productionBlend"]["selectedWeights"] == {"ownCountyPrior": .85, "regionalNeighborhood": .15}
         evidence = nearest_evidence("corn", 29.7604, -95.3698, atlas)
         assert evidence and evidence["county"] == "Fort Bend County" and evidence["observations"] == 14
         assert evidence["latest"]["year"] == 2025
@@ -96,7 +98,7 @@ def verify(artifact: Path, profiles: Path) -> None:
         assert evidence["observedYieldPrior"]["interval80"][0] <= expected <= evidence["observedYieldPrior"]["interval80"][1]
         assert evidence["observedYieldPrior"]["intervalMethod"] == "spatial-neighborhood-conformal"
         assert evidence["observedYieldPrior"]["distanceBucket"] == "25-50"
-        assert 1 <= evidence["observedYieldPrior"]["neighborCount"] <= 8
+        assert 1 <= evidence["observedYieldPrior"]["neighborCount"] <= 9
         assert len(evidence["regionalNeighbors"]) == evidence["observedYieldPrior"]["neighborCount"] == 6
         assert evidence["observedYieldPrior"]["expectedPercentile"] != evidence["regionalNeighbors"][0]["expectedPercentile"]
         assert abs(sum(item["weight"] for item in evidence["regionalNeighbors"]) - 1) < .0001
