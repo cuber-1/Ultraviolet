@@ -1,0 +1,39 @@
+{
+  "name": "CropFit reliability inference benchmark v5",
+  "method": "Median of 100 warm runs over one baseline plus ten historical climate scenarios on the same host; each model must produce exact nested equality between its scenario loop and batched path.",
+  "production": {
+    "model": "CropFit EcoCrop surrogate v0.12.1",
+    "artifactSha256": "10ba0916d6d751e52cba7f990b29af9a6b54e3d7adea97fded3d1f63634043fb",
+    "artifactBytes": 1916,
+    "scenarios": 11,
+    "scenarioLoopMilliseconds": 1.7343,
+    "batchedMilliseconds": 1.6332,
+    "batchingSpeedup": 1.06,
+    "outputsIdentical": true
+  },
+  "championV011": {
+    "model": "CropFit EcoCrop surrogate v0.11.0",
+    "artifactSha256": "96fedbe3ca60c3eb61495e5d5c288696597ee4340f4451f4517516403982c508",
+    "artifactBytes": 64266524,
+    "scenarios": 11,
+    "scenarioLoopMilliseconds": 9.9752,
+    "batchedMilliseconds": 2.5988,
+    "batchingSpeedup": 3.84,
+    "outputsIdentical": true
+  },
+  "productionVsChampion": {
+    "batchedSpeedup": 1.59,
+    "latencyReductionPercent": 37.16,
+    "artifactSizeReductionPercent": 99.997
+  },
+  "gate": {
+    "passed": true,
+    "checks": {
+      "productionBatchEquality": true,
+      "championBatchEquality": true,
+      "productionFaster": true,
+      "productionAtMostOnePercentSize": true
+    }
+  },
+  "interpretation": "Warm local CPU timing is machine-dependent; exact output equality, artifact hashes, and byte sizes are deterministic."
+}

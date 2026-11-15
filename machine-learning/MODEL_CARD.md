@@ -398,6 +398,14 @@ committed benchmark requires exact nested output equality and measured a
 machine-dependent median reduction from 26.4 ms to 4.5 ms (**5.9x faster**) on
 the development host. See `evaluation/inference-benchmark-v1.md`.
 
+The v0.12.1 benchmark reruns the full baseline-plus-ten-history request against
+both immutable release artifacts on the same host. The 1.9 KB log-linear model
+completes the batched path in 1.633 ms versus 2.599 ms for the 64.3 MB v0.11
+forest: **1.59× faster**, **37.2% lower latency**, and **99.997% smaller**.
+Each model's scenario-loop and batched outputs are exactly equal. Timings are
+machine-dependent; hashes, byte sizes, and equality are deterministic. See
+`evaluation/inference-benchmark-v5.md`.
+
 ## Onboarding crop coverage
 
 All 16 onboarding choices now reach CropFit in resilient mode, up from 10.

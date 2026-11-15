@@ -324,6 +324,17 @@ def verify(artifact: Path, profiles: Path) -> None:
         assert trend_report["final"]["spearmanDeltaBootstrap95"][1] < 0
         assert next(item for item in trend_report["final"]["perCrop"] if item["crop"] == "wheat")["spearmanDelta"] == 0
 
+    inference_benchmark = artifact.parents[1] / "evaluation/inference-benchmark-v5.json"
+    if inference_benchmark.exists():
+        benchmark = json.loads(inference_benchmark.read_text())
+        assert benchmark["gate"]["passed"]
+        assert benchmark["production"]["artifactSha256"] == predictor.artifact_sha256
+        assert benchmark["production"]["outputsIdentical"]
+        assert benchmark["championV011"]["artifactSha256"] == "96fedbe3ca60c3eb61495e5d5c288696597ee4340f4451f4517516403982c508"
+        assert benchmark["championV011"]["outputsIdentical"]
+        assert benchmark["productionVsChampion"]["batchedSpeedup"] > 1
+        assert benchmark["productionVsChampion"]["artifactSizeReductionPercent"] > 99
+
     if atlas.exists():
         assert evidence["observedYieldPrior"]["expectedPercentile"] != evidence["regionalNeighbors"][0]["expectedPercentile"]
         assert abs(sum(item["weight"] for item in evidence["regionalNeighbors"]) - 1) < .0001
