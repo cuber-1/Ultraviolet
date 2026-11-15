@@ -15,7 +15,7 @@ import {
   MONTH_LONG, MONTH_SHORT, applyModel, briefCrops, briefFocus, estimateFood, formatLbs, cropProfiles, fetchMlCapabilities, fetchMonthlyClimate, fetchRegionPredictions, formatArea, loadBrief, planForLocation, ruralPlaces, saveBrief,
   urbanAgentCriteria, urbanAreaLabel, type Brief, type CropTiming, type LocationPlan,
 } from '../services/cropPlan';
-import { getRun, saveRun, savedTime } from '../services/runs';
+import { findModelRun, getRun, mlOnline, saveRun, savedTime } from '../services/runs';
 import { roofTitle, useAddresses } from '../services/addresses';
 import './PlanPage.css';
 
@@ -30,6 +30,7 @@ const URBAN_STAGES: LoaderStage[] = [
   { key: 'model', label: 'Crop model' },
   { key: 'ranking', label: 'Ranking' },
 ];
+const REPLAY_STAGE: Record<string, string> = { search_rooftop_imagery: 'imagery', lookup_property_record: 'property', resolve_roof_geometry: 'geometry', simulate_rooftop_sunlight: 'sunlight', predict_crop_suitability: 'model', rank: 'ranking' };
 const RURAL_STAGES: LoaderStage[] = [
   { key: 'geocode', label: 'Locating towns' },
   { key: 'climate', label: 'NASA climate' },
@@ -79,6 +80,34 @@ export default function PlanPage() {
     setRunning(true); setError(null); setOutcome(null); setSavedAt(null); setLog([]); setStageIndex(0); setStartedAt(Date.now()); setClimatePlan(null); setLiveTrace([]); setDiscovered([]); setReveal(false);
     try {
       if (input.scale === 'urban') {
+        // Model offline but these exact answers were searched with it before: play that search back.
+        const recorded = (await mlOnline(controller.signal)) ? null : await findModelRun<UrbanOutcome>(input, controller.signal).catch(() => null);
+        if (!live()) return;
+        if (recorded) {
+          const saved = recorded.outcome;
+          const sleep = (ms: number) => new Promise<void>((resolve) => { const timer = window.setTimeout(resolve, ms); controller.signal.addEventListener('abort', () => { window.clearTimeout(timer); resolve(); }, { once: true }); });
+          push(`Reading NASA monthly climate for ${urbanAreaLabel(input)}`);
+          await sleep(900);
+          if (!live()) return;
+          setClimatePlan(saved.plan);
+          if (saved.plan) setLiveTrace((items) => [...items, { kind: 'activity', tool: 'climate', title: `Reading NASA climate for ${urbanAreaLabel(input)}`, detail: `${saved.plan!.climate.annual.temperatureC.toFixed(0)}°C average · ${saved.plan!.climate.annual.solarMjM2Day.toFixed(1)} MJ/m²/day sun${saved.plan!.moveInMonth !== null ? ` · best start ${MONTH_LONG[saved.plan!.moveInMonth]}` : ''}`, at: 0 }]);
+          advance(URBAN_STAGES, 'planning'); push('Planning the search');
+          let previous = 0;
+          for (const event of saved.comparison.trace ?? []) {
+            const gap = Math.min(Math.max(event.at - previous, 0), 5_000);
+            previous = Math.max(previous, event.at);
+            await sleep(event.kind === 'activity' ? Math.max(gap, 450) : Math.min(gap, 600));
+            if (!live()) return;
+            if (event.kind === 'activity') { const stage = REPLAY_STAGE[event.tool]; if (stage) advance(URBAN_STAGES, stage); push(event.title); }
+            setLiveTrace((items) => [...items, event]);
+          }
+          await sleep(1_200);
+          if (!live()) return;
+          const next: UrbanOutcome = { ...saved, brief: input };
+          setOutcome(next); saveOutcome(next); setReveal(true);
+          navigate('/plan', { replace: true, state: { brief: input } });
+          return;
+        }
         push(`Reading NASA monthly climate for ${urbanAreaLabel(input)}`);
         const climate = await fetchMonthlyClimate([input.urbanArea ?? ''], controller.signal).catch(() => null);
         if (!live()) return;

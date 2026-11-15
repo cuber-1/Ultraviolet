@@ -40,3 +40,22 @@ export async function getRun<T>(id: string, signal?: AbortSignal) {
 }
 
 export const savedTime = (iso: string) => new Date(iso).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+
+/** True when the crop model answers its health check right now. */
+export async function mlOnline(signal?: AbortSignal) {
+  try {
+    const response = await fetch('/api/ml/health', { signal });
+    return response.ok && (await response.json() as { online?: boolean }).online === true;
+  } catch { return false; }
+}
+
+/** Newest saved run for the same answers whose crop scores came from the trained model. */
+export async function findModelRun<T extends { kind: string }>(brief: Brief, signal?: AbortSignal) {
+  const key = briefKey(brief);
+  const matches = (await listRuns(signal)).filter((run) => run.key === key).sort((a, b) => b.savedAt.localeCompare(a.savedAt));
+  for (const meta of matches) {
+    const record = await getRun<T & { comparison?: { mlModel?: { source?: string } | null; trace?: unknown[] } }>(meta.id, signal).catch(() => null);
+    if (record?.outcome.comparison?.mlModel?.source === 'ml' && record.outcome.comparison.trace?.length) return record;
+  }
+  return null;
+}
