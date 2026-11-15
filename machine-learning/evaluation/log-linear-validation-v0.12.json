@@ -1,0 +1,620 @@
+{
+  "name": "CropFit log-linear validation v0.12",
+  "protocol": {
+    "target": "EcoCrop mechanistic screening teacher; not observed yield",
+    "champion": "v0.11.0, six features, 40 Extra Trees",
+    "candidate": "ordinary least squares in log space over four range-membership features; structural zero when any membership is zero",
+    "candidateFeatures": [
+      "temperature_range_fit",
+      "water_range_fit",
+      "ph_range_fit",
+      "solar_range_fit"
+    ],
+    "selection": "The candidate and every threshold were fixed after development seeds 20270501-20270503. Confirmation, final, and independent-shift seeds below were reserved until this protocol was committed.",
+    "fixedEvaluation": "Both models use identical fitting profiles, validation profiles, held-out profiles, and scenario rows.",
+    "confirmationSeeds": [
+      20270510,
+      20270511,
+      20270512,
+      20270513,
+      20270514
+    ],
+    "finalSeeds": [
+      20270515,
+      20270516,
+      20270517,
+      20270518,
+      20270519
+    ],
+    "shiftSeed": 20270520,
+    "declaredGate": "Every seed must improve MAE/p90 by >=99%, improve deployed maximum error, keep maximum raw error <=0.001, preserve active 80%/90% coverage within two points, and produce exact inactive zeros. All-seed and final-only mean gains must be >=99%; learned elasticities must remain positive, sum within 0.01 of one, and vary by <=0.001; compressed size must be <=50 KB and <=1% of v0.11; batch latency <=0.25x. The independent Latin-hypercube shift must meet the same accuracy, tail, subgroup, zero, and coverage requirements."
+  },
+  "results": [
+    {
+      "seed": 20270510,
+      "testExamples": 26856,
+      "championV011": {
+        "mae": 0.01092117,
+        "p90AbsoluteError": 0.02973461,
+        "maximumAbsoluteError": 2.67306622,
+        "deployedMaximumAbsoluteError": 0.55595527,
+        "fitSeconds": 0.4045,
+        "apiBatchLatencyMs": 14.209
+      },
+      "logLinearCandidate": {
+        "mae": 3e-07,
+        "p90AbsoluteError": 1.26e-06,
+        "maximumAbsoluteError": 5.62e-06,
+        "deployedMaximumAbsoluteError": 5.07e-06,
+        "fitSeconds": 0.0181,
+        "apiBatchLatencyMs": 0.01,
+        "coefficients": {
+          "temperature_range_fit": 0.42,
+          "water_range_fit": 0.26,
+          "ph_range_fit": 0.18,
+          "solar_range_fit": 0.14
+        },
+        "intercept": 4.60517019,
+        "calibration": {
+          "method": "active absolute-residual split conformal",
+          "validationExamples": 3317,
+          "testExamples": 5819,
+          "absoluteErrorQuantiles": {
+            "p80": 2.39e-06,
+            "p90": 3.1e-06
+          },
+          "coverage80": 0.8158,
+          "coverage90": 0.9082,
+          "inactiveExact": true
+        }
+      },
+      "gains": {
+        "maePercent": 99.9973,
+        "p90Percent": 99.9958
+      },
+      "phase": "confirmation",
+      "passedPerSeedGate": true
+    },
+    {
+      "seed": 20270511,
+      "testExamples": 26856,
+      "championV011": {
+        "mae": 0.01037219,
+        "p90AbsoluteError": 0.02819095,
+        "maximumAbsoluteError": 0.887572,
+        "deployedMaximumAbsoluteError": 0.51915092,
+        "fitSeconds": 0.4065,
+        "apiBatchLatencyMs": 14.377
+      },
+      "logLinearCandidate": {
+        "mae": 2.9e-07,
+        "p90AbsoluteError": 1.23e-06,
+        "maximumAbsoluteError": 5.52e-06,
+        "deployedMaximumAbsoluteError": 5.47e-06,
+        "fitSeconds": 0.0231,
+        "apiBatchLatencyMs": 0.01,
+        "coefficients": {
+          "temperature_range_fit": 0.42,
+          "water_range_fit": 0.26,
+          "ph_range_fit": 0.18,
+          "solar_range_fit": 0.14
+        },
+        "intercept": 4.60517019,
+        "calibration": {
+          "method": "active absolute-residual split conformal",
+          "validationExamples": 3333,
+          "testExamples": 5598,
+          "absoluteErrorQuantiles": {
+            "p80": 2.43e-06,
+            "p90": 3.11e-06
+          },
+          "coverage80": 0.8096,
+          "coverage90": 0.9059,
+          "inactiveExact": true
+        }
+      },
+      "gains": {
+        "maePercent": 99.9972,
+        "p90Percent": 99.9956
+      },
+      "phase": "confirmation",
+      "passedPerSeedGate": true
+    },
+    {
+      "seed": 20270512,
+      "testExamples": 26856,
+      "championV011": {
+        "mae": 0.01037283,
+        "p90AbsoluteError": 0.02944221,
+        "maximumAbsoluteError": 1.27515583,
+        "deployedMaximumAbsoluteError": 0.44674244,
+        "fitSeconds": 0.391,
+        "apiBatchLatencyMs": 14.575
+      },
+      "logLinearCandidate": {
+        "mae": 3e-07,
+        "p90AbsoluteError": 1.23e-06,
+        "maximumAbsoluteError": 5.47e-06,
+        "deployedMaximumAbsoluteError": 5.31e-06,
+        "fitSeconds": 0.0341,
+        "apiBatchLatencyMs": 0.01,
+        "coefficients": {
+          "temperature_range_fit": 0.42,
+          "water_range_fit": 0.26,
+          "ph_range_fit": 0.18,
+          "solar_range_fit": 0.14
+        },
+        "intercept": 4.60517019,
+        "calibration": {
+          "method": "active absolute-residual split conformal",
+          "validationExamples": 3327,
+          "testExamples": 5754,
+          "absoluteErrorQuantiles": {
+            "p80": 2.38e-06,
+            "p90": 3.08e-06
+          },
+          "coverage80": 0.7977,
+          "coverage90": 0.894,
+          "inactiveExact": true
+        }
+      },
+      "gains": {
+        "maePercent": 99.9971,
+        "p90Percent": 99.9958
+      },
+      "phase": "confirmation",
+      "passedPerSeedGate": true
+    },
+    {
+      "seed": 20270513,
+      "testExamples": 26856,
+      "championV011": {
+        "mae": 0.01026406,
+        "p90AbsoluteError": 0.02703519,
+        "maximumAbsoluteError": 0.91358879,
+        "deployedMaximumAbsoluteError": 0.56783156,
+        "fitSeconds": 0.3726,
+        "apiBatchLatencyMs": 14.625
+      },
+      "logLinearCandidate": {
+        "mae": 2.9e-07,
+        "p90AbsoluteError": 1.18e-06,
+        "maximumAbsoluteError": 5.92e-06,
+        "deployedMaximumAbsoluteError": 5.18e-06,
+        "fitSeconds": 0.0371,
+        "apiBatchLatencyMs": 0.01,
+        "coefficients": {
+          "temperature_range_fit": 0.42,
+          "water_range_fit": 0.26,
+          "ph_range_fit": 0.18,
+          "solar_range_fit": 0.14
+        },
+        "intercept": 4.60517019,
+        "calibration": {
+          "method": "active absolute-residual split conformal",
+          "validationExamples": 3345,
+          "testExamples": 5542,
+          "absoluteErrorQuantiles": {
+            "p80": 2.37e-06,
+            "p90": 3.11e-06
+          },
+          "coverage80": 0.7974,
+          "coverage90": 0.8979,
+          "inactiveExact": true
+        }
+      },
+      "gains": {
+        "maePercent": 99.9972,
+        "p90Percent": 99.9956
+      },
+      "phase": "confirmation",
+      "passedPerSeedGate": true
+    },
+    {
+      "seed": 20270514,
+      "testExamples": 26856,
+      "championV011": {
+        "mae": 0.0101621,
+        "p90AbsoluteError": 0.02719755,
+        "maximumAbsoluteError": 1.73642428,
+        "deployedMaximumAbsoluteError": 0.65178928,
+        "fitSeconds": 0.3675,
+        "apiBatchLatencyMs": 13.709
+      },
+      "logLinearCandidate": {
+        "mae": 2.9e-07,
+        "p90AbsoluteError": 1.19e-06,
+        "maximumAbsoluteError": 5.51e-06,
+        "deployedMaximumAbsoluteError": 5.5e-06,
+        "fitSeconds": 0.032,
+        "apiBatchLatencyMs": 0.009,
+        "coefficients": {
+          "temperature_range_fit": 0.42,
+          "water_range_fit": 0.26,
+          "ph_range_fit": 0.18,
+          "solar_range_fit": 0.14
+        },
+        "intercept": 4.60517019,
+        "calibration": {
+          "method": "active absolute-residual split conformal",
+          "validationExamples": 3514,
+          "testExamples": 5648,
+          "absoluteErrorQuantiles": {
+            "p80": 2.31e-06,
+            "p90": 3.02e-06
+          },
+          "coverage80": 0.7951,
+          "coverage90": 0.8943,
+          "inactiveExact": true
+        }
+      },
+      "gains": {
+        "maePercent": 99.9971,
+        "p90Percent": 99.9956
+      },
+      "phase": "confirmation",
+      "passedPerSeedGate": true
+    },
+    {
+      "seed": 20270515,
+      "testExamples": 26856,
+      "championV011": {
+        "mae": 0.01035406,
+        "p90AbsoluteError": 0.02589469,
+        "maximumAbsoluteError": 2.55167289,
+        "deployedMaximumAbsoluteError": 0.62351298,
+        "fitSeconds": 0.3687,
+        "apiBatchLatencyMs": 12.932
+      },
+      "logLinearCandidate": {
+        "mae": 2.8e-07,
+        "p90AbsoluteError": 1.12e-06,
+        "maximumAbsoluteError": 5.44e-06,
+        "deployedMaximumAbsoluteError": 5.44e-06,
+        "fitSeconds": 0.0244,
+        "apiBatchLatencyMs": 0.01,
+        "coefficients": {
+          "temperature_range_fit": 0.42,
+          "water_range_fit": 0.26,
+          "ph_range_fit": 0.18,
+          "solar_range_fit": 0.14
+        },
+        "intercept": 4.60517019,
+        "calibration": {
+          "method": "active absolute-residual split conformal",
+          "validationExamples": 3326,
+          "testExamples": 5527,
+          "absoluteErrorQuantiles": {
+            "p80": 2.35e-06,
+            "p90": 3.08e-06
+          },
+          "coverage80": 0.8165,
+          "coverage90": 0.905,
+          "inactiveExact": true
+        }
+      },
+      "gains": {
+        "maePercent": 99.9973,
+        "p90Percent": 99.9957
+      },
+      "phase": "final",
+      "passedPerSeedGate": true
+    },
+    {
+      "seed": 20270516,
+      "testExamples": 26856,
+      "championV011": {
+        "mae": 0.01063004,
+        "p90AbsoluteError": 0.026087,
+        "maximumAbsoluteError": 2.19638054,
+        "deployedMaximumAbsoluteError": 0.5438766,
+        "fitSeconds": 0.4129,
+        "apiBatchLatencyMs": 14.446
+      },
+      "logLinearCandidate": {
+        "mae": 2.9e-07,
+        "p90AbsoluteError": 1.19e-06,
+        "maximumAbsoluteError": 5.37e-06,
+        "deployedMaximumAbsoluteError": 5.37e-06,
+        "fitSeconds": 0.0337,
+        "apiBatchLatencyMs": 0.01,
+        "coefficients": {
+          "temperature_range_fit": 0.42,
+          "water_range_fit": 0.26,
+          "ph_range_fit": 0.18,
+          "solar_range_fit": 0.14
+        },
+        "intercept": 4.60517019,
+        "calibration": {
+          "method": "active absolute-residual split conformal",
+          "validationExamples": 3380,
+          "testExamples": 5592,
+          "absoluteErrorQuantiles": {
+            "p80": 2.31e-06,
+            "p90": 3.07e-06
+          },
+          "coverage80": 0.7874,
+          "coverage90": 0.8959,
+          "inactiveExact": true
+        }
+      },
+      "gains": {
+        "maePercent": 99.9973,
+        "p90Percent": 99.9954
+      },
+      "phase": "final",
+      "passedPerSeedGate": true
+    },
+    {
+      "seed": 20270517,
+      "testExamples": 26856,
+      "championV011": {
+        "mae": 0.01042758,
+        "p90AbsoluteError": 0.02713099,
+        "maximumAbsoluteError": 2.45996971,
+        "deployedMaximumAbsoluteError": 0.64396286,
+        "fitSeconds": 0.3842,
+        "apiBatchLatencyMs": 13.42
+      },
+      "logLinearCandidate": {
+        "mae": 2.9e-07,
+        "p90AbsoluteError": 1.22e-06,
+        "maximumAbsoluteError": 5.59e-06,
+        "deployedMaximumAbsoluteError": 5.59e-06,
+        "fitSeconds": 0.0295,
+        "apiBatchLatencyMs": 0.01,
+        "coefficients": {
+          "temperature_range_fit": 0.42,
+          "water_range_fit": 0.26,
+          "ph_range_fit": 0.18,
+          "solar_range_fit": 0.14
+        },
+        "intercept": 4.60517019,
+        "calibration": {
+          "method": "active absolute-residual split conformal",
+          "validationExamples": 3489,
+          "testExamples": 5698,
+          "absoluteErrorQuantiles": {
+            "p80": 2.31e-06,
+            "p90": 3.11e-06
+          },
+          "coverage80": 0.7875,
+          "coverage90": 0.9026,
+          "inactiveExact": true
+        }
+      },
+      "gains": {
+        "maePercent": 99.9972,
+        "p90Percent": 99.9955
+      },
+      "phase": "final",
+      "passedPerSeedGate": true
+    },
+    {
+      "seed": 20270518,
+      "testExamples": 26856,
+      "championV011": {
+        "mae": 0.00955262,
+        "p90AbsoluteError": 0.02357221,
+        "maximumAbsoluteError": 3.16235499,
+        "deployedMaximumAbsoluteError": 0.51371636,
+        "fitSeconds": 0.3776,
+        "apiBatchLatencyMs": 14.299
+      },
+      "logLinearCandidate": {
+        "mae": 2.8e-07,
+        "p90AbsoluteError": 1.14e-06,
+        "maximumAbsoluteError": 5.5e-06,
+        "deployedMaximumAbsoluteError": 5.5e-06,
+        "fitSeconds": 0.0334,
+        "apiBatchLatencyMs": 0.01,
+        "coefficients": {
+          "temperature_range_fit": 0.42,
+          "water_range_fit": 0.26,
+          "ph_range_fit": 0.18,
+          "solar_range_fit": 0.14
+        },
+        "intercept": 4.60517019,
+        "calibration": {
+          "method": "active absolute-residual split conformal",
+          "validationExamples": 3310,
+          "testExamples": 5482,
+          "absoluteErrorQuantiles": {
+            "p80": 2.29e-06,
+            "p90": 3e-06
+          },
+          "coverage80": 0.7993,
+          "coverage90": 0.8916,
+          "inactiveExact": true
+        }
+      },
+      "gains": {
+        "maePercent": 99.9971,
+        "p90Percent": 99.9952
+      },
+      "phase": "final",
+      "passedPerSeedGate": true
+    },
+    {
+      "seed": 20270519,
+      "testExamples": 26856,
+      "championV011": {
+        "mae": 0.01124542,
+        "p90AbsoluteError": 0.02923571,
+        "maximumAbsoluteError": 2.22199669,
+        "deployedMaximumAbsoluteError": 0.82273612,
+        "fitSeconds": 0.3679,
+        "apiBatchLatencyMs": 14.34
+      },
+      "logLinearCandidate": {
+        "mae": 1.303e-05,
+        "p90AbsoluteError": 5.876e-05,
+        "maximumAbsoluteError": 0.00032692,
+        "deployedMaximumAbsoluteError": 8.281e-05,
+        "fitSeconds": 0.0321,
+        "apiBatchLatencyMs": 0.01,
+        "coefficients": {
+          "temperature_range_fit": 0.42000007,
+          "water_range_fit": 0.26000007,
+          "ph_range_fit": 0.17999826,
+          "solar_range_fit": 0.14000006
+        },
+        "intercept": 4.6051694,
+        "calibration": {
+          "method": "active absolute-residual split conformal",
+          "validationExamples": 3339,
+          "testExamples": 5769,
+          "absoluteErrorQuantiles": {
+            "p80": 7.883e-05,
+            "p90": 0.00010809
+          },
+          "coverage80": 0.8391,
+          "coverage90": 0.897,
+          "inactiveExact": true
+        }
+      },
+      "gains": {
+        "maePercent": 99.8841,
+        "p90Percent": 99.799
+      },
+      "phase": "final",
+      "passedPerSeedGate": false
+    }
+  ],
+  "summary": {
+    "seedWins": 9,
+    "seeds": 10,
+    "allMeanMaeImprovementPercent": 99.9859,
+    "allMeanP90ImprovementPercent": 99.9759,
+    "finalMeanMaeImprovementPercent": 99.9746,
+    "finalMeanP90ImprovementPercent": 99.9562,
+    "meanApiBatchLatencyRatio": 0.0007,
+    "championSerializedSizeBytes": 64092071,
+    "candidateSerializedSizeBytes": 360,
+    "coefficientRange": {
+      "temperature_range_fit": [
+        0.42,
+        0.42000007
+      ],
+      "water_range_fit": [
+        0.26,
+        0.26000007
+      ],
+      "ph_range_fit": [
+        0.17999826,
+        0.18
+      ],
+      "solar_range_fit": [
+        0.14,
+        0.14000006
+      ]
+    }
+  },
+  "independentShift": {
+    "seed": 20270520,
+    "profiles": 373,
+    "examples": 23872,
+    "championV011": {
+      "examples": 23872,
+      "mae": 0.01037156,
+      "p90AbsoluteError": 0.02553002,
+      "maximumAbsoluteError": 2.49779816,
+      "deployedMae": 0.00375477,
+      "deployedMaximumAbsoluteError": 0.48590484,
+      "subgroups": {
+        "irrigated": {
+          "examples": 11936,
+          "mae": 0.01058174,
+          "p90AbsoluteError": 0.02954941
+        },
+        "rainfed": {
+          "examples": 11936,
+          "mae": 0.01016139,
+          "p90AbsoluteError": 0.02207557
+        },
+        "active": {
+          "examples": 4904,
+          "mae": 0.05048735,
+          "p90AbsoluteError": 0.13134809
+        },
+        "hardZero": {
+          "examples": 18968,
+          "mae": 0.0,
+          "p90AbsoluteError": 0.0
+        }
+      }
+    },
+    "logLinearCandidate": {
+      "examples": 23872,
+      "mae": 1e-07,
+      "p90AbsoluteError": 3.9e-07,
+      "maximumAbsoluteError": 2.27e-06,
+      "deployedMae": 5e-08,
+      "deployedMaximumAbsoluteError": 2.27e-06,
+      "subgroups": {
+        "irrigated": {
+          "examples": 11936,
+          "mae": 1.1e-07,
+          "p90AbsoluteError": 4.4e-07
+        },
+        "rainfed": {
+          "examples": 11936,
+          "mae": 8e-08,
+          "p90AbsoluteError": 3.2e-07
+        },
+        "active": {
+          "examples": 4904,
+          "mae": 4.7e-07,
+          "p90AbsoluteError": 1.05e-06
+        },
+        "hardZero": {
+          "examples": 18968,
+          "mae": 0.0,
+          "p90AbsoluteError": 0.0
+        }
+      }
+    },
+    "gains": {
+      "maePercent": 99.999,
+      "p90Percent": 99.9985,
+      "deployedMaePercent": 99.9987
+    },
+    "activeCoverage": {
+      "frozenRandom": {
+        "method": "active absolute-residual split conformal",
+        "validationExamples": 3361,
+        "testExamples": 5502,
+        "absoluteErrorQuantiles": {
+          "p80": 2.29e-06,
+          "p90": 3.06e-06
+        },
+        "coverage80": 0.7883,
+        "coverage90": 0.8955,
+        "inactiveExact": true
+      },
+      "independentShift": {
+        "coverage80": 1.0,
+        "coverage90": 1.0,
+        "absoluteErrorQuantiles": {
+          "p80": 2.29e-06,
+          "p90": 3.06e-06
+        },
+        "inactiveExact": true
+      }
+    },
+    "passed": false
+  },
+  "gate": {
+    "passed": false,
+    "checks": {
+      "everySeedPasses": false,
+      "allSeedMeanGains": true,
+      "finalMeanGains": true,
+      "coefficientStability": true,
+      "positiveUnitSumElasticities": true,
+      "artifactSize": true,
+      "batchLatency": true,
+      "independentShift": false
+    }
+  }
+}

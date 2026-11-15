@@ -76,9 +76,14 @@ than 99.99%, maximum error stays below 0.000006, direct active split-conformal
 coverage remains nominal, the serialized model is 0.4 KB versus 64.1 MB, and
 batch latency is below 0.001×. The improvement is mechanistically explainable:
 the declared EcoCrop teacher is log-linear in these memberships. It does not
-imply comparable real-world yield accuracy. Fresh confirmation, final, and
-Latin-hypercube seeds remain sealed behind the committed protocol. See
-`evaluation/log-linear-development-v0.12.md`.
+imply comparable real-world yield accuracy. The precommitted fresh gate then
+rejected the candidate despite 99.99% average gains: 9/10 seeds passed, but
+final seed 20270519 covered 83.9% at the nominal 80% level, above the 82%
+ceiling. Independently generated float64 rows were covered 100%/100% by
+absolute-error radii calibrated on float32 rows, exposing a representation-
+shift calibration mismatch at numerical-error scale. Production remains
+v0.11. See `evaluation/log-linear-development-v0.12.md` and
+`evaluation/log-linear-validation-v0.12.md`.
 
 Version 0.9 increases generated fitting coverage from 72 to 120 scenarios per
 training crop while preserving the exact v0.8 validation and held-out rows. The

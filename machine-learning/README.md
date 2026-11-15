@@ -151,12 +151,17 @@ returns a structural zero if any membership is zero. Across three development
 seeds it reduced MAE and p90 by more than 99.99%, kept maximum error below
 0.000006, serialized to 0.4 KB, and preserved direct split-conformal coverage.
 This near-exact fit is expected because the declared mechanistic teacher is
-log-linear in those memberships; it is not observed-yield accuracy. Fresh
-confirmation, final, and Latin-hypercube seeds remain sealed behind the
-committed promotion protocol in `cropfit/log_linear_validation.py`.
+log-linear in those memberships; it is not observed-yield accuracy. The
+precommitted fresh gate was subsequently opened and rejected the candidate.
+Nine of ten grouped seeds passed, but final seed 20270519 covered 83.9% at the
+nominal 80% level, above the 82% ceiling, and independently generated float64
+rows were covered 100%/100% by radii calibrated on float32 rows. Production
+therefore remains v0.11 while numerical conditioning and representation-shift
+calibration are investigated. See `evaluation/log-linear-validation-v0.12.md`.
 
 ```bash
 npm run ml:develop:log-linear
+npm run ml:evaluate:log-linear  # expected to exit nonzero: promotion rejected
 ```
 
 Training refuses to replace the production artifact unless frozen MAE, p90,

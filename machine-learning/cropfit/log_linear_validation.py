@@ -226,7 +226,7 @@ def markdown(report: dict) -> str:
         "", f'Seed wins: **{summary["seedWins"]}/{summary["seeds"]}**. Final-only gains are **{summary["finalMeanMaeImprovementPercent"]:.3f}% MAE** and **{summary["finalMeanP90ImprovementPercent"]:.3f}% p90**.',
         "", f'The regressor is **{summary["candidateSerializedSizeBytes"] / 1000:.1f} KB** versus **{summary["championSerializedSizeBytes"] / 1_000_000:.1f} MB**, with **{summary["meanApiBatchLatencyRatio"]:.3f}x** batch latency.',
         "", "## Independent shift", "",
-        f'Fresh-shift gains are **{shift["gains"]["maePercent"]:.2f}% raw MAE**, **{shift["gains"]["p90Percent"]:.2f}% raw p90**, and **{shift["gains"]["deployedMaePercent"]:.2f}% deployed MAE**.',
+        f'Fresh-shift gains are **{shift["gains"]["maePercent"]:.3f}% raw MAE**, **{shift["gains"]["p90Percent"]:.3f}% raw p90**, and **{shift["gains"]["deployedMaePercent"]:.3f}% deployed MAE**.',
         "", f'Active shifted coverage is **{shift["activeCoverage"]["independentShift"]["coverage80"]:.1%} / {shift["activeCoverage"]["independentShift"]["coverage90"]:.1%}**.',
         "", f'Promotion gate: **{"PASS" if report["gate"]["passed"] else "NOT PASSED"}**.',
         "", "> This validates mechanistic-teacher fidelity, not observed yield, revenue, or property value.", "",
@@ -251,8 +251,10 @@ def plot(report: dict, output: Path) -> None:
     axes[1].legend(); axes[1].grid(alpha=.18)
     axes[2].bar(["v0.11", "v0.12"], [summary["championSerializedSizeBytes"] / 1_000_000, summary["candidateSerializedSizeBytes"] / 1_000_000], color=["#8fae82", "#315d49"])
     axes[2].set(ylabel="Serialized model (MB)", title="Mac-ready model size")
+    axes[2].set_yscale("log")
     axes[2].grid(axis="y", alpha=.18)
-    figure.suptitle("CropFit v0.12 candidate · interpretable log-linear regression", fontweight="bold")
+    status = "passes" if report["gate"]["passed"] else "rejected · calibration mismatch"
+    figure.suptitle(f"CropFit v0.12 {status} · interpretable log-linear regression", fontweight="bold")
     figure.text(.5, .01, "Fresh unseen crop profiles · independent scenario shift · not observed yield accuracy", ha="center", color="#555555")
     figure.tight_layout(rect=(0, .05, 1, .93)); figure.savefig(output, dpi=180); plt.close(figure)
 
