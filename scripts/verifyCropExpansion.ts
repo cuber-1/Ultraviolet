@@ -4,20 +4,27 @@ type Candidate = {
   crop: string;
   observations: number;
   coverage: number;
-  spearman: number;
-  bootstrap95: [number, number];
+  spearman: number | null;
+  bootstrap95: [number | null, number | null];
+  finalTest: {
+    observations: number;
+    coverage: number;
+    spearman: number | null;
+    bootstrap95: [number | null, number | null];
+  };
   passed: boolean;
 };
 
 const report = JSON.parse(readFileSync(
-  new URL('../machine-learning/evaluation/crop-expansion-validation-v1.json', import.meta.url),
+  new URL('../machine-learning/evaluation/crop-expansion-validation-v2.json', import.meta.url),
   'utf8',
 )) as { acceptedCrops: string[]; candidates: Candidate[]; dataNotes: string[] };
 
-const passesGate = (candidate: Candidate) => candidate.observations >= 100
-  && candidate.spearman >= .5
-  && candidate.bootstrap95[0] > .3
-  && candidate.coverage >= .5;
+const passesBlock = (block: Pick<Candidate, 'observations' | 'coverage' | 'spearman' | 'bootstrap95'>) => block.observations >= 100
+  && block.spearman !== null && block.spearman >= .5
+  && block.bootstrap95[0] !== null && block.bootstrap95[0] > .3
+  && block.coverage >= .5;
+const passesGate = (candidate: Candidate) => passesBlock(candidate) && passesBlock(candidate.finalTest);
 
 for (const candidate of report.candidates) {
   if (candidate.passed !== passesGate(candidate)) {
@@ -28,11 +35,21 @@ const computedAccepted = report.candidates.filter(passesGate).map(({ crop }) => 
 if (JSON.stringify(report.acceptedCrops) !== JSON.stringify(computedAccepted)) {
   throw new Error('Accepted crop list does not match the frozen expansion gate.');
 }
-if (report.acceptedCrops.length !== 0) {
-  throw new Error('Production coverage changed without a new reviewed crop-expansion protocol.');
+if (JSON.stringify(report.acceptedCrops) !== JSON.stringify(['silage corn', 'spring wheat'])) {
+  throw new Error('Locked crop-subtype expansion result changed unexpectedly.');
 }
-if (!report.dataNotes.some((note) => note.includes('excludes chickpeas'))) {
-  throw new Error('The 2019 USDA dry-bean definition break is no longer documented.');
+if (!report.dataNotes.some((note) => note.includes('excludes chickpeas'))
+  || !report.dataNotes.some((note) => note.includes('never pooled'))) {
+  throw new Error('USDA definition-break guards are no longer documented.');
 }
 
-console.log('Crop expansion policy verified: no rejected USDA series enters production');
+const atlas = JSON.parse(readFileSync(
+  new URL('../machine-learning/evaluation/yield-atlas-v9.json', import.meta.url),
+  'utf8',
+)) as { crops: string[]; records: { crop: string }[] };
+if (JSON.stringify(atlas.crops) !== JSON.stringify(['corn', 'soybean', 'wheat'])
+  || atlas.records.some(({ crop }) => crop === 'silage corn' || crop === 'spring wheat')) {
+  throw new Error('Validated crop subtypes entered production without a separate atlas promotion.');
+}
+
+console.log('Crop expansion policy verified: spring wheat and silage corn pass locked evidence gates but remain isolated from production');

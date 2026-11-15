@@ -146,20 +146,6 @@ soybean regressed despite a small positive pooled result. Urban rooftop ranking
 is unchanged because county farm yields are not roof-specific. See
 `evaluation/ranking-validation-v1.md`.
 
-## Crop-coverage expansion gate
-
-Three additional USDA county series were tested before expanding the observed
-prior: dry edible beans, potatoes, and oil-type sunflowers. None passed the
-predeclared forward-year gate (at least 100 predictions, Spearman at least
-0.50, county-bootstrap lower bound above 0.30, and at least 50% coverage).
-
-The current bean definition produced 81 forward predictions with Spearman
-0.3184 (95% interval 0.0036–0.5446). The apparently stronger legacy bean series
-was not joined to it: USDA NASS states that dry edible beans began excluding
-chickpeas in 2019. Potatoes had only four predictions, while sunflower reached
-135 but only 0.2724 Spearman. Production coverage therefore remains corn,
-soybeans, and wheat. See `evaluation/crop-expansion-validation-v1.md`.
-
 ## Recency experiment
 
 Atlas v9 shrinks an exponential recency estimate toward the stable long-history
@@ -202,9 +188,22 @@ all 5,562 records per request. The reproducible benchmark and exact-identity
 check are in `evaluation/atlas-lookup-benchmark-v1.md`; timing ratios are
 machine-dependent.
 
+## Observed subtype expansion gate
+
+Crop-expansion v2 evaluates nine exact USDA class/practice/unit definitions
+without pooling definition breaks. Every candidate must pass both 2018–2025
+forward evaluation and a locked 2023–2025 block with at least 100 observations,
+Spearman at least 0.50, a grouped-bootstrap lower bound above 0.30, and at least
+50% published-row coverage. Spring wheat passes the recent block with 257
+observations and Spearman 0.762 (95% interval 0.670–0.830); silage corn passes
+with 576 observations and 0.551 (0.469–0.617). Dry peas and durum wheat fail the
+recent sample floor despite positive rank signal. The accepted subtypes remain
+outside atlas v9 until subtype lookup, calibration, and uncertainty receive a
+separate promotion test. See `evaluation/crop-expansion-validation-v2.md`.
+
 ## Inference request safety
 
-API v0.5.6 bounds caller-supplied climate to 12 or 24 ordered months and at
+API v0.9.2 bounds caller-supplied climate to 12 or 24 ordered months and at
 most 20 complete history years. Temperature, precipitation, and solar inputs
 must be finite and remain within documented physical limits. Invalid caller
 data returns HTTP 422 instead of being mislabeled as a model/upstream failure;

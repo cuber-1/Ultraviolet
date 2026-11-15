@@ -230,10 +230,19 @@ blend and validates using the observed prior for supported rural crops only.
 npm run ml:evaluate:crop-expansion
 ```
 
-This evaluates candidate USDA county series as forward-year rank priors without
-changing production coverage. The committed v1 report rejects beans, potatoes,
-and sunflowers. It also keeps the pre-2019 bean definition separate because
-that series includes chickpeas, unlike the current USDA category.
+Crop-expansion v2 keeps nine USDA class/practice/unit definitions separate and
+requires each to pass both the full 2018–2025 forward test and a locked
+2023–2025 block. Each block needs at least 100 observations, Spearman at least
+0.50, a county-bootstrap lower bound above 0.30, and at least 50% coverage.
+
+Spring wheat passes with 257 final observations, Spearman 0.762, and a
+0.670–0.830 interval. Silage corn passes with 576 observations, Spearman 0.551,
+and a 0.469–0.617 interval. Dry peas and durum wheat have promising rank signal
+but fail the final sample floor; beans, potatoes, and both sunflower definitions
+also remain rejected. Grain/silage corn and winter/spring/durum wheat are never
+pooled. This screen does not add the passing subtypes to atlas v9: production
+coverage remains grain corn, soybeans, and winter wheat pending a separately
+validated subtype lookup. See `evaluation/crop-expansion-validation-v2.md`.
 
 ## Test recency weighting and atlas lookup
 
