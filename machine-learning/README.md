@@ -7,7 +7,7 @@ revenue, or a buy/sell recommendation.
 
 ## Run the trained model
 
-On macOS or Linux, install the released v0.9.1 artifact, EcoCrop profiles, and
+On macOS or Linux, install the released v0.10.0 artifact, EcoCrop profiles, and
 inference dependencies without access to the Spark:
 
 ```bash
@@ -32,7 +32,7 @@ artifact instead, use the full setup below. Because the repository is private,
 the installer uses an authenticated GitHub CLI session (`gh auth login`) or a
 `GITHUB_TOKEN`.
 
-Runtime API v0.17.0 keeps the validated v0.9.1 estimator and hardens every direct
+Runtime API v0.18.0 serves the validated v0.10.0 estimator and hardens every direct
 and HTTP prediction path with the same finite coordinate, soil-pH, boolean,
 climate-shape, and 20-year history limits. Startup validates the artifact's
 internal model/metadata contract. `GET /health` returns the artifact SHA-256 and
@@ -92,13 +92,13 @@ learning-rate schedule, error distribution, and feature importance to
 `machine-learning/runs/<run-id>/`. A candidate is only promoted when it improves held-out
 crop-profile error.
 
-CropFit v0.9.1 fits 120 scenarios per training crop with 70 Extra Trees while
-retaining the exact v0.8 validation and test rows. Its promotion report compares
-the candidate with v0.8 on identical grouped splits, including locked
-confirmation/final seeds, conformal coverage, artifact size, and API-sized latency:
+CropFit v0.10.0 fits 200 scenarios per training crop with 40 Extra Trees. Its
+promotion report compares the candidate with v0.9.1 on ten newly reserved
+grouped crop-profile splits plus a fresh independent Latin-hypercube shift,
+including active uncertainty, artifact size, and API-sized latency:
 
 ```bash
-npm run ml:evaluate:training-density
+npm run ml:evaluate:density-refinement-v2
 ```
 
 Its independent scenario-shift report uses a separately seeded Latin-hypercube
@@ -109,10 +109,9 @@ hard-zero cases to dominate the aggregate:
 npm run ml:evaluate:scenario-shift
 ```
 
-The reproducible v0.10 density experiment doubles fitting coverage and reduces
-the ensemble to 32 trees. It passes every frozen grouped-split gate but is not
-promoted because a separate scenario-shift gate catches a 0.99% deployed-MAE
-regression:
+The earlier 240-scenario/32-tree experiment remains reproducible. It passes
+every frozen grouped-split gate but is rejected because a separate
+scenario-shift gate catches a 0.99% deployed-MAE regression:
 
 ```bash
 npm run ml:evaluate:density-refinement

@@ -77,11 +77,15 @@ def verify(artifact: Path, profiles: Path) -> None:
     assert predictor.model.n_features_in_ == len(FEATURE_NAMES), "artifact and feature code disagree"
     assert predictor.model_features(list(range(len(FEATURE_NAMES)))) == list(range(len(FEATURE_NAMES)))
     assert align_model_features(list(range(len(FEATURE_NAMES))), len(FEATURE_NAMES) - 2) == list(range(len(FEATURE_NAMES) - 2))
-    if predictor.metadata["model"].endswith(("v0.6", "v0.7", "v0.8", "v0.9", "v0.9.1")):
+    if predictor.metadata["model"].endswith(("v0.6", "v0.7", "v0.8", "v0.9", "v0.9.1", "v0.10.0")):
         assert predictor.metadata["selectedModel"] == "extraTrees"
     if predictor.metadata["model"].endswith(("v0.9", "v0.9.1")):
         assert predictor.metadata["modelParameters"]["nEstimators"] == 70
         assert predictor.metadata["trainingExamples"] == 151_800
+        assert predictor.metadata["evaluationExamples"] == 134_064
+    if predictor.metadata["model"].endswith("v0.10.0"):
+        assert predictor.metadata["modelParameters"]["nEstimators"] == 40
+        assert predictor.metadata["trainingExamples"] == 253_000
         assert predictor.metadata["evaluationExamples"] == 134_064
     if predictor.metadata.get("promotionGate"):
         assert predictor.metadata["promotionGate"]["passed"]
@@ -357,6 +361,16 @@ def verify(artifact: Path, profiles: Path) -> None:
         assert density_shift_report["gains"]["deployedMaePercent"] < 0
         assert density_shift_report["protocol"]["candidate"].startswith("v0.10 candidate")
 
+    refinement_v2_validation = artifact.parents[1] / "evaluation/density-refinement-v2-validation-v0.10.json"
+    if refinement_v2_validation.exists():
+        refinement_v2_report = json.loads(refinement_v2_validation.read_text())
+        assert refinement_v2_report["gate"]["passed"]
+        assert refinement_v2_report["summary"]["seedWins"] == refinement_v2_report["summary"]["seeds"] == 10
+        assert refinement_v2_report["summary"]["finalMeanMaeImprovementPercent"] >= 5
+        assert refinement_v2_report["summary"]["finalMeanP90ImprovementPercent"] >= 5
+        assert refinement_v2_report["independentShift"]["passed"]
+        assert min(refinement_v2_report["independentShift"]["gains"].values()) >= 5
+
     shift_validation = artifact.parents[1] / "evaluation/scenario-shift-validation-v0.9.1.json"
     if shift_validation.exists():
         shift_report = json.loads(shift_validation.read_text())
@@ -379,6 +393,14 @@ def verify(artifact: Path, profiles: Path) -> None:
         assert ood_report["gate"]["passed"]
         assert ood_report["heldOut"]["errorNeverIncreased"]
         assert ood_report["heldOut"]["seasonalCeiling"]["mae"] < ood_report["heldOut"]["rawSurrogate"]["mae"]
+
+    current_ood_validation = artifact.parents[1] / "evaluation/ood-validation-v0.10.0.json"
+    if current_ood_validation.exists():
+        current_ood_report = json.loads(current_ood_validation.read_text())
+        assert current_ood_report["model"].endswith("v0.10.0")
+        assert current_ood_report["gate"]["passed"]
+        assert current_ood_report["heldOut"]["errorNeverIncreased"]
+        assert current_ood_report["heldOut"]["seasonalCeiling"]["mae"] < .006
 
     from .trained_api import PredictionRequest, predict as api_predict
 

@@ -1,17 +1,17 @@
-# CropFit EcoCrop surrogate v0.9.1
+# CropFit EcoCrop surrogate v0.10.0
 
 - Trained: 2026-11-15
 - Source: FAO EcoCrop environmental requirement profiles via OpenCLIM
 - Usable crop profiles: 1,862
-- Generated fitting scenarios: 223,440 (151,800 from training profiles)
+- Generated fitting scenarios: 372,400 (253,000 from training profiles)
 - Frozen validation/test scenarios: 134,064 before profile splitting
 - Evaluation: entire crop profiles held out (373 profiles)
 - Selected production estimator: Extra Trees
-- Raw estimator MAE: 0.0145 suitability points
-- Deployed score MAE after deterministic seasonal ceiling: 0.00625 points
+- Raw estimator MAE: 0.0135 suitability points
+- Deployed score MAE after deterministic seasonal ceiling: 0.00576 points
 - R²: 1.0000
-- Raw estimator 90th percentile absolute error: 0.0407 points
-- Deployed score 90th percentile absolute error: 0.00137 points
+- Raw estimator 90th percentile absolute error: 0.0384 points
+- Deployed score 90th percentile absolute error: 0.00034 points
 
 Version 0.9 increases generated fitting coverage from 72 to 120 scenarios per
 training crop while preserving the exact v0.8 validation and held-out rows. The
@@ -31,21 +31,26 @@ score at zero. Active coverage is 80.6%/90.9% on the frozen-random test and
 v0.9's raw and deployed error gains remain between 12.7% and 77.5%. See
 `evaluation/scenario-shift-validation-v0.9.1.md`.
 
-The compressed artifact is 70.5 MB versus 73.2 MB for v0.8. On the development
-host, clean-process peak RSS fell from 773,168 KiB to 756,376 KiB and full
-11-scenario reliability prediction median latency fell from 4.58 ms to 3.25 ms.
-The locked 132-row batch latency ratio was 0.99× because parallel-dispatch
-overhead dominates tiny batches. Timings and RSS are machine-dependent; Apple
+The compressed v0.10 artifact is 66.7 MB, 6.3% smaller than v0.9.1. Its locked
+132-row batch latency ratio is 0.95×. Timings are machine-dependent; Apple
 Silicon installation and loopback inference remain CI requirements.
 
-A v0.10 density candidate doubled fitting coverage to 240 scenarios per crop
+A first v0.10 density candidate doubled fitting coverage to 240 scenarios per crop
 while reducing the ensemble to 32 trees. It won all seven frozen
 confirmation/final splits, reducing locked MAE 10.9% and p90 error 10.3%, with
 a 9.5% smaller artifact. It was still rejected: on an independent
 Latin-hypercube shift test, raw MAE improved only 4.83% against a declared 5%
-floor and deployed seasonal-ceiling MAE regressed 0.99%. The production model
-therefore remains v0.9.1. See `evaluation/density-refinement-validation-v0.10.md`
+floor and deployed seasonal-ceiling MAE regressed 0.99%, so it was rejected.
+See `evaluation/density-refinement-validation-v0.10.md`
 and `evaluation/density-shift-validation-v0.10.md`.
+
+The promoted v0.10 candidate instead fits 200 scenarios per crop with 40 trees.
+It wins all ten newly reserved confirmation/final seeds: mean MAE falls 8.62%,
+p90 falls 8.49%, final-only gains remain 8.65%/7.73%, and API-batch latency is
+0.95×. On a separately reserved Latin-hypercube seed, raw and deployed MAE
+improve 10.72% and 10.43%; every active subgroup improves and shifted active
+coverage is 80.7%/90.8%. See
+`evaluation/density-refinement-v2-validation-v0.10.md`.
 
 An 80-tree compact candidate reduced serialized estimator size to about 67% of
 the champion, but failed the frozen accuracy tolerance on all seven fresh
@@ -55,20 +60,19 @@ rejected; that experiment did not replace the 120-tree v0.6 champion. See
 
 ## Out-of-distribution ceiling
 
-API v0.17.0 retains the v0.6.1 safety ceiling that caps the ML score by the exact
+API v0.18.0 retains the v0.6.1 safety ceiling that caps the ML score by the exact
 seasonal and establishment EcoCrop suitability already computed for
 limiting-factor explanations. This is a one-sided safety constraint: the
 ensemble still determines underprediction but cannot claim suitability above
 the mechanistic target it approximates.
 
-On the production held-out split, the ceiling reduced MAE from 0.0145 to
-0.00625 and p90 error from 0.0407 to 0.00137 without increasing any example's
-error. The ceiling MAE and maximum error improve from v0.8; its already tiny
-p90 moves from 0.00125 to 0.00137. Existing intervals remain conservative at
-89.9%/95.0% coverage. It also
+On the production held-out split, the ceiling reduces MAE from 0.01351 to
+0.00576 and p90 error from 0.03839 to 0.00034 without increasing any example's
+error. Existing intervals remain conservative at 98.0%/99.0% coverage after
+the ceiling. It also
 eliminates errors at the tested exact hard solar and temperature boundaries,
 where continuous random training samples do not land. See
-`evaluation/ood-validation-v0.9.1.md`.
+`evaluation/ood-validation-v0.10.0.md`.
 
 Version 0.5 adds four crop-relative features: temperature, water, pH, and solar
 membership within each crop's absolute and optimum ranges. The 120-tree Random
@@ -78,10 +82,10 @@ feature design, it improved held-out MAE on all five robustness seeds from
 reproducible protocol and per-seed results are in
 `evaluation/feature-validation-v0.5.md`.
 
-Version 0.9.1 fits its active-case tree-disagreement-normalized split-conformal
+Version 0.10.0 fits its active-case tree-disagreement-normalized split-conformal
 calibrator using 3,395 active examples from 224 validation crop profiles. On
 5,628 active held-out examples from the 373 test profiles, nominal 80% and 90%
-bands cover 80.6% and 90.9%; mean radii are 0.105 and 0.139 suitability points.
+bands cover 78.0% and 89.4%; mean radii are 0.092 and 0.123 suitability points.
 Hard-zero deployed scores receive zero radius because the deterministic ceiling
 fixes their value. These are conditional EcoCrop-teacher fidelity bands, not
 per-species or observed-yield guarantees.
@@ -89,9 +93,9 @@ per-species or observed-yield guarantees.
 The CUDA XGBoost candidate completed 500 rounds with a cosine learning-rate
 schedule from 0.08 to 0.005. It was not promoted because held-out-profile MAE
 was worse (0.0872). The committed diagnostics are
-`evaluation/training-curves-v0.9.1.png`,
-`evaluation/selected-feature-importance-v0.9.1.png`, and
-`evaluation/training-history-v0.9.1.csv`.
+`evaluation/training-curves-v0.10.0.png`,
+`evaluation/selected-feature-importance-v0.10.0.png`, and
+`evaluation/training-history-v0.10.0.csv`.
 
 ## Intended use
 
@@ -241,7 +245,7 @@ crop-region pairs without at least 50 examples in every validation block. See
 
 ## Inference request safety
 
-API v0.17.0 bounds caller-supplied climate to 12 or 24 ordered months and at
+API v0.18.0 bounds caller-supplied climate to 12 or 24 ordered months and at
 most 20 complete history years. Temperature, precipitation, and solar inputs
 must be finite and remain within documented physical limits. Invalid caller
 data returns HTTP 422 instead of being mislabeled as a model/upstream failure;
@@ -275,7 +279,7 @@ reuse a stale prediction. The cache is a bounded 2,048-entry LRU, and CI checks
 key sensitivity, revision invalidation, model isolation, expiry, and
 least-recently-used eviction.
 
-API v0.17.0 exposes its API+training-run+artifact-hash revision and the full
+API v0.18.0 exposes its API+training-run+artifact-hash revision and the full
 artifact SHA-256 through `/health`. The browser proxy reads the revision once
 per prediction request. Startup rejects artifacts missing the fitted ensemble,
 model identity, or a consistent feature contract. Direct and HTTP inference

@@ -18,6 +18,7 @@
     "ml:evaluate:interactions": "PYTHONPATH=machine-learning machine-learning/.venv/bin/python -m cropfit.interaction_validation",
     "ml:evaluate:training-density": "PYTHONPATH=machine-learning machine-learning/.venv/bin/python -m cropfit.training_density_validation",
     "ml:evaluate:density-refinement": "PYTHONPATH=machine-learning machine-learning/.venv/bin/python -m cropfit.density_refinement_validation",
+    "ml:evaluate:density-refinement-v2": "PYTHONPATH=machine-learning machine-learning/.venv/bin/python -m cropfit.density_refinement_v2_validation",
     "ml:evaluate:scenario-shift": "PYTHONPATH=machine-learning machine-learning/.venv/bin/python -m cropfit.scenario_shift_validation",
     "ml:evaluate:density-shift": "PYTHONPATH=machine-learning machine-learning/.venv/bin/python -m cropfit.density_shift_validation",
     "ml:evaluate:compact": "PYTHONPATH=machine-learning machine-learning/.venv/bin/python -m cropfit.compact_validation",

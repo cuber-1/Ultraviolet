@@ -20,11 +20,13 @@ SEED = 20261114
 SCENARIOS_PER_PROFILE = 64
 
 
-def shifted_examples(profiles: list, profile_groups: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+def shifted_examples(
+    profiles: list, profile_groups: np.ndarray, seed: int = SEED,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     rows, labels, irrigated = [], [], []
     for group in profile_groups:
         profile = profiles[int(group)]
-        samples = qmc.LatinHypercube(d=5, seed=SEED + int(group)).random(SCENARIOS_PER_PROFILE)
+        samples = qmc.LatinHypercube(d=5, seed=seed + int(group)).random(SCENARIOS_PER_PROFILE)
         for values in samples:
             temperature = profile.temp_abs_min - 7 + values[0] * (profile.temp_abs_max - profile.temp_abs_min + 14)
             rain_low = max(0.0, profile.rain_abs_min * .35)

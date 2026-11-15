@@ -176,7 +176,7 @@ def train(
     fitting_groups = np.unique(groups[train_indices])
     fitting_indices = np.flatnonzero(np.isin(training_groups, fitting_groups))
     model = ExtraTreesRegressor(
-        n_estimators=70,
+        n_estimators=40,
         min_samples_leaf=1,
         max_features=1.0,
         n_jobs=-1,
@@ -223,7 +223,7 @@ def train(
         active_held_out_p80_coverage, active_held_out_p90_coverage,
     )
     metadata = {
-        "model": "CropFit EcoCrop surrogate v0.9.1",
+        "model": "CropFit EcoCrop surrogate v0.10.0",
         "selectedModel": "extraTrees",
         "createdAt": created.isoformat(),
         "runId": run_id,
@@ -243,7 +243,7 @@ def train(
         },
         "modelParameters": {
             "estimator": "ExtraTreesRegressor",
-            "nEstimators": 70,
+            "nEstimators": 40,
             "minSamplesLeaf": 1,
             "maxFeatures": 1.0,
         },
@@ -292,7 +292,7 @@ def train(
                 "rule": "Active held-out coverage must be within 2 percentage points of both nominal levels.",
             },
         },
-        "selectionEvidence": "Fitting 120 scenarios per training crop with 70 Extra Trees improved MAE and p90 error on all seven locked confirmation/final crop-profile splits while retaining the exact v0.8 validation/test rows and reducing artifact size; see evaluation/training-density-validation-v0.9.json.",
+        "selectionEvidence": "Fitting 200 scenarios per training crop with 40 Extra Trees improved MAE and p90 on all ten fresh grouped crop-profile seeds and a separately seeded Latin-hypercube shift while reducing artifact size and latency; see evaluation/density-refinement-v2-validation-v0.10.json.",
         "boostedCandidate": {
             "mae": round(float(mean_absolute_error(y[test_indices], boosted_predictions)), 4),
             "r2": round(float(r2_score(y[test_indices], boosted_predictions)), 4),
@@ -330,7 +330,7 @@ def main():
     parser.add_argument("--artifact", type=Path, default=root / "artifacts/cropfit.joblib")
     parser.add_argument("--metadata", type=Path, default=root / "artifacts/cropfit.metadata.json")
     parser.add_argument("--runs", type=Path, default=root / "runs")
-    parser.add_argument("--samples-per-crop", type=int, default=120)
+    parser.add_argument("--samples-per-crop", type=int, default=200)
     parser.add_argument("--evaluation-samples-per-crop", type=int, default=72)
     parser.add_argument("--rounds", type=int, default=500)
     parser.add_argument("--seed", type=int, default=20261114)
