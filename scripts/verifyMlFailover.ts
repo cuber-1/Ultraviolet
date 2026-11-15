@@ -42,14 +42,19 @@ const primary = await start(async (req, res) => {
   return send(res, 404, {});
 });
 let receivedClimate = false;
+let backupRevision = '0.6.2:run-a';
+let backupScore = 81;
+let backupRequests = 0;
+let backupHealthDown = false;
 const backup = await start(async (req, res) => {
-  if (req.url === '/health') return send(res, 200, { model: 'CropFit backup' });
+  if (req.url === '/health') return backupHealthDown ? send(res, 503, { error: 'health unavailable' }) : send(res, 200, { model: 'CropFit backup', apiVersion: '0.6.2', revision: backupRevision });
   if (req.url === '/predict') {
     const chunks: Buffer[] = [];
     for await (const chunk of req) chunks.push(Buffer.from(chunk));
     const body = JSON.parse(Buffer.concat(chunks).toString()) as { climate?: unknown[] };
     receivedClimate = body.climate?.length === 12;
-    return send(res, 200, cropFitResponse);
+    backupRequests += 1;
+    return send(res, 200, { ...cropFitResponse, score: backupScore, monthlyCurve: [{ month: 'MAR', score: backupScore, uncertainty: 5 }] });
   }
   send(res, 404, {});
 });
@@ -83,6 +88,24 @@ try {
   if (backupResult.model.name !== 'CropFit backup' || backupResult.model.source !== 'ml' || health.role !== 'backup' || !receivedClimate || backupResult.predictions[0]?.observedYieldEvidence?.observedYieldPrior?.interval90[1] !== .7 || !herbs?.notes?.includes('Representative EcoCrop profile for Herbs: basil.')) {
     throw new Error('Primary-to-backup failover did not select the backup model.');
   }
+  const cachedBackup = await predictCropSuitability(request);
+  if (backupRequests !== request.crops.length || cachedBackup.predictions[0]?.suitability !== .81) {
+    throw new Error('Same-revision CropFit response was not reused from cache.');
+  }
+  backupRevision = '0.6.2:run-b';
+  backupScore = 64;
+  const revisedBackup = await predictCropSuitability(request);
+  if (backupRequests !== request.crops.length * 2 || revisedBackup.predictions[0]?.suitability !== .64) {
+    throw new Error('Retrained model revision reused stale CropFit predictions.');
+  }
+  backupHealthDown = true;
+  const requestsBeforeUnverified = backupRequests;
+  await predictCropSuitability(request);
+  await predictCropSuitability(request);
+  if (backupRequests !== requestsBeforeUnverified + request.crops.length * 2) {
+    throw new Error('CropFit predictions were cached while model revision was unverified.');
+  }
+  backupHealthDown = false;
 
   primaryRecovered = true;
   const recoveredResult = await predictCropSuitability(request);
@@ -103,7 +126,7 @@ try {
   if (calendarResult.model.source !== 'calendar-fallback' || calendarResult.predictions.length !== 2) {
     throw new Error('Model-to-calendar failover did not return calendar predictions.');
   }
-  console.log('ML recovery verified: primary down -> backup -> primary recovered -> crop calendar');
+  console.log('ML recovery verified: revision cache bust -> primary down -> backup -> primary recovered -> crop calendar');
 } finally {
   primary.close();
   backup.close();

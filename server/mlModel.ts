@@ -69,10 +69,10 @@ export async function mlModelHealth() {
     const started = Date.now();
     try {
       const response = await fetch(`${url}/health`, { signal: AbortSignal.timeout(4_000) });
-      const payload = await response.json().catch(() => ({})) as { apiVersion?: string; model?: string | { name?: string; version?: string }; metrics?: Record<string, number>; evidence?: unknown };
+      const payload = await response.json().catch(() => ({})) as { apiVersion?: string; revision?: string; model?: string | { name?: string; version?: string }; metrics?: Record<string, number>; evidence?: unknown };
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const model = typeof payload.model === 'string' ? modelIdentity(payload.model) : payload.model ?? null;
-      return { configured: true, online: true, latencyMs: Date.now() - started, model, metrics: payload.metrics ?? null, evidence: payload.evidence ?? null, error: null, url, role: index === 0 ? 'primary' : 'backup', primaryError: index ? errors[0] : null };
+      return { configured: true, online: true, latencyMs: Date.now() - started, model, apiVersion: payload.apiVersion ?? null, revision: payload.revision ?? null, metrics: payload.metrics ?? null, evidence: payload.evidence ?? null, error: null, url, role: index === 0 ? 'primary' : 'backup', primaryError: index ? errors[0] : null };
     } catch (reason) {
       errors.push(`${index === 0 ? 'primary' : 'backup'}: ${reason instanceof Error ? reason.message : 'unreachable'}`);
     }
@@ -202,7 +202,7 @@ export class BoundedExpiringCache<T> {
 }
 
 export const CROPFIT_CACHE_MAX_ENTRIES = 2_048;
-export const cropFitRequestCacheKey = (url: string, payload: object) => `${url}:${createHash('sha256').update(JSON.stringify(payload)).digest('base64url')}`;
+export const cropFitRequestCacheKey = (url: string, revision: string, payload: object) => `${url}:${revision}:${createHash('sha256').update(JSON.stringify(payload)).digest('base64url')}`;
 const cropFitCache = new BoundedExpiringCache<Promise<CropFitResult>>(CROPFIT_CACHE_MAX_ENTRIES);
 
 async function modelApiKind(url: string): Promise<'contract' | 'cropfit'> {
@@ -223,14 +223,14 @@ async function modelApiKind(url: string): Promise<'contract' | 'cropfit'> {
   }
 }
 
-function cropFitCall(url: string, crop: string, lat: number, lon: number, climate: MlClimate | null) {
+function cropFitCall(url: string, revision: string | null, crop: string, lat: number, lon: number, climate: MlClimate | null) {
   const payload = {
     crop, latitude: Number(lat.toFixed(4)), longitude: Number(lon.toFixed(4)), soilPh: Number(process.env.ML_SOIL_PH) || 6.5, irrigated: process.env.ML_IRRIGATED !== 'false',
     climate: climate ? MONTH_KEYS.map((month, index) => ({ month: month.toUpperCase(), temperatureC: climate.temperatureC[index], precipitationMmDay: climate.precipitationMmDay[index], solarMjM2Day: climate.solarMjM2Day[index] })) : undefined,
     climateHistory: climate?.history?.map((year) => MONTH_KEYS.map((month, index) => ({ month: month.toUpperCase(), temperatureC: year.temperatureC[index], precipitationMmDay: year.precipitationMmDay[index], solarMjM2Day: year.solarMjM2Day[index], year: year.year }))),
   };
-  const key = cropFitRequestCacheKey(url, payload);
-  const cached = cropFitCache.get(key);
+  const key = revision ? cropFitRequestCacheKey(url, revision, payload) : null;
+  const cached = key ? cropFitCache.get(key) : undefined;
   if (cached) return cached;
   const value = fetch(`${url}/predict`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(modelTimeoutMs()),
@@ -240,8 +240,10 @@ function cropFitCall(url: string, crop: string, lat: number, lon: number, climat
     if (!response.ok) throw new Error(typeof payload.detail === 'string' ? payload.detail : `CropFit HTTP ${response.status}`);
     return payload;
   });
-  cropFitCache.set(key, value, Date.now() + 3_600_000);
-  value.catch(() => cropFitCache.delete(key));
+  if (key) {
+    cropFitCache.set(key, value, Date.now() + 3_600_000);
+    value.catch(() => cropFitCache.delete(key));
+  }
   return value;
 }
 
@@ -298,13 +300,20 @@ const pair = (a: unknown, b: unknown): [number, number] | null => Number.isFinit
 
 async function predictViaCropFit(url: string, request: MlRequest): Promise<MlResponse> {
   const strict = mlStrict();
+  let health: { model?: string; apiVersion?: string; revision?: string } | null = null;
+  try {
+    const response = await fetch(`${url}/health`, { signal: AbortSignal.timeout(3_000) });
+    if (response.ok) health = await response.json() as { model?: string; apiVersion?: string; revision?: string };
+  } catch { /* prediction can proceed uncached when health is transiently unavailable */ }
+  const revision = typeof health?.revision === 'string' && health.revision ? health.revision
+    : health ? createHash('sha256').update(JSON.stringify({ apiVersion: health.apiVersion ?? null, model: health.model ?? null })).digest('base64url') : null;
   const pairs = request.sites.flatMap((site) => request.crops.map((crop) => ({ site, crop, name: strict && crop.id === 'microgreens' ? undefined : CROPFIT_NAMES[crop.id] })));
   const errors: string[] = [];
   const predictions: MlPrediction[] = [];
   for (let i = 0; i < pairs.length; i += 6) {
     const batch = await Promise.all(pairs.slice(i, i + 6).map(async ({ site, crop, name }) => {
       if (!name) return strict ? null : calendarPrediction(site, crop, request.preferredMonth);
-      try { return fromCropFit(site, crop, request.preferredMonth, await cropFitCall(url, name, site.lat, site.lon, site.climate)); }
+      try { return fromCropFit(site, crop, request.preferredMonth, await cropFitCall(url, revision, name, site.lat, site.lon, site.climate)); }
       catch (reason) {
         const message = reason instanceof Error ? reason.message : 'CropFit failed';
         if (strict) throw new Error(`CropFit failed for ${crop.name}: ${message}`);
@@ -317,7 +326,7 @@ async function predictViaCropFit(url: string, request: MlRequest): Promise<MlRes
   if (errors.length) console.warn(`CropFit failed for ${errors.length} pair(s): ${errors[0]}`);
   let name = 'CropFit';
   let version: string | null = null;
-  try { const health = await (await fetch(`${url}/health`, { signal: AbortSignal.timeout(3_000) })).json() as { model?: string }; if (health.model) { const identity = modelIdentity(health.model); name = identity.name; version = identity.version ?? null; } } catch { /* keep default */ }
+  if (health?.model) { const identity = modelIdentity(health.model); name = identity.name; version = identity.version ?? null; }
   return { model: { name, version, source: 'ml', error: errors.length ? `${errors.length} pair(s) used the crop calendar: ${errors[0]}` : null }, predictions };
 }
 

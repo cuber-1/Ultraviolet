@@ -15,7 +15,7 @@ from .yield_atlas import load_atlas, nearest_evidence
 
 ROOT = Path(__file__).resolve().parents[1]
 YIELD_ATLAS = ROOT / "evaluation/yield-atlas-v2.json"
-app = FastAPI(title="Ultraviolet CropFit", version="0.6.1")
+app = FastAPI(title="Ultraviolet CropFit", version="0.6.2")
 
 ClimateSeries = Annotated[list[dict], Field(min_length=12, max_length=24)]
 ClimateYear = Annotated[list[dict], Field(min_length=12, max_length=12)]
@@ -78,6 +78,7 @@ def health():
     model = predictor()
     return {
         "status": "ok", "mode": "trained", "apiVersion": app.version,
+        "revision": f'{app.version}:{model.metadata.get("runId", "unknown")}',
         "model": model.metadata["model"], "metrics": model.metadata["metrics"],
         "requestLimits": {"climateMonths": [12, 24], "historyYearsMax": 20},
         "climateHistory": {

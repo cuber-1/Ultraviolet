@@ -187,10 +187,15 @@ checks the complete ID-to-profile mapping on every push.
 ## Client cache correctness
 
 The web server's one-hour CropFit cache is content-addressed over the complete
-request and model URL. Climate, soil pH, irrigation, coordinate, crop, or
-primary/backup changes cannot reuse a stale prediction. The cache is a bounded
-2,048-entry LRU, and CI checks key sensitivity, model isolation, expiry, and
+request, model URL, API version, and training run. Climate, soil pH, irrigation,
+coordinate, crop, primary/backup, deployment, or retraining changes cannot
+reuse a stale prediction. The cache is a bounded 2,048-entry LRU, and CI checks
+key sensitivity, revision invalidation, model isolation, expiry, and
 least-recently-used eviction.
+
+API v0.6.2 exposes its API+training-run revision through `/health`. The browser
+proxy reads it once per prediction request. If revision health is unavailable,
+model predictions continue but bypass the cache until provenance is verified.
 
 Transient health failures are not cached as an API type. A recovered Spark is
 reprobed on the next request and immediately resumes as the CropFit primary;
