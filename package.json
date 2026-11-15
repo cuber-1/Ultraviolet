@@ -16,6 +16,7 @@
     "ml:evaluate:estimator": "PYTHONPATH=machine-learning machine-learning/.venv/bin/python -m cropfit.estimator_validation",
     "ml:evaluate:capacity": "PYTHONPATH=machine-learning machine-learning/.venv/bin/python -m cropfit.capacity_validation",
     "ml:evaluate:interactions": "PYTHONPATH=machine-learning machine-learning/.venv/bin/python -m cropfit.interaction_validation",
+    "ml:evaluate:training-density": "PYTHONPATH=machine-learning machine-learning/.venv/bin/python -m cropfit.training_density_validation",
     "ml:evaluate:compact": "PYTHONPATH=machine-learning machine-learning/.venv/bin/python -m cropfit.compact_validation",
     "ml:evaluate:ood": "PYTHONPATH=machine-learning machine-learning/.venv/bin/python -m cropfit.ood_validation",
     "ml:build:yield-atlas": "PYTHONPATH=machine-learning machine-learning/.venv/bin/python -m cropfit.yield_atlas",

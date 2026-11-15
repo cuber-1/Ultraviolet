@@ -57,10 +57,10 @@ climate = [{"month": month, "temperatureC": 22, "precipitationMmDay": 3, "solarM
 payload = {"crop": "corn", "latitude": 29.76, "longitude": -95.37, "soilPh": 6.5, "irrigated": True, "climate": climate, "climateHistory": [climate] * 10}
 health = requests.get(f"{base}/health", timeout=10).json()
 assert health["status"] == "ok" and health["requestLimits"]["historyYearsMax"] == 20
-assert health["apiVersion"] == "0.8.0"
+assert health["apiVersion"] == "0.9.0"
 assert health["revision"].startswith(f'{health["apiVersion"]}:')
-assert health["model"] == "CropFit EcoCrop surrogate v0.8"
-assert health["metrics"]["mae"] == .0175
+assert health["model"] == "CropFit EcoCrop surrogate v0.9"
+assert health["metrics"]["mae"] == .0145
 atlas = health["evidence"]["historicalYieldAtlas"]
 assert atlas["name"] == "USDA county yield atlas v9"
 assert atlas["predictionMethod"]["halfLifeYears"] == 3.0 and atlas["predictionMethod"]["recencyWeight"] == .8
@@ -107,5 +107,5 @@ for crop, scientific_name in representatives.items():
     assert response.json()["profile"]["scientific_name"] == scientific_name
 invalid = requests.post(f"{base}/predict", json={**payload, "climate": climate[:11]}, timeout=10)
 assert invalid.status_code == 422
-print(f'CropFit HTTP verified: API {health["apiVersion"]}, model v0.8, atlas v9 geographically stable uncertainty, seasonal boundary ceiling, 2016-2025 climate window, 16-choice coverage, USDA evidence, input bounds')
+print(f'CropFit HTTP verified: API {health["apiVersion"]}, model v0.9, atlas v9 geographically stable uncertainty, seasonal boundary ceiling, 2016-2025 climate window, 16-choice coverage, USDA evidence, input bounds')
 PY

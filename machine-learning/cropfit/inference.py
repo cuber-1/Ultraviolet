@@ -36,7 +36,7 @@ class CropFitPredictor:
         self.profiles = load_profiles(profiles_path)
 
     def model_features(self, row: list[float]) -> list[float]:
-        """Keep inference usable while a v0.7 artifact is upgraded to v0.8."""
+        """Keep inference usable while an older 23-feature artifact is upgraded."""
         return align_model_features(row, int(self.model.n_features_in_))
 
     def calibrated_error(self, tree_std: float) -> tuple[float, float]:

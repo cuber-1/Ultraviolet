@@ -37,8 +37,12 @@ def verify(artifact: Path, profiles: Path) -> None:
     assert predictor.model.n_features_in_ == len(FEATURE_NAMES), "artifact and feature code disagree"
     assert predictor.model_features(list(range(len(FEATURE_NAMES)))) == list(range(len(FEATURE_NAMES)))
     assert align_model_features(list(range(len(FEATURE_NAMES))), len(FEATURE_NAMES) - 2) == list(range(len(FEATURE_NAMES) - 2))
-    if predictor.metadata["model"].endswith(("v0.6", "v0.7", "v0.8")):
+    if predictor.metadata["model"].endswith(("v0.6", "v0.7", "v0.8", "v0.9")):
         assert predictor.metadata["selectedModel"] == "extraTrees"
+    if predictor.metadata["model"].endswith("v0.9"):
+        assert predictor.metadata["modelParameters"]["nEstimators"] == 70
+        assert predictor.metadata["trainingExamples"] == 151_800
+        assert predictor.metadata["evaluationExamples"] == 134_064
     if predictor.metadata.get("promotionGate"):
         assert predictor.metadata["promotionGate"]["passed"]
         assert all(predictor.metadata["promotionGate"]["checks"].values())
@@ -197,6 +201,16 @@ def verify(artifact: Path, profiles: Path) -> None:
         assert interaction_report["summary"]["lockedMeanP90ImprovementPercent"] >= 70
         assert interaction_report["summary"]["candidateSerializedSizeBytes"] <= 80_000_000
 
+    density_validation = artifact.parents[1] / "evaluation/training-density-validation-v0.9.json"
+    if density_validation.exists():
+        density_report = json.loads(density_validation.read_text())
+        assert density_report["gate"]["passed"]
+        assert density_report["summary"]["lockedSeedWins"] == density_report["summary"]["lockedSeeds"] == 7
+        assert density_report["summary"]["lockedMeanMaeImprovementPercent"] >= 10
+        assert density_report["summary"]["lockedMeanP90ImprovementPercent"] >= 10
+        assert density_report["summary"]["candidateSerializedSizeBytes"] <= 72_000_000
+        assert density_report["protocol"]["fixedEvaluation"].startswith("Both models use identical")
+
     compact_validation = artifact.parents[1] / "evaluation/compact-validation-v1.json"
     if compact_validation.exists():
         compact_report = json.loads(compact_validation.read_text())
@@ -204,7 +218,7 @@ def verify(artifact: Path, profiles: Path) -> None:
         assert compact_report["summary"]["seedWins"] == 0
         assert compact_report["summary"]["decision"].startswith("reject")
 
-    ood_validation = artifact.parents[1] / "evaluation/ood-validation-v0.8.json"
+    ood_validation = artifact.parents[1] / "evaluation/ood-validation-v0.9.json"
     if ood_validation.exists():
         ood_report = json.loads(ood_validation.read_text())
         assert ood_report["gate"]["passed"]
