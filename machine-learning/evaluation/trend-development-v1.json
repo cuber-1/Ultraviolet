@@ -1,0 +1,390 @@
+{
+  "name": "USDA county-prior trend development v1",
+  "target": "next-year county yield percentile within crop and year",
+  "champion": "v11 shrunken three-year-half-life recency prior",
+  "candidate": "champion plus a development-gated clipped OLS county-rank trend correction",
+  "protocol": {
+    "developmentYears": [
+      2018,
+      2019,
+      2020
+    ],
+    "confirmationYearsOpened": false,
+    "finalYearsOpened": false,
+    "minimumHistory": 4,
+    "maximumAnnualSlope": 0.05,
+    "trendWeights": [
+      0.1,
+      0.2,
+      0.3,
+      0.5
+    ],
+    "lookbackYears": [
+      5,
+      8,
+      16
+    ],
+    "cropGate": "Enable the fixed trend correction only for crops whose development Spearman and MAE both improve; all other crops retain the champion exactly.",
+    "advanceRule": "At least one crop must enable; gated development pooled Spearman and MAE must improve; no crop or development year may regress either metric. Only then may fixed parameters advance to a separately committed confirmation/final protocol."
+  },
+  "championMetrics": {
+    "observations": 10362,
+    "spearman": 0.8468,
+    "maePercentile": 0.1167
+  },
+  "candidateSelection": [
+    {
+      "lookbackYears": 5,
+      "trendWeight": 0.1,
+      "observations": 10362,
+      "baseline": {
+        "observations": 10362,
+        "spearman": 0.8468,
+        "maePercentile": 0.1167
+      },
+      "recency": {
+        "observations": 10362,
+        "spearman": 0.8465,
+        "maePercentile": 0.1168
+      },
+      "spearmanDelta": -0.0003,
+      "maeDelta": 0.0001
+    },
+    {
+      "lookbackYears": 5,
+      "trendWeight": 0.2,
+      "observations": 10362,
+      "baseline": {
+        "observations": 10362,
+        "spearman": 0.8468,
+        "maePercentile": 0.1167
+      },
+      "recency": {
+        "observations": 10362,
+        "spearman": 0.8461,
+        "maePercentile": 0.1169
+      },
+      "spearmanDelta": -0.0007,
+      "maeDelta": 0.0002
+    },
+    {
+      "lookbackYears": 5,
+      "trendWeight": 0.3,
+      "observations": 10362,
+      "baseline": {
+        "observations": 10362,
+        "spearman": 0.8468,
+        "maePercentile": 0.1167
+      },
+      "recency": {
+        "observations": 10362,
+        "spearman": 0.8455,
+        "maePercentile": 0.1171
+      },
+      "spearmanDelta": -0.0013,
+      "maeDelta": 0.0004
+    },
+    {
+      "lookbackYears": 5,
+      "trendWeight": 0.5,
+      "observations": 10362,
+      "baseline": {
+        "observations": 10362,
+        "spearman": 0.8468,
+        "maePercentile": 0.1167
+      },
+      "recency": {
+        "observations": 10362,
+        "spearman": 0.8439,
+        "maePercentile": 0.1176
+      },
+      "spearmanDelta": -0.0029,
+      "maeDelta": 0.0009
+    },
+    {
+      "lookbackYears": 8,
+      "trendWeight": 0.1,
+      "observations": 10362,
+      "baseline": {
+        "observations": 10362,
+        "spearman": 0.8468,
+        "maePercentile": 0.1167
+      },
+      "recency": {
+        "observations": 10362,
+        "spearman": 0.8472,
+        "maePercentile": 0.1164
+      },
+      "spearmanDelta": 0.0004,
+      "maeDelta": -0.0003
+    },
+    {
+      "lookbackYears": 8,
+      "trendWeight": 0.2,
+      "observations": 10362,
+      "baseline": {
+        "observations": 10362,
+        "spearman": 0.8468,
+        "maePercentile": 0.1167
+      },
+      "recency": {
+        "observations": 10362,
+        "spearman": 0.8474,
+        "maePercentile": 0.1162
+      },
+      "spearmanDelta": 0.0006,
+      "maeDelta": -0.0005
+    },
+    {
+      "lookbackYears": 8,
+      "trendWeight": 0.3,
+      "observations": 10362,
+      "baseline": {
+        "observations": 10362,
+        "spearman": 0.8468,
+        "maePercentile": 0.1167
+      },
+      "recency": {
+        "observations": 10362,
+        "spearman": 0.8474,
+        "maePercentile": 0.1161
+      },
+      "spearmanDelta": 0.0006,
+      "maeDelta": -0.0006
+    },
+    {
+      "lookbackYears": 8,
+      "trendWeight": 0.5,
+      "observations": 10362,
+      "baseline": {
+        "observations": 10362,
+        "spearman": 0.8468,
+        "maePercentile": 0.1167
+      },
+      "recency": {
+        "observations": 10362,
+        "spearman": 0.8468,
+        "maePercentile": 0.1162
+      },
+      "spearmanDelta": 0.0,
+      "maeDelta": -0.0005
+    },
+    {
+      "lookbackYears": 16,
+      "trendWeight": 0.1,
+      "observations": 10362,
+      "baseline": {
+        "observations": 10362,
+        "spearman": 0.8468,
+        "maePercentile": 0.1167
+      },
+      "recency": {
+        "observations": 10362,
+        "spearman": 0.847,
+        "maePercentile": 0.1165
+      },
+      "spearmanDelta": 0.0002,
+      "maeDelta": -0.0002
+    },
+    {
+      "lookbackYears": 16,
+      "trendWeight": 0.2,
+      "observations": 10362,
+      "baseline": {
+        "observations": 10362,
+        "spearman": 0.8468,
+        "maePercentile": 0.1167
+      },
+      "recency": {
+        "observations": 10362,
+        "spearman": 0.8469,
+        "maePercentile": 0.1164
+      },
+      "spearmanDelta": 0.0001,
+      "maeDelta": -0.0003
+    },
+    {
+      "lookbackYears": 16,
+      "trendWeight": 0.3,
+      "observations": 10362,
+      "baseline": {
+        "observations": 10362,
+        "spearman": 0.8468,
+        "maePercentile": 0.1167
+      },
+      "recency": {
+        "observations": 10362,
+        "spearman": 0.8467,
+        "maePercentile": 0.1164
+      },
+      "spearmanDelta": -0.0001,
+      "maeDelta": -0.0003
+    },
+    {
+      "lookbackYears": 16,
+      "trendWeight": 0.5,
+      "observations": 10362,
+      "baseline": {
+        "observations": 10362,
+        "spearman": 0.8468,
+        "maePercentile": 0.1167
+      },
+      "recency": {
+        "observations": 10362,
+        "spearman": 0.8456,
+        "maePercentile": 0.1166
+      },
+      "spearmanDelta": -0.0012,
+      "maeDelta": -0.0001
+    }
+  ],
+  "selectedGlobal": {
+    "lookbackYears": 8,
+    "trendWeight": 0.3,
+    "observations": 10362,
+    "baseline": {
+      "observations": 10362,
+      "spearman": 0.8468,
+      "maePercentile": 0.1167
+    },
+    "recency": {
+      "observations": 10362,
+      "spearman": 0.8474,
+      "maePercentile": 0.1161
+    },
+    "spearmanDelta": 0.0006,
+    "maeDelta": -0.0006
+  },
+  "selected": {
+    "lookbackYears": 8,
+    "trendWeight": 0.3,
+    "enabledCrops": [
+      "corn",
+      "soybean"
+    ],
+    "observations": 10362,
+    "baseline": {
+      "observations": 10362,
+      "spearman": 0.8468,
+      "maePercentile": 0.1167
+    },
+    "recency": {
+      "observations": 10362,
+      "spearman": 0.8477,
+      "maePercentile": 0.1161
+    },
+    "spearmanDelta": 0.0009,
+    "maeDelta": -0.0006
+  },
+  "perCrop": [
+    {
+      "crop": "corn",
+      "observations": 4219,
+      "baseline": {
+        "observations": 4219,
+        "spearman": 0.8467,
+        "maePercentile": 0.1175
+      },
+      "recency": {
+        "observations": 4219,
+        "spearman": 0.8486,
+        "maePercentile": 0.1165
+      },
+      "spearmanDelta": 0.0019,
+      "maeDelta": -0.001
+    },
+    {
+      "crop": "soybean",
+      "observations": 3705,
+      "baseline": {
+        "observations": 3705,
+        "spearman": 0.8546,
+        "maePercentile": 0.1153
+      },
+      "recency": {
+        "observations": 3705,
+        "spearman": 0.8547,
+        "maePercentile": 0.1147
+      },
+      "spearmanDelta": 0.0001,
+      "maeDelta": -0.0006
+    },
+    {
+      "crop": "wheat",
+      "observations": 2438,
+      "baseline": {
+        "observations": 2438,
+        "spearman": 0.8368,
+        "maePercentile": 0.1174
+      },
+      "recency": {
+        "observations": 2438,
+        "spearman": 0.8368,
+        "maePercentile": 0.1174
+      },
+      "spearmanDelta": 0.0,
+      "maeDelta": 0.0
+    }
+  ],
+  "perYear": [
+    {
+      "year": 2018,
+      "observations": 3278,
+      "baseline": {
+        "observations": 3278,
+        "spearman": 0.864,
+        "maePercentile": 0.1124
+      },
+      "recency": {
+        "observations": 3278,
+        "spearman": 0.8645,
+        "maePercentile": 0.1117
+      },
+      "spearmanDelta": 0.0005,
+      "maeDelta": -0.0007
+    },
+    {
+      "year": 2019,
+      "observations": 3090,
+      "baseline": {
+        "observations": 3090,
+        "spearman": 0.8238,
+        "maePercentile": 0.1242
+      },
+      "recency": {
+        "observations": 3090,
+        "spearman": 0.8245,
+        "maePercentile": 0.1237
+      },
+      "spearmanDelta": 0.0007,
+      "maeDelta": -0.0005
+    },
+    {
+      "year": 2020,
+      "observations": 3994,
+      "baseline": {
+        "observations": 3994,
+        "spearman": 0.8538,
+        "maePercentile": 0.1143
+      },
+      "recency": {
+        "observations": 3994,
+        "spearman": 0.8551,
+        "maePercentile": 0.1137
+      },
+      "spearmanDelta": 0.0013,
+      "maeDelta": -0.0006
+    }
+  ],
+  "gate": {
+    "passed": true,
+    "checks": {
+      "atLeastOneCropEnabled": true,
+      "pooledRankImproves": true,
+      "pooledMaeImproves": true,
+      "everyCropRankAndMaeNonRegressing": true,
+      "everyYearRankAndMaeNonRegressing": true
+    }
+  },
+  "interpretation": "Observed county-rank ordering only; not parcel yield, revenue, or property value."
+}

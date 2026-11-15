@@ -283,6 +283,16 @@ report explicitly measures EcoCrop-teacher fidelity, not observed yield.
 npm run ml:build:yield-atlas
 ```
 
+The crop-gated trend experiment is intentionally split into development and
+sealed validation commands. Development may select parameters using only
+2018–2020; confirmation and final years stay unopened until the fixed protocol
+is committed:
+
+```bash
+npm run ml:develop:trend
+npm run ml:evaluate:trend
+```
+
 The builder uses the filtered USDA Quick Stats and Census county files from the
 national observed-validation download. It writes atlas v11, a forward-year
 validation report, and a presentation PNG under `evaluation/`. Atlas v11 uses

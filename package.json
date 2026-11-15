@@ -40,6 +40,8 @@
     "ml:evaluate:crop-expansion": "PYTHONPATH=machine-learning machine-learning/.venv/bin/python -m cropfit.crop_expansion_validation",
     "ml:build:crop-subtype-atlas": "PYTHONPATH=machine-learning machine-learning/.venv/bin/python -m cropfit.subtype_yield_atlas",
     "ml:evaluate:recency": "PYTHONPATH=machine-learning machine-learning/.venv/bin/python -m cropfit.recency_validation",
+    "ml:develop:trend": "PYTHONPATH=machine-learning machine-learning/.venv/bin/python -m cropfit.trend_development",
+    "ml:evaluate:trend": "PYTHONPATH=machine-learning machine-learning/.venv/bin/python -m cropfit.trend_validation",
     "ml:benchmark:atlas": "PYTHONPATH=machine-learning machine-learning/.venv/bin/python -m cropfit.atlas_lookup_benchmark",
     "ml:benchmark:inference": "PYTHONPATH=machine-learning machine-learning/.venv/bin/python -m cropfit.inference_benchmark",
     "ml:train": "PYTHONPATH=machine-learning machine-learning/.venv/bin/python -m cropfit.training",
