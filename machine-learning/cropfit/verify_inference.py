@@ -81,7 +81,7 @@ def verify(artifact: Path, profiles: Path) -> None:
     else:
         raise AssertionError("invalid second-year climate was accepted")
 
-    atlas = artifact.parents[1] / "evaluation/yield-atlas-v7.json"
+    atlas = artifact.parents[1] / "evaluation/yield-atlas-v8.json"
     if atlas.exists():
         atlas_report = load_atlas(str(atlas.resolve()))
         assert atlas_report["years"] == list(range(2010, 2026))
@@ -89,7 +89,14 @@ def verify(artifact: Path, profiles: Path) -> None:
         assert atlas_report["uncertaintyValidation"]["gate"]["passed"]
         assert atlas_report["spatialTransferValidation"]["gate"]["passed"]
         assert atlas_report["spatialTransferValidation"]["productionBlend"]["gate"]["passed"]
-        assert atlas_report["spatialTransferValidation"]["productionBlend"]["selectedWeights"] == {"ownCountyPrior": .85, "regionalNeighborhood": .15}
+        production_blend = atlas_report["spatialTransferValidation"]["productionBlend"]
+        assert production_blend["selectedWeights"] == {"regionalNeighborhoodByRegion": {
+            "Northeast": 0.0, "Midwest": .15, "South": .15, "West": 0.0,
+        }}
+        assert all(
+            item["spearmanDelta"] >= 0 and item["maeDelta"] <= 0
+            for item in (*production_blend["perRegionConfirmation"], *production_blend["perRegionFinalSignal"])
+        )
         evidence = nearest_evidence("corn", 29.7604, -95.3698, atlas)
         assert evidence and evidence["county"] == "Fort Bend County" and evidence["observations"] == 14
         assert evidence["latest"]["year"] == 2025
@@ -105,6 +112,10 @@ def verify(artifact: Path, profiles: Path) -> None:
         assert len(evidence["regionalNeighbors"]) == evidence["observedYieldPrior"]["neighborCount"] == 6
         assert evidence["observedYieldPrior"]["expectedPercentile"] != evidence["regionalNeighbors"][0]["expectedPercentile"]
         assert abs(sum(item["weight"] for item in evidence["regionalNeighbors"]) - 1) < .0001
+        western_evidence = nearest_evidence("wheat", 39.7392, -104.9903, atlas)
+        assert western_evidence and western_evidence["state"] == "CO"
+        assert western_evidence["observedYieldPrior"]["neighborCount"] == 1
+        assert western_evidence["regionalNeighbors"][0]["weight"] == 1.0
         assert atlas_report["predictionMethod"] == {"name": "shrunken exponential recency prior", "forecastYear": 2026, "halfLifeYears": 3.0, "recencyWeight": .8, "longHistoryWeight": .2}
         assert evidence["observedYieldPrior"]["interval90"][0] <= evidence["observedYieldPrior"]["interval80"][0]
         assert evidence["observedYieldPrior"]["interval90"][1] >= evidence["observedYieldPrior"]["interval80"][1]

@@ -13,16 +13,17 @@
 > remain excluded in strict mode.
 > Optional: `ML_SOIL_PH` (default 6.5), `ML_IRRIGATED` (default true).
 
-For corn, soybean, and wheat, CropFit API v0.6.7 also returns optional
+For corn, soybean, and wheat, CropFit API v0.6.8 also returns optional
 `observedYieldEvidence` from the nearest USDA reporting county within 100 km.
-Atlas v7 includes 2010–2025 history plus a calibrated observed-yield percentile
+Atlas v8 includes 2010–2025 history plus a calibrated observed-yield percentile
 prior with 80% and 90% uncertainty intervals. The prior blends 80% exponential
 recency weighting (three-year half-life) with 20% of the stable long-history
-mean. For regional ranking it keeps 85% of the nearest county prior and adds
-15% from up to eight surrounding counties with development-selected
-inverse-square distance weighting. Returned intervals use production-blend
-errors from 2011–2017, conditional on crop and effective history depth. This
-preserves 84.0% / 92.8% later coverage while narrowing the mean 90% band 5.1%
+mean. For regional ranking it adds 15% from up to eight surrounding counties
+in the Midwest and South, where both development rank and MAE improved; the
+Northeast and West retain 100% of the local prior. Returned intervals use
+production-blend errors from 2011–2017, conditional on crop and effective
+history depth. This
+preserves 84.0% / 92.7% later coverage while narrowing the mean 90% band 5.1%
 relative to transfer radii. It does not modify the underlying
 EcoCrop suitability and is not a parcel yield forecast.
 Nearest-county retrieval uses a cached exact haversine spatial index; it returns

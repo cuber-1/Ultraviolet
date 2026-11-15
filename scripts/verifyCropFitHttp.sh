@@ -61,13 +61,20 @@ assert health["revision"].startswith(f'{health["apiVersion"]}:')
 assert health["model"] == "CropFit EcoCrop surrogate v0.6"
 assert health["metrics"]["mae"] == .0894
 atlas = health["evidence"]["historicalYieldAtlas"]
-assert atlas["name"] == "USDA county yield atlas v7"
+assert atlas["name"] == "USDA county yield atlas v8"
 assert atlas["predictionMethod"]["halfLifeYears"] == 3.0 and atlas["predictionMethod"]["recencyWeight"] == .8
 assert atlas["validation"]["spearman"] == .7914 and atlas["uncertaintyValidation"]["gate"]["passed"]
 assert atlas["spatialTransferValidation"]["gate"]["passed"]
 assert atlas["spatialTransferValidation"]["selectedNeighborhood"] == {"maxNeighbors": 8, "distancePower": 2.0, "distanceOffsetKm": 5.0}
 assert atlas["spatialTransferValidation"]["finalSignal"]["regionalNeighborhood"]["spearman"] == .806
-assert atlas["spatialTransferValidation"]["productionBlend"]["selectedWeights"] == {"ownCountyPrior": .85, "regionalNeighborhood": .15}
+production_blend = atlas["spatialTransferValidation"]["productionBlend"]
+assert production_blend["selectedWeights"] == {"regionalNeighborhoodByRegion": {
+    "Northeast": 0.0, "Midwest": .15, "South": .15, "West": 0.0,
+}}
+assert all(
+    item["spearmanDelta"] >= 0 and item["maeDelta"] <= 0
+    for item in (*production_blend["perRegionConfirmation"], *production_blend["perRegionFinalSignal"])
+)
 assert atlas["spatialTransferValidation"]["productionBlend"]["gate"]["passed"]
 assert atlas["spatialTransferValidation"]["productionBlend"]["intervalCalibration"]["meanWidth90Reduction"] >= .04
 assert health["climateHistory"] == {"source": "NASA POWER Agroclimatology", "startYear": 2016, "endYear": 2025, "years": 10}
@@ -98,5 +105,5 @@ for crop, scientific_name in representatives.items():
     assert response.json()["profile"]["scientific_name"] == scientific_name
 invalid = requests.post(f"{base}/predict", json={**payload, "climate": climate[:11]}, timeout=10)
 assert invalid.status_code == 422
-print(f'CropFit HTTP verified: API {health["apiVersion"]}, model v0.6, atlas v7 calibrated local + regional prior, seasonal boundary ceiling, 2016-2025 climate window, 16-choice coverage, USDA evidence, input bounds')
+print(f'CropFit HTTP verified: API {health["apiVersion"]}, model v0.6, atlas v8 region-gated local + regional prior, seasonal boundary ceiling, 2016-2025 climate window, 16-choice coverage, USDA evidence, input bounds')
 PY
