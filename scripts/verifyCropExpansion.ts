@@ -58,8 +58,8 @@ const subtypeAtlas = JSON.parse(readFileSync(
 )) as {
   crops: string[];
   records: Array<{ crop: string; yieldUnit: string; history: Array<{ yieldPerAcre: number }> }>;
-  spatialTransferValidation?: { selectedNeighborhoodByCrop?: Record<string, { maxNeighbors: number; distancePower: number; historyPower: number; distanceOffsetKm: number }>; distanceOnlyNeighborhoodByCrop?: Record<string, { maxNeighbors: number; distancePower: number; historyPower: number; distanceOffsetKm: number }>; selectedRecencyWeightsByCrop?: Record<string, number>; selectedDisagreementAlphasByCrop?: Record<string, number>; selectedCalibrationScopesByCrop?: Record<string, string>; selectedRegionalScalesByCrop?: Record<string, Record<string, { scale80: number; scale90: number }>>; supportedRegionsByCrop?: Record<string, string[]> };
-  validation: { acceptedCrops: string[]; gate: { passed: boolean }; selectedNeighborhoods: Record<string, { maxNeighbors: number; distancePower: number; historyPower: number; distanceOffsetKm: number }>; distanceOnlyNeighborhoods: Record<string, { maxNeighbors: number; distancePower: number; historyPower: number; distanceOffsetKm: number }>; selectedRecencyWeights: Record<string, number>; temporalSelection: Array<{ crop: string; selected: number; developmentSpearmanGain: number; developmentMaeReduction: number; minimumDevelopmentSpearmanGain: number }>; selectedDisagreementAlphas: Record<string, number>; disagreementScaleSelection: Array<{ crop: string; selected: number; developmentWidthReduction: number; minimumDevelopmentWidthReduction: number }>; selectedCalibrationScopes: Record<string, string>; calibrationScopeSelection: Array<{ crop: string; selected: string; developmentWidthReduction: number; minimumDevelopmentWidthReduction: number; smallestRegionalCalibrationGroup: number; minimumRegionalCalibrationExamples: number }>; selectedRegionalScales: Record<string, Record<string, { scale80: number; scale90: number }>>; supportedRegionsByCrop: Record<string, string[]>; perCrop: Array<{ crop: string; passed: boolean; spearmanGain: number; spearmanGainBootstrap95: [number, number]; maeReduction: number; pointValidation: Record<'development' | 'stability' | 'final', { spearmanGain: number; maeReduction: number }>; historyReliabilityComparison: Record<'development' | 'stability' | 'final', { spearmanGain: number; maeReduction: number }> & { finalSpearmanGainBootstrap95: [number, number] }; temporalComparison: { selectedRecencyWeight: number; development: { spearmanGain: number; maeReduction: number }; stability: { spearmanGain: number; maeReduction: number }; final: { spearmanGain: number; maeReduction: number }; finalSpearmanGainBootstrap95: [number, number] }; disagreementCalibrationComparison: { selectedAlpha: number; finalBaseline: { meanWidth90: number }; finalSelected: { meanWidth90: number } }; calibrationScopeComparison: { selectedScope: string; finalBaseline: { meanWidth90: number }; finalSelected: { meanWidth90: number } }; signal: { observations: number; spearman: number; bootstrap95: [number, number] }; development: { coverage80: number; coverage90: number }; stability: { coverage80: number; coverage90: number }; final: { coverage80: number; coverage90: number; meanWidth90: number }; perRegion: Array<{ region: string; final: { observations: number; coverage80: number; coverage90: number; meanWidth90: number } }> }> };
+  spatialTransferValidation?: { selectedNeighborhoodByCrop?: Record<string, { maxNeighbors: number; distancePower: number; historyPower: number; distanceOffsetKm: number }>; distanceOnlyNeighborhoodByCrop?: Record<string, { maxNeighbors: number; distancePower: number; historyPower: number; distanceOffsetKm: number }>; selectedRecencyWeightsByCrop?: Record<string, number>; selectedDisagreementAlphasByCrop?: Record<string, number>; selectedCalibrationScopesByCrop?: Record<string, string>; selectedHistoryDepthByCrop?: Record<string, { region: string | null; beta: number }>; selectedRegionalScalesByCrop?: Record<string, Record<string, { scale80: number; scale90: number }>>; supportedRegionsByCrop?: Record<string, string[]> };
+  validation: { acceptedCrops: string[]; gate: { passed: boolean }; selectedNeighborhoods: Record<string, { maxNeighbors: number; distancePower: number; historyPower: number; distanceOffsetKm: number }>; distanceOnlyNeighborhoods: Record<string, { maxNeighbors: number; distancePower: number; historyPower: number; distanceOffsetKm: number }>; selectedRecencyWeights: Record<string, number>; temporalSelection: Array<{ crop: string; selected: number; developmentSpearmanGain: number; developmentMaeReduction: number; minimumDevelopmentSpearmanGain: number }>; selectedDisagreementAlphas: Record<string, number>; disagreementScaleSelection: Array<{ crop: string; selected: number; developmentWidthReduction: number; minimumDevelopmentWidthReduction: number }>; selectedCalibrationScopes: Record<string, string>; calibrationScopeSelection: Array<{ crop: string; selected: string; developmentWidthReduction: number; minimumDevelopmentWidthReduction: number; smallestRegionalCalibrationGroup: number; minimumRegionalCalibrationExamples: number }>; selectedHistoryDepth: Record<string, { region: string | null; beta: number }>; historyDepthSelection: Array<{ crop: string; selected: { region: string | null; beta: number }; developmentWidthReduction: number; minimumDevelopmentWidthReduction: number }>; selectedRegionalScales: Record<string, Record<string, { scale80: number; scale90: number }>>; supportedRegionsByCrop: Record<string, string[]>; perCrop: Array<{ crop: string; passed: boolean; spearmanGain: number; spearmanGainBootstrap95: [number, number]; maeReduction: number; pointValidation: Record<'development' | 'stability' | 'final', { spearmanGain: number; maeReduction: number }>; historyReliabilityComparison: Record<'development' | 'stability' | 'final', { spearmanGain: number; maeReduction: number }> & { finalSpearmanGainBootstrap95: [number, number] }; temporalComparison: { selectedRecencyWeight: number; development: { spearmanGain: number; maeReduction: number }; stability: { spearmanGain: number; maeReduction: number }; final: { spearmanGain: number; maeReduction: number }; finalSpearmanGainBootstrap95: [number, number] }; disagreementCalibrationComparison: { selectedAlpha: number; finalBaseline: { meanWidth90: number }; finalSelected: { meanWidth90: number } }; calibrationScopeComparison: { selectedScope: string; finalBaseline: { meanWidth90: number }; finalSelected: { meanWidth90: number } }; historyDepthComparison: { selected: { region: string | null; beta: number }; finalBaseline: { meanWidth90: number }; finalSelected: { meanWidth90: number } }; signal: { observations: number; spearman: number; bootstrap95: [number, number] }; development: { coverage80: number; coverage90: number }; stability: { coverage80: number; coverage90: number }; final: { coverage80: number; coverage90: number; meanWidth90: number }; perRegion: Array<{ region: string; final: { observations: number; coverage80: number; coverage90: number; meanWidth90: number } }> }> };
 };
 const expectedNeighborhoods = {
   'silage corn': { maxNeighbors: 5, distancePower: 2, historyPower: 1, distanceOffsetKm: 5 },
@@ -71,11 +71,15 @@ const expectedDistanceOnlyNeighborhoods = {
 };
 const expectedRegionalScales = {
   'silage corn': { Midwest: { scale80: 1.1, scale90: 1.1 }, Northeast: { scale80: 1, scale90: 1 } },
-  'spring wheat': { Midwest: { scale80: 1.05, scale90: 1.05 }, West: { scale80: 1.1, scale90: 1 } },
+  'spring wheat': { Midwest: { scale80: 1, scale90: 1.05 }, West: { scale80: 1.1, scale90: 1 } },
 };
 const expectedDisagreementAlphas = { 'silage corn': 0, 'spring wheat': 5 };
 const expectedRecencyWeights = { 'silage corn': .25, 'spring wheat': .8 };
 const expectedCalibrationScopes = { 'silage corn': 'pooled', 'spring wheat': 'region-conditioned' };
+const expectedHistoryDepth = {
+  'silage corn': { region: 'Midwest', beta: -.02 },
+  'spring wheat': { region: 'West', beta: -.02 },
+};
 const expectedRegions = { 'silage corn': ['Midwest', 'Northeast'], 'spring wheat': ['Midwest', 'West'] };
 if (JSON.stringify(subtypeAtlas.crops) !== JSON.stringify(['silage corn', 'spring wheat'])
   || JSON.stringify(subtypeAtlas.validation.acceptedCrops) !== JSON.stringify(['silage corn', 'spring wheat'])
@@ -89,6 +93,8 @@ if (JSON.stringify(subtypeAtlas.crops) !== JSON.stringify(['silage corn', 'sprin
   || JSON.stringify(subtypeAtlas.spatialTransferValidation?.selectedDisagreementAlphasByCrop) !== JSON.stringify(expectedDisagreementAlphas)
   || JSON.stringify(subtypeAtlas.validation.selectedCalibrationScopes) !== JSON.stringify(expectedCalibrationScopes)
   || JSON.stringify(subtypeAtlas.spatialTransferValidation?.selectedCalibrationScopesByCrop) !== JSON.stringify(expectedCalibrationScopes)
+  || JSON.stringify(subtypeAtlas.validation.selectedHistoryDepth) !== JSON.stringify(expectedHistoryDepth)
+  || JSON.stringify(subtypeAtlas.spatialTransferValidation?.selectedHistoryDepthByCrop) !== JSON.stringify(expectedHistoryDepth)
   || JSON.stringify(subtypeAtlas.validation.selectedRegionalScales) !== JSON.stringify(expectedRegionalScales)
   || JSON.stringify(subtypeAtlas.spatialTransferValidation?.selectedRegionalScalesByCrop) !== JSON.stringify(expectedRegionalScales)
   || JSON.stringify(subtypeAtlas.validation.supportedRegionsByCrop) !== JSON.stringify(expectedRegions)
@@ -110,6 +116,10 @@ if (!subtypeAtlas.validation.calibrationScopeSelection.every((item) => item.sele
     && item.smallestRegionalCalibrationGroup >= item.minimumRegionalCalibrationExamples))) {
   throw new Error('Region-conditioned calibration bypassed its development-width selection floor.');
 }
+if (!subtypeAtlas.validation.historyDepthSelection.every((item) => item.selected.beta === 0
+  || item.developmentWidthReduction >= item.minimumDevelopmentWidthReduction)) {
+  throw new Error('Within-bucket history scaling bypassed its development-width selection floor.');
+}
 for (const item of subtypeAtlas.validation.perCrop) {
   const passes = item.signal.observations >= 100 && item.signal.spearman >= .5 && item.signal.bootstrap95[0] > .3
     && item.spearmanGainBootstrap95[0] > 0
@@ -125,6 +135,8 @@ for (const item of subtypeAtlas.validation.perCrop) {
       || item.disagreementCalibrationComparison.finalSelected.meanWidth90 < item.disagreementCalibrationComparison.finalBaseline.meanWidth90)
     && (item.calibrationScopeComparison.selectedScope === 'pooled'
       || item.calibrationScopeComparison.finalSelected.meanWidth90 < item.calibrationScopeComparison.finalBaseline.meanWidth90)
+    && (item.historyDepthComparison.selected.beta === 0
+      || item.historyDepthComparison.finalSelected.meanWidth90 < item.historyDepthComparison.finalBaseline.meanWidth90)
     && item.development.coverage80 >= .78 && item.development.coverage90 >= .88
     && item.stability.coverage80 >= .78 && item.stability.coverage90 >= .88
     && item.final.coverage80 >= .75 && item.final.coverage80 <= .9
@@ -140,4 +152,4 @@ if (subtypeAtlas.records.some((record) => !['bu/acre', 'tons/acre'].includes(rec
   throw new Error('Crop-subtype atlas lost explicit, finite yield units.');
 }
 
-console.log('Crop expansion policy verified: subtype priors improve locked transfer with temporal memory, history reliability, disagreement scaling, and region-conditioned uncertainty');
+console.log('Crop expansion policy verified: subtype priors improve locked transfer with temporal memory, history reliability, disagreement scaling, region-conditioned uncertainty, and adaptive history depth');

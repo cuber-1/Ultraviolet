@@ -32,7 +32,7 @@ artifact instead, use the full setup below. Because the repository is private,
 the installer uses an authenticated GitHub CLI session (`gh auth login`) or a
 `GITHUB_TOKEN`.
 
-Runtime API v0.16.0 keeps the validated v0.9.1 estimator and hardens every direct
+Runtime API v0.17.0 keeps the validated v0.9.1 estimator and hardens every direct
 and HTTP prediction path with the same finite coordinate, soil-pH, boolean,
 climate-shape, and 20-year history limits. Startup validates the artifact's
 internal model/metadata contract. `GET /health` returns the artifact SHA-256 and
@@ -272,10 +272,17 @@ coverage improves to 81.9% / 89.4% and its mean 90% width falls from 0.702 to
 0.613. Region-conditioned pre-2018 groups with at least 50 errors per
 region/history cell clear a separate 1% promotion floor
 for spring wheat, reducing development width 1.3% and locked pooled width from
-0.617 to 0.608 without changing 92.6% coverage. Silage retains pooled groups
+0.617 to 0.608 without changing 92.6% coverage. A second development-only
+search then scales width continuously inside each coarse history bucket, for at
+most one supported region per crop. It selects β=-0.02 for Western spring wheat
+and Midwest silage: each additional effective history observation multiplies
+the radius by `exp(-0.02)`. On locked outcomes, spring-wheat mean 90% width
+falls again from 0.608 to 0.593 with 91.1% coverage, and silage width falls from
+0.750 to 0.720 with 89.2% coverage. Both candidates first cleared a 1%
+development-width floor and every pooled and regional coverage gate. Silage retains pooled groups
 because regional calibration widens its development intervals, and retains α=0
 because no candidate cleared the 1% development-width
-floor. Its intervals achieve 82.2% / 89.9% coverage with mean 90% width 0.750.
+floor. Its final intervals achieve 80.3% / 89.2% coverage with mean 90% width 0.720.
 The 690-record artifact keeps
 `bu/acre` and `tons/acre` explicit and publishes only crop-region pairs with at
 least 50 examples in development, stability, and final blocks. Generic

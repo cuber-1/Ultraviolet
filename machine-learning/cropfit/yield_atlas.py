@@ -940,28 +940,43 @@ def nearest_evidence(crop: str, latitude: float, longitude: float, path: Path, m
         reported_expected = round(expected, 4)
         reported_disagreement = round(neighbor_disagreement, 4)
         disagreement_factor = 1 + disagreement_alpha * reported_disagreement
+        history_depth_beta = float(calibration.get("historyDepthBeta", 0.0))
+        history_depth_region = calibration.get("historyDepthRegion")
+        history_center = float(calibration.get("historyCenter", effective_history))
+        history_factor = (
+            math.exp(history_depth_beta * (effective_history - history_center))
+            if evidence_region == history_depth_region else 1.0
+        )
+        adaptive_factor = disagreement_factor * history_factor
+        interval_method = (
+            "local-regional-blend-conformal" if used_regional_blend
+            else "region-gated-local-conformal"
+        ) if production_calibration.get("groups") else (
+            (
+                "region-conditioned-disagreement-scaled-spatial-conformal"
+                if disagreement_alpha > 0 else "region-conditioned-spatial-conformal"
+            ) if calibration.get("region", "all") != "all" else (
+                "disagreement-scaled-spatial-conformal" if disagreement_alpha > 0
+                else "spatial-neighborhood-conformal"
+            )
+        )
+        if history_factor != 1.0:
+            interval_method = "history-scaled-" + interval_method
         prior.update({
             "expectedPercentile": reported_expected,
-            "interval80": [round(max(0.0, reported_expected - base80 * disagreement_factor * interval_scales["scale80"]), 4), round(min(1.0, reported_expected + base80 * disagreement_factor * interval_scales["scale80"]), 4)],
-            "interval90": [round(max(0.0, reported_expected - base90 * disagreement_factor * interval_scales["scale90"]), 4), round(min(1.0, reported_expected + base90 * disagreement_factor * interval_scales["scale90"]), 4)],
-            "intervalMethod": (
-                "local-regional-blend-conformal" if used_regional_blend
-                else "region-gated-local-conformal"
-            ) if production_calibration.get("groups") else (
-                (
-                    "region-conditioned-disagreement-scaled-spatial-conformal"
-                    if disagreement_alpha > 0 else "region-conditioned-spatial-conformal"
-                ) if calibration.get("region", "all") != "all" else (
-                    "disagreement-scaled-spatial-conformal" if disagreement_alpha > 0
-                    else "spatial-neighborhood-conformal"
-                )
-            ),
+            "interval80": [round(max(0.0, reported_expected - base80 * adaptive_factor * interval_scales["scale80"]), 4), round(min(1.0, reported_expected + base80 * adaptive_factor * interval_scales["scale80"]), 4)],
+            "interval90": [round(max(0.0, reported_expected - base90 * adaptive_factor * interval_scales["scale90"]), 4), round(min(1.0, reported_expected + base90 * adaptive_factor * interval_scales["scale90"]), 4)],
+            "intervalMethod": interval_method,
             "distanceBucket": bucket,
             "calibrationExamples": calibration["examples"], "neighborCount": neighbor_count,
             "effectiveHistoryCount": effective_history, "effectiveHistoryBucket": history_bucket(effective_history),
             "calibrationRegion": calibration.get("region", "all"),
             "neighborDisagreement": reported_disagreement,
             "disagreementAlpha": disagreement_alpha,
+            "historyDepthRegion": history_depth_region,
+            "historyDepthBeta": history_depth_beta,
+            "historyCenter": history_center,
+            "historyDepthFactor": round(history_factor, 6),
         })
     regional_neighbors = [{
         "county": item["record"]["county"], "state": item["record"]["state"], "fips": item["record"]["fips"],

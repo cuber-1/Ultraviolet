@@ -245,6 +245,12 @@ def verify(artifact: Path, profiles: Path) -> None:
         assert subtype_report["validation"]["selectedCalibrationScopes"] == {
             "silage corn": "pooled", "spring wheat": "region-conditioned",
         }
+        expected_history_depth = {
+            "silage corn": {"region": "Midwest", "beta": -.02},
+            "spring wheat": {"region": "West", "beta": -.02},
+        }
+        assert subtype_report["validation"]["selectedHistoryDepth"] == expected_history_depth
+        assert subtype_report["spatialTransferValidation"]["selectedHistoryDepthByCrop"] == expected_history_depth
         assert subtype_report["predictionMethod"] == {
             "name": "crop-specific shrunken exponential recency prior",
             "forecastYear": 2026, "halfLifeYears": 3.0, "defaultRecencyWeight": .8,
@@ -265,8 +271,13 @@ def verify(artifact: Path, profiles: Path) -> None:
         assert spring["observedYieldPrior"]["disagreementAlpha"] == 5.0
         assert spring["observedYieldPrior"]["calibrationRegion"] == "Midwest"
         assert spring["observedYieldPrior"]["neighborDisagreement"] >= 0
-        assert silage["observedYieldPrior"]["intervalMethod"] == "spatial-neighborhood-conformal"
+        assert silage["observedYieldPrior"]["intervalMethod"] == "history-scaled-spatial-neighborhood-conformal"
         assert silage["observedYieldPrior"]["calibrationRegion"] == "all"
+        assert spring["observedYieldPrior"]["historyDepthRegion"] == "West"
+        assert spring["observedYieldPrior"]["historyDepthFactor"] == 1.0
+        assert silage["observedYieldPrior"]["historyDepthRegion"] == "Midwest"
+        assert silage["observedYieldPrior"]["historyDepthBeta"] == -.02
+        assert silage["observedYieldPrior"]["historyDepthFactor"] != 1.0
         assert spring["observedYieldPrior"]["neighborCount"] == 5
         assert silage["observedYieldPrior"]["neighborCount"] == 5
         assert abs(sum(item["weight"] for item in spring["regionalNeighbors"]) - 1) < .0001

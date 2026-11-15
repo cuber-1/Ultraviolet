@@ -46,6 +46,7 @@ if ! curl --fail --silent "http://127.0.0.1:${test_port}/health" >/dev/null; the
 fi
 
 "${repo_root}/machine-learning/.venv/bin/python" - "${test_port}" <<'PY'
+import math
 import sys
 
 import requests
@@ -57,7 +58,7 @@ climate = [{"month": month, "temperatureC": 22, "precipitationMmDay": 3, "solarM
 payload = {"crop": "corn", "latitude": 29.76, "longitude": -95.37, "soilPh": 6.5, "irrigated": True, "climate": climate, "climateHistory": [climate] * 10}
 health = requests.get(f"{base}/health", timeout=10).json()
 assert health["status"] == "ok" and health["requestLimits"]["historyYearsMax"] == 20
-assert health["apiVersion"] == "0.16.0"
+assert health["apiVersion"] == "0.17.0"
 assert health["revision"].startswith(f'{health["apiVersion"]}:')
 assert health["model"] == "CropFit EcoCrop surrogate v0.9.1"
 assert len(health["artifactSha256"]) == 64
@@ -90,6 +91,12 @@ assert subtype_atlas["validation"]["selectedRecencyWeights"] == {"silage corn": 
 assert subtype_atlas["predictionMethod"]["recencyWeightByCrop"] == {"silage corn": .25, "spring wheat": .8}
 assert subtype_atlas["validation"]["selectedDisagreementAlphas"] == {"silage corn": 0.0, "spring wheat": 5.0}
 assert subtype_atlas["validation"]["selectedCalibrationScopes"] == {"silage corn": "pooled", "spring wheat": "region-conditioned"}
+expected_history_depth = {
+    "silage corn": {"region": "Midwest", "beta": -.02},
+    "spring wheat": {"region": "West", "beta": -.02},
+}
+assert subtype_atlas["validation"]["selectedHistoryDepth"] == expected_history_depth
+assert subtype_atlas["spatialTransferValidation"]["selectedHistoryDepthByCrop"] == expected_history_depth
 silage_validation = next(item for item in subtype_atlas["validation"]["perCrop"] if item["crop"] == "silage corn")
 assert all(silage_validation["historyReliabilityComparison"][block]["spearmanGain"] > 0 for block in ("development", "stability", "final"))
 assert silage_validation["temporalComparison"]["final"]["spearmanGain"] > 0
@@ -134,7 +141,7 @@ for crop, latitude, longitude, unit in (
     response.raise_for_status()
     evidence = response.json()["observedYieldEvidence"]
     assert evidence["yieldUnit"] == unit and evidence["meanYieldPerAcre"] > 0
-    expected_method = "region-conditioned-disagreement-scaled-spatial-conformal" if crop == "spring wheat" else "spatial-neighborhood-conformal"
+    expected_method = "region-conditioned-disagreement-scaled-spatial-conformal" if crop == "spring wheat" else "history-scaled-spatial-neighborhood-conformal"
     assert evidence["observedYieldPrior"]["intervalMethod"] == expected_method
     assert evidence["observedYieldPrior"]["neighborCount"] == 5
     assert abs(sum(item["weight"] for item in evidence["regionalNeighbors"]) - 1) < .0001
@@ -142,15 +149,21 @@ western_wheat = requests.post(f"{base}/predict", json={**payload, "crop": "sprin
 western_wheat.raise_for_status()
 western_evidence = western_wheat.json()["observedYieldEvidence"]
 assert western_evidence["state"] == "ID"
-assert western_evidence["observedYieldPrior"]["intervalMethod"] == "region-conditioned-disagreement-scaled-spatial-conformal"
+assert western_evidence["observedYieldPrior"]["intervalMethod"] == "history-scaled-region-conditioned-disagreement-scaled-spatial-conformal"
 assert western_evidence["observedYieldPrior"]["disagreementAlpha"] == 5.0
 assert western_evidence["observedYieldPrior"]["calibrationRegion"] == "West"
 assert western_evidence["observedYieldPrior"]["neighborDisagreement"] >= 0
 western_prior = western_evidence["observedYieldPrior"]
+assert western_prior["historyDepthRegion"] == "West"
+assert western_prior["historyDepthBeta"] == -.02
 western_group = next(item for item in subtype_atlas["spatialTransferValidation"]["groups"] if item["crop"] == "spring wheat" and item["region"] == "West" and item["historyBucket"] == western_prior["effectiveHistoryBucket"])
+western_history_factor = math.exp(western_group["historyDepthBeta"]
+    * (western_prior["effectiveHistoryCount"] - western_group["historyCenter"]))
+assert western_prior["historyDepthFactor"] == round(western_history_factor, 6)
 western_radius90 = (western_group["normalizedErrorP90"]
     * subtype_atlas["validation"]["selectedRegionalScales"]["spring wheat"]["West"]["scale90"]
-    * (1 + western_group["disagreementAlpha"] * western_prior["neighborDisagreement"]))
+    * (1 + western_group["disagreementAlpha"] * western_prior["neighborDisagreement"])
+    * western_history_factor)
 assert western_prior["interval90"] == [
     round(max(0, western_prior["expectedPercentile"] - western_radius90), 4),
     round(min(1, western_prior["expectedPercentile"] + western_radius90), 4),
