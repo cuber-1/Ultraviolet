@@ -81,18 +81,21 @@ def verify(artifact: Path, profiles: Path) -> None:
     else:
         raise AssertionError("invalid second-year climate was accepted")
 
-    atlas = artifact.parents[1] / "evaluation/yield-atlas-v3.json"
+    atlas = artifact.parents[1] / "evaluation/yield-atlas-v4.json"
     if atlas.exists():
         atlas_report = load_atlas(str(atlas.resolve()))
         assert atlas_report["years"] == list(range(2010, 2026))
         assert atlas_report["historyWindowComparison"]["gate"]["passed"]
         assert atlas_report["uncertaintyValidation"]["gate"]["passed"]
+        assert atlas_report["spatialTransferValidation"]["gate"]["passed"]
         evidence = nearest_evidence("corn", 29.7604, -95.3698, atlas)
         assert evidence and evidence["county"] == "Fort Bend County" and evidence["observations"] == 14
         assert evidence["latest"]["year"] == 2025
         assert [item["year"] for item in evidence["history"]][-3:] == [2023, 2024, 2025]
         expected = evidence["observedYieldPrior"]["expectedPercentile"]
         assert evidence["observedYieldPrior"]["interval80"][0] <= expected <= evidence["observedYieldPrior"]["interval80"][1]
+        assert evidence["observedYieldPrior"]["intervalMethod"] == "spatial-transfer-conformal"
+        assert evidence["observedYieldPrior"]["distanceBucket"] == "25-50"
         assert atlas_report["predictionMethod"] == {"name": "shrunken exponential recency prior", "forecastYear": 2026, "halfLifeYears": 3.0, "recencyWeight": .8, "longHistoryWeight": .2}
         assert evidence["observedYieldPrior"]["interval90"][0] <= evidence["observedYieldPrior"]["interval80"][0]
         assert evidence["observedYieldPrior"]["interval90"][1] >= evidence["observedYieldPrior"]["interval80"][1]

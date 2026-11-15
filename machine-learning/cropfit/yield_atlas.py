@@ -21,6 +21,7 @@ CALIBRATION_END_YEAR = 2017
 UNCERTAINTY_TEST_YEARS = tuple(range(2018, 2026))
 PRIOR_RECENCY_HALF_LIFE_YEARS = 3.0
 PRIOR_RECENCY_WEIGHT = 0.8
+SPATIAL_TRANSFER_MAX_DISTANCE_KM = 100.0
 
 
 def observed_prior_prediction(
@@ -168,6 +169,10 @@ def history_bucket(count: int) -> str:
     return "1" if count == 1 else "2-3" if count <= 3 else "4+"
 
 
+def distance_bucket(distance_km: float) -> str:
+    return "0-25" if distance_km <= 25 else "25-50" if distance_km <= 50 else "50-100"
+
+
 def conformal_quantile(values: list[float], probability: float) -> float:
     ordered = np.sort(np.asarray(values, dtype=float))
     rank = min(len(ordered), math.ceil((len(ordered) + 1) * probability))
@@ -234,7 +239,124 @@ def uncertainty_calibration(rows: list[dict]) -> tuple[dict, dict[tuple[str, str
     return report, table
 
 
-def build_atlas(rows: list[dict], validation: dict, comparison: dict, uncertainty: dict, calibration_table: dict[tuple[str, str], dict]) -> dict:
+def spatial_transfer_validation(rows: list[dict]) -> tuple[dict, dict[tuple[str, str, str], dict]]:
+    histories: dict[tuple[str, str], list[dict]] = defaultdict(list)
+    for row in rows:
+        histories[(row["crop"], row["fips"])].append(row)
+    for items in histories.values():
+        items.sort(key=lambda item: item["year"])
+
+    examples = []
+    eligible = 0
+    for test_year in YEARS[1:]:
+        for crop in sorted(CROP_NAMES.values()):
+            sources = []
+            for (source_crop, fips), items in histories.items():
+                if source_crop != crop:
+                    continue
+                earlier = [item for item in items if item["year"] < test_year]
+                if earlier:
+                    latest = earlier[-1]
+                    sources.append({
+                        "fips": fips, "latitude": latest["latitude"], "longitude": latest["longitude"],
+                        "prediction": observed_prior_prediction(earlier, test_year), "historyCount": len(earlier),
+                    })
+            targets = [row for row in rows if row["year"] == test_year and row["crop"] == crop]
+            if len(sources) < 2 or not targets:
+                continue
+            tree = BallTree(np.radians([[item["latitude"], item["longitude"]] for item in sources]), metric="haversine")
+            distances, indices = tree.query(
+                np.radians([[item["latitude"], item["longitude"]] for item in targets]),
+                k=min(3, len(sources)),
+            )
+            for target, target_distances, target_indices in zip(targets, distances, indices, strict=True):
+                source = None
+                distance = None
+                for candidate_distance, candidate_index in zip(target_distances, target_indices, strict=True):
+                    candidate = sources[int(candidate_index)]
+                    if candidate["fips"] != target["fips"]:
+                        source = candidate
+                        distance = float(candidate_distance * 6371.0)
+                        break
+                if source is None or distance is None:
+                    continue
+                eligible += 1
+                if distance > SPATIAL_TRANSFER_MAX_DISTANCE_KM:
+                    continue
+                prediction = source["prediction"]
+                examples.append({
+                    **target, "prediction": prediction, "sourceFips": source["fips"],
+                    "sourceHistoryCount": source["historyCount"], "distanceKm": distance,
+                    "distanceBucket": distance_bucket(distance),
+                    "absoluteError": abs(prediction - target["yieldPercentileWithinCropYear"]),
+                })
+
+    calibration = [item for item in examples if item["year"] <= CALIBRATION_END_YEAR]
+    test = [item for item in examples if item["year"] in UNCERTAINTY_TEST_YEARS]
+    grouped: dict[tuple[str, str, str], list[float]] = defaultdict(list)
+    for item in calibration:
+        grouped[(item["crop"], history_bucket(item["sourceHistoryCount"]), item["distanceBucket"])].append(item["absoluteError"])
+    table = {
+        key: {
+            "crop": key[0], "historyBucket": key[1], "distanceBucket": key[2], "examples": len(errors),
+            "absoluteErrorP80": round(conformal_quantile(errors, .8), 4),
+            "absoluteErrorP90": round(conformal_quantile(errors, .9), 4),
+        }
+        for key, errors in grouped.items()
+    }
+
+    def scored(items: list[dict]) -> dict:
+        hits80, hits90, widths80, widths90 = [], [], [], []
+        for item in items:
+            calibration_item = table[(item["crop"], history_bucket(item["sourceHistoryCount"]), item["distanceBucket"])]
+            prediction = item["prediction"]
+            actual = item["yieldPercentileWithinCropYear"]
+            intervals = []
+            for key in ("absoluteErrorP80", "absoluteErrorP90"):
+                radius = calibration_item[key]
+                intervals.append((max(0.0, prediction - radius), min(1.0, prediction + radius)))
+            hits80.append(intervals[0][0] <= actual <= intervals[0][1])
+            hits90.append(intervals[1][0] <= actual <= intervals[1][1])
+            widths80.append(intervals[0][1] - intervals[0][0]); widths90.append(intervals[1][1] - intervals[1][0])
+        return {
+            "observations": len(items), "coverage80": round(float(np.mean(hits80)), 4),
+            "coverage90": round(float(np.mean(hits90)), 4), "meanWidth80": round(float(np.mean(widths80)), 4),
+            "meanWidth90": round(float(np.mean(widths90)), 4),
+        }
+
+    final = [item for item in examples if item["year"] in (2023, 2024, 2025)]
+    final_summary = point_summary(final)
+    per_crop_signal = [{"crop": crop, **point_summary([item for item in final if item["crop"] == crop])} for crop in sorted(CROP_NAMES.values())]
+    pooled_uncertainty = scored(test)
+    per_crop_uncertainty = [{"crop": crop, **scored([item for item in test if item["crop"] == crop])} for crop in sorted(CROP_NAMES.values())]
+    per_distance = [{"distanceBucket": bucket, **scored([item for item in test if item["distanceBucket"] == bucket])} for bucket in ("0-25", "25-50", "50-100")]
+    covered = len(examples) / eligible
+    passed = (
+        len(final) >= 8_000 and covered >= .99 and final_summary["spearman"] >= .65
+        and final_summary["bootstrap95"][0] > .60 and all(item["spearman"] >= .65 for item in per_crop_signal)
+        and .80 <= pooled_uncertainty["coverage80"] <= .87 and .88 <= pooled_uncertainty["coverage90"] <= .94
+        and pooled_uncertainty["meanWidth90"] <= .65
+        and all(item["coverage90"] >= .88 for item in per_crop_uncertainty)
+    )
+    report = {
+        "method": "For each target county-year, exclude that county and use the nearest different county's prior built only from earlier years.",
+        "maxDistanceKm": SPATIAL_TRANSFER_MAX_DISTANCE_KM,
+        "eligibleExamples": eligible, "coveredExamples": len(examples), "coverage": round(covered, 4),
+        "calibrationYears": list(range(YEARS[1], CALIBRATION_END_YEAR + 1)),
+        "testYears": list(UNCERTAINTY_TEST_YEARS), "finalTestYears": [2023, 2024, 2025],
+        "groups": [table[key] for key in sorted(table)],
+        "finalSignal": final_summary, "perCropFinalSignal": per_crop_signal,
+        "uncertainty": {"pooled": pooled_uncertainty, "perCrop": per_crop_uncertainty, "perDistance": per_distance},
+        "gate": {
+            "passed": passed,
+            "rule": "Nearest-different-county coverage within 100 km >=99%; final N >=8,000, Spearman >=0.65 with bootstrap lower >0.60 and every crop >=0.65; test coverage 80-87%/88-94%, mean 90% width <=0.65, every crop >=88% 90%-coverage.",
+        },
+        "interpretation": "Validates regional county-prior transfer and its uncertainty, not parcel yield, revenue, or purchase returns.",
+    }
+    return report, table
+
+
+def build_atlas(rows: list[dict], validation: dict, comparison: dict, uncertainty: dict, calibration_table: dict[tuple[str, str], dict], spatial_transfer: dict) -> dict:
     groups: dict[tuple[str, str], list[dict]] = defaultdict(list)
     for row in rows:
         groups[(row["crop"], row["fips"])].append(row)
@@ -270,7 +392,7 @@ def build_atlas(rows: list[dict], validation: dict, comparison: dict, uncertaint
             "latest": {"year": last["year"], "yieldBushelsPerAcre": last["yieldBushelsPerAcre"]},
         })
     return {
-        "name": "USDA county yield atlas v3", "evidenceGrade": "observed-county-prior",
+        "name": "USDA county yield atlas v4", "evidenceGrade": "observed-county-prior",
         "scope": "contiguous U.S. counties excluding California; corn, soybean, and wheat; 2010–2025",
         "source": "USDA NASS Quick Stats published county yields",
         "predictionMethod": {
@@ -284,13 +406,14 @@ def build_atlas(rows: list[dict], validation: dict, comparison: dict, uncertaint
         "validation": validation["pooled"],
         "historyWindowComparison": comparison,
         "uncertaintyValidation": uncertainty,
-        "disclaimer": "Observed county prior with retrospectively calibrated uncertainty; not a parcel yield forecast, causal estimate, or purchase recommendation.",
+        "spatialTransferValidation": spatial_transfer,
+        "disclaimer": "Observed nearest-county prior with retrospectively calibrated temporal and spatial-transfer uncertainty; not a parcel yield forecast, causal estimate, or purchase recommendation.",
     }
 
 
-def markdown(validation: dict, comparison: dict, uncertainty: dict, atlas: dict) -> str:
+def markdown(validation: dict, comparison: dict, uncertainty: dict, spatial_transfer: dict, atlas: dict) -> str:
     lines = [
-        "# USDA county yield atlas v3 validation", "",
+        "# USDA county yield atlas v4 validation", "",
         "The atlas stores each county's historical percentile within crop and year. Its production prior blends 80% three-year-half-life recency weighting with 20% of the stable long-history mean. The retrospective forward-year test predicts each year using only earlier years for that county.", "",
         "| Test year | Covered / published | Coverage | Spearman | Grouped 95% interval | Percentile MAE |",
         "|---:|---:|---:|---:|---:|---:|",
@@ -305,13 +428,16 @@ def markdown(validation: dict, comparison: dict, uncertainty: dict, atlas: dict)
         f'On the same {comparison["comparisonRows"]:,} 2019–2025 county-year rows, extending history from 2018 back to 2010 changed Spearman from **{legacy["spearman"]:.3f}** to **{extended["spearman"]:.3f}** and percentile MAE from **{legacy["maePercentile"]:.3f}** to **{extended["maePercentile"]:.3f}**. Gate: **{"PASS" if comparison["gate"]["passed"] else "NOT PASSED"}**.',
         "", "## Calibrated uncertainty", "",
         f'The interval calibrator uses only 2011–2017 forward errors. On 2018–2025, the nominal 80% interval covered **{intervals["coverage80"]:.1%}** and the nominal 90% interval covered **{intervals["coverage90"]:.1%}** of {intervals["observations"]:,} later outcomes. Mean 90% interval width was {intervals["meanWidth90"]:.3f} percentile units. Gate: **{"PASS" if uncertainty["gate"]["passed"] else "NOT PASSED"}**.',
-        "", f'The production atlas contains {len(atlas["records"]):,} county-crop records. It is an observed historical prior with calibrated uncertainty, not a parcel yield forecast.',
+        "", "## Spatial transfer", "",
+        f'In the leave-one-county-out test, {spatial_transfer["coveredExamples"]:,} of {spatial_transfer["eligibleExamples"]:,} target county-years had another reporting county within 100 km ({spatial_transfer["coverage"]:.1%}). On locked 2023–2025 outcomes, nearest-county transfer reached Spearman **{spatial_transfer["finalSignal"]["spearman"]:.3f}** over {spatial_transfer["finalSignal"]["observations"]:,} outcomes (95% interval {spatial_transfer["finalSignal"]["bootstrap95"][0]:.3f} to {spatial_transfer["finalSignal"]["bootstrap95"][1]:.3f}).',
+        f'Transfer intervals calibrated on 2011–2017 covered **{spatial_transfer["uncertainty"]["pooled"]["coverage80"]:.1%}** and **{spatial_transfer["uncertainty"]["pooled"]["coverage90"]:.1%}** on 2018–2025. Gate: **{"PASS" if spatial_transfer["gate"]["passed"] else "NOT PASSED"}**.',
+        "", f'The production atlas contains {len(atlas["records"]):,} county-crop records. It is an observed historical prior with calibrated temporal and spatial-transfer uncertainty, not a parcel yield forecast.',
         "", "> County averages combine weather, soil, genetics, management, reporting, and economics. They must not be interpreted as parcel-specific production or investment advice.", "",
     ]
     return "\n".join(lines)
 
 
-def plot(comparison: dict, uncertainty: dict, output: Path) -> None:
+def plot(comparison: dict, uncertainty: dict, spatial_transfer: dict, output: Path) -> None:
     import matplotlib.pyplot as plt
 
     years = [item["year"] for item in comparison["perYear"]]
@@ -320,7 +446,7 @@ def plot(comparison: dict, uncertainty: dict, output: Path) -> None:
     interval_years = [item["year"] for item in uncertainty["perYear"]]
     coverage80 = [item["coverage80"] * 100 for item in uncertainty["perYear"]]
     coverage90 = [item["coverage90"] * 100 for item in uncertainty["perYear"]]
-    figure, axes = plt.subplots(1, 2, figsize=(14, 5.6))
+    figure, axes = plt.subplots(1, 3, figsize=(19, 5.6))
     axes[0].plot(years, extended, marker="o", linewidth=2.5, color="#315d49", label="16-year history")
     axes[0].plot(years, legacy, marker="o", linewidth=2, color="#d98352", linestyle="--", label="8-year history")
     axes[0].set(ylim=(.65, .9), ylabel="Spearman correlation", xlabel="test year", xticks=years, title="Same future rows · longer history")
@@ -332,7 +458,15 @@ def plot(comparison: dict, uncertainty: dict, output: Path) -> None:
     axes[1].set(ylim=(65, 100), ylabel="observed coverage (%)", xlabel="test year", xticks=interval_years, title="Intervals calibrated on 2011–2017 only")
     axes[1].grid(alpha=.18); axes[1].legend(loc="lower right")
     axes[1].text(.02, .04, f'Pooled coverage\n80% band: {uncertainty["pooled"]["coverage80"]:.1%}\n90% band: {uncertainty["pooled"]["coverage90"]:.1%}', transform=axes[1].transAxes, fontsize=9, color="#315d49", bbox={"facecolor": "white", "edgecolor": "#d8dfda", "alpha": .9, "pad": 6})
-    figure.suptitle("USDA observed-yield prior v3 · temporal validation", fontweight="bold")
+    transfer = spatial_transfer["uncertainty"]["perCrop"]
+    positions = np.arange(len(transfer)); width = .34
+    axes[2].bar(positions - width / 2, [item["coverage80"] * 100 for item in transfer], width, color="#557f2d", label="80% interval")
+    axes[2].bar(positions + width / 2, [item["coverage90"] * 100 for item in transfer], width, color="#315d49", label="90% interval")
+    axes[2].axhline(80, color="#557f2d", alpha=.4, linestyle=":"); axes[2].axhline(90, color="#315d49", alpha=.4, linestyle=":")
+    axes[2].set(xticks=positions, xticklabels=[item["crop"] for item in transfer], ylim=(70, 100), ylabel="observed coverage (%)", title="Nearest-county transfer bands")
+    axes[2].grid(axis="y", alpha=.18); axes[2].legend(loc="lower right")
+    axes[2].text(.02, .04, f'2023–2025 transfer ρ {spatial_transfer["finalSignal"]["spearman"]:.3f}\nN {spatial_transfer["finalSignal"]["observations"]:,} · gate {"PASS" if spatial_transfer["gate"]["passed"] else "NOT PASSED"}', transform=axes[2].transAxes, fontsize=9, color="#315d49", bbox={"facecolor": "white", "edgecolor": "#d8dfda", "alpha": .9, "pad": 6})
+    figure.suptitle("USDA observed-yield prior v4 · temporal and spatial validation", fontweight="bold")
     figure.text(.5, .01, "County-level corn, soybean, wheat · not a parcel yield forecast", ha="center", color="#555555")
     figure.tight_layout(rect=(0, .04, 1, 1)); figure.savefig(output, dpi=180); plt.close(figure)
 
@@ -363,7 +497,7 @@ def atlas_spatial_index(path: str) -> dict[str, tuple[tuple[dict, ...], BallTree
     }
 
 
-def nearest_evidence(crop: str, latitude: float, longitude: float, path: Path, max_distance_km: float = 100.0) -> dict | None:
+def nearest_evidence(crop: str, latitude: float, longitude: float, path: Path, max_distance_km: float = SPATIAL_TRANSFER_MAX_DISTANCE_KM) -> dict | None:
     resolved = str(path.resolve())
     atlas = load_atlas(resolved)
     crop_key = {"maize": "corn", "soybeans": "soybean", "winter wheat": "wheat"}.get(crop.strip().lower(), crop.strip().lower())
@@ -376,8 +510,23 @@ def nearest_evidence(crop: str, latitude: float, longitude: float, path: Path, m
     distance = float(distances[0, 0] * 6371.0)
     if distance > max_distance_km:
         return None
+    prior = dict(record.get("observedYieldPrior", {}))
+    transfer = atlas.get("spatialTransferValidation", {})
+    bucket = distance_bucket(distance)
+    calibration = next((item for item in transfer.get("groups", []) if (
+        item["crop"] == crop_key and item["historyBucket"] == history_bucket(record["observations"])
+        and item["distanceBucket"] == bucket
+    )), None)
+    if calibration and prior:
+        expected = prior["expectedPercentile"]
+        prior.update({
+            "interval80": [round(max(0.0, expected - calibration["absoluteErrorP80"]), 4), round(min(1.0, expected + calibration["absoluteErrorP80"]), 4)],
+            "interval90": [round(max(0.0, expected - calibration["absoluteErrorP90"]), 4), round(min(1.0, expected + calibration["absoluteErrorP90"]), 4)],
+            "intervalMethod": "spatial-transfer-conformal", "distanceBucket": bucket,
+            "calibrationExamples": calibration["examples"],
+        })
     return {
-        **record, "distanceKm": round(distance, 1), "evidenceGrade": atlas["evidenceGrade"],
+        **record, "observedYieldPrior": prior, "distanceKm": round(distance, 1), "evidenceGrade": atlas["evidenceGrade"],
         "source": atlas["source"], "disclaimer": atlas["disclaimer"],
     }
 
@@ -386,26 +535,29 @@ def main() -> None:
     root = Path(__file__).resolve().parents[1]
     parser = argparse.ArgumentParser()
     parser.add_argument("--data", type=Path, default=root / "data/raw/observed-validation/national")
-    parser.add_argument("--atlas", type=Path, default=root / "evaluation/yield-atlas-v3.json")
-    parser.add_argument("--validation", type=Path, default=root / "evaluation/yield-atlas-validation-v3.json")
-    parser.add_argument("--plot", type=Path, default=root / "evaluation/yield-atlas-validation-v3.png")
+    parser.add_argument("--atlas", type=Path, default=root / "evaluation/yield-atlas-v4.json")
+    parser.add_argument("--validation", type=Path, default=root / "evaluation/yield-atlas-validation-v4.json")
+    parser.add_argument("--plot", type=Path, default=root / "evaluation/yield-atlas-validation-v4.png")
     args = parser.parse_args()
     rows = rows_from_quickstats(args.data)
     validation = temporal_validation(rows)
     comparison = history_window_comparison(rows)
     uncertainty, calibration_table = uncertainty_calibration(rows)
-    atlas = build_atlas(rows, validation, comparison, uncertainty, calibration_table)
+    spatial_transfer, _ = spatial_transfer_validation(rows)
+    atlas = build_atlas(rows, validation, comparison, uncertainty, calibration_table, spatial_transfer)
     args.atlas.write_text(json.dumps(atlas, separators=(",", ":")) + "\n")
-    report = {"temporalValidation": validation, "historyWindowComparison": comparison, "uncertaintyValidation": uncertainty}
+    report = {"temporalValidation": validation, "historyWindowComparison": comparison, "uncertaintyValidation": uncertainty, "spatialTransferValidation": spatial_transfer}
     args.validation.write_text(json.dumps(report, indent=2) + "\n")
-    args.validation.with_suffix(".md").write_text(markdown(validation, comparison, uncertainty, atlas))
-    plot(comparison, uncertainty, args.plot)
+    args.validation.with_suffix(".md").write_text(markdown(validation, comparison, uncertainty, spatial_transfer, atlas))
+    plot(comparison, uncertainty, spatial_transfer, args.plot)
     print(json.dumps({
         "records": len(atlas["records"]),
         "temporal": validation["pooled"],
         "historyGate": comparison["gate"],
         "uncertainty": uncertainty["pooled"],
         "uncertaintyGate": uncertainty["gate"],
+        "spatialTransfer": {"coverage": spatial_transfer["coverage"], "finalSignal": spatial_transfer["finalSignal"], "uncertainty": spatial_transfer["uncertainty"]["pooled"]},
+        "spatialTransferGate": spatial_transfer["gate"],
     }, indent=2))
 
 
