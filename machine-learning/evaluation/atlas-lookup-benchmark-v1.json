@@ -7,17 +7,17 @@
       "case": "supported crop",
       "crop": "corn",
       "iterationsPerRound": 1000,
-      "bruteMillisecondsPerLookup": 0.826475,
-      "indexedMillisecondsPerLookup": 0.057078,
-      "speedup": 14.48
+      "bruteMillisecondsPerLookup": 0.828825,
+      "indexedMillisecondsPerLookup": 0.05779,
+      "speedup": 14.34
     },
     {
       "case": "unsupported crop",
       "crop": "tomato",
       "iterationsPerRound": 1000,
-      "bruteMillisecondsPerLookup": 0.110936,
-      "indexedMillisecondsPerLookup": 0.012059,
-      "speedup": 9.2
+      "bruteMillisecondsPerLookup": 0.112082,
+      "indexedMillisecondsPerLookup": 0.012193,
+      "speedup": 9.19
     }
   ]
 }

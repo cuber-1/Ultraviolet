@@ -130,13 +130,15 @@ sweep, their machine-readable report, and two presentation charts under
 For corn, soybeans, and wheat, the response may also include
 `observedYieldEvidence`: the nearest USDA reporting county within 100 km, its
 2010–2025 within-crop/year percentile history, and an observed county prior
-with calibrated 80% and 90% uncertainty intervals. Atlas v6 uses 85% of the
+with calibrated 80% and 90% uncertainty intervals. Atlas v7 uses 85% of the
 nearest county's forward-only prior and 15% of the surrounding regional
 neighborhood, selected on 2018–2020 development MAE. On locked 2023–2025
 outcomes, rank Spearman improves from 0.8352 to 0.8380 (grouped-bootstrap delta
 0.0021–0.0034) and percentile MAE falls from 0.1208 to 0.1204. Every crop and
 final year improves. This remains separate observed evidence and never changes
-the EcoCrop suitability score.
+the EcoCrop suitability score. A production-specific conformal calibrator uses
+27,034 pre-2018 errors; across 2018–2025 it preserves 84.0% / 92.8% coverage
+while reducing mean 90% band width from 0.535 to 0.507 (5.1%).
 
 ## Next evidence gate
 
@@ -178,15 +180,15 @@ npm run ml:build:yield-atlas
 ```
 
 The builder uses the filtered USDA Quick Stats and Census county files from the
-national observed-validation download. It writes atlas v6, a forward-year
-validation report, and a presentation PNG under `evaluation/`. Atlas v6 uses
+national observed-validation download. It writes atlas v7, a forward-year
+validation report, and a presentation PNG under `evaluation/`. Atlas v7 uses
 the development-selected 80% three-year-half-life recency / 20% long-history
 prior. The report compares the 16-year and legacy 8-year histories on identical
 future rows and tests conformal intervals calibrated on 2011–2017 against
 2018–2025 outcomes. It also runs a leave-one-county-out nearest-neighbor test,
-selects a regional neighborhood on development years, calibrates its
-location-facing intervals for crop and effective source-history depth, and
-validates the 85% local / 15% regional production blend.
+selects a regional neighborhood on development years, validates the 85% local
+/ 15% regional production blend, and separately calibrates its sharper
+location-facing intervals by crop and effective source-history depth.
 
 ## Validate rural ranking evidence
 
@@ -220,6 +222,6 @@ npm run ml:benchmark:inference
 
 The recency command tests shrinkage toward exponential history weighting under
 fixed temporal splits. The v2 gate passes on confirmation and locked final
-years, and its selected prior is used by atlas v6. The
+years, and its selected prior is used by atlas v7. The
 benchmark compares the cached haversine spatial index with exact brute force
 and verifies identical nearest counties for each supported crop.
