@@ -37,9 +37,9 @@ def verify(artifact: Path, profiles: Path) -> None:
     assert predictor.model.n_features_in_ == len(FEATURE_NAMES), "artifact and feature code disagree"
     assert predictor.model_features(list(range(len(FEATURE_NAMES)))) == list(range(len(FEATURE_NAMES)))
     assert align_model_features(list(range(len(FEATURE_NAMES))), len(FEATURE_NAMES) - 2) == list(range(len(FEATURE_NAMES) - 2))
-    if predictor.metadata["model"].endswith(("v0.6", "v0.7", "v0.8", "v0.9")):
+    if predictor.metadata["model"].endswith(("v0.6", "v0.7", "v0.8", "v0.9", "v0.9.1")):
         assert predictor.metadata["selectedModel"] == "extraTrees"
-    if predictor.metadata["model"].endswith("v0.9"):
+    if predictor.metadata["model"].endswith(("v0.9", "v0.9.1")):
         assert predictor.metadata["modelParameters"]["nEstimators"] == 70
         assert predictor.metadata["trainingExamples"] == 151_800
         assert predictor.metadata["evaluationExamples"] == 134_064
@@ -55,6 +55,11 @@ def verify(artifact: Path, profiles: Path) -> None:
         assert calibration["gate"]["passed"]
         assert result["confidence"] == calibration["nominalCoverage"]["p80"] == .8
         assert result["expectedAbsoluteError"]["p80"] <= result["expectedAbsoluteError"]["p90"]
+    conditional = predictor.metadata.get("conditionalUncertaintyCalibration")
+    if conditional:
+        assert conditional["gate"]["passed"]
+        assert .78 <= conditional["activeHeldOutCoverage"]["p80"] <= .82
+        assert .88 <= conditional["activeHeldOutCoverage"]["p90"] <= .92
     assert result["bestReliablePlantingMonth"] in MONTHS
     assert len(result["monthlyCurve"]) == 12
     for month in result["monthlyCurve"]:
@@ -78,6 +83,7 @@ def verify(artifact: Path, profiles: Path) -> None:
     stress_curve = predictor.curve(profile, stress, 6.5, False)
     assert all(item["score"] <= target["suitability"] for item, target in zip(stress_curve, stress_teacher, strict=True))
     assert all(item["score"] == 0 for item in stress_curve), "seasonal EcoCrop ceiling did not stop boundary extrapolation"
+    assert all(item["expectedAbsoluteErrorP80"] == item["expectedAbsoluteErrorP90"] == 0 for item in stress_curve)
     onboarding_profiles = {
         "basil": "Ocimum basilicum",
         "kale": "Brassica oleracea var. acephala",
@@ -211,6 +217,15 @@ def verify(artifact: Path, profiles: Path) -> None:
         assert density_report["summary"]["candidateSerializedSizeBytes"] <= 72_000_000
         assert density_report["protocol"]["fixedEvaluation"].startswith("Both models use identical")
 
+    shift_validation = artifact.parents[1] / "evaluation/scenario-shift-validation-v0.9.1.json"
+    if shift_validation.exists():
+        shift_report = json.loads(shift_validation.read_text())
+        assert shift_report["gate"]["passed"]
+        assert min(shift_report["gains"].values()) >= 10
+        assert .78 <= shift_report["activeCoverage"]["conditionalMethodOnShifted"]["p80"] <= .82
+        assert .88 <= shift_report["activeCoverage"]["conditionalMethodOnShifted"]["p90"] <= .92
+        assert shift_report["activeCoverage"]["oldGlobalMethodOnShifted"]["p90"] < .7
+
     compact_validation = artifact.parents[1] / "evaluation/compact-validation-v1.json"
     if compact_validation.exists():
         compact_report = json.loads(compact_validation.read_text())
@@ -218,7 +233,7 @@ def verify(artifact: Path, profiles: Path) -> None:
         assert compact_report["summary"]["seedWins"] == 0
         assert compact_report["summary"]["decision"].startswith("reject")
 
-    ood_validation = artifact.parents[1] / "evaluation/ood-validation-v0.9.json"
+    ood_validation = artifact.parents[1] / "evaluation/ood-validation-v0.9.1.json"
     if ood_validation.exists():
         ood_report = json.loads(ood_validation.read_text())
         assert ood_report["gate"]["passed"]

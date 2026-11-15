@@ -1,4 +1,4 @@
-# CropFit EcoCrop surrogate v0.9
+# CropFit EcoCrop surrogate v0.9.1
 
 - Trained: 2026-11-15
 - Source: FAO EcoCrop environmental requirement profiles via OpenCLIM
@@ -21,6 +21,16 @@ gates: locked mean MAE fell 12.53% and p90 error fell 14.02%. On the production
 split, MAE fell from 0.0175 to 0.0145 and p90 fell from 0.0491 to 0.0407. See
 `evaluation/training-density-validation-v0.9.md`.
 
+Version 0.9.1 corrects uncertainty reporting for active growing conditions.
+The previous marginal calibration was dominated by deterministic hard-zero
+cases: on an independent Latin-hypercube test, its active-case 90% coverage was
+only 55.1%. Calibration now uses active validation examples separately and
+returns zero radius only where the deterministic ceiling fixes the deployed
+score at zero. Active coverage is 80.6%/90.9% on the frozen-random test and
+81.4%/91.4% under independent scenario shift. The same shift test confirms
+v0.9's raw and deployed error gains remain between 12.7% and 77.5%. See
+`evaluation/scenario-shift-validation-v0.9.1.md`.
+
 The compressed artifact is 70.5 MB versus 73.2 MB for v0.8. On the development
 host, clean-process peak RSS fell from 773,168 KiB to 756,376 KiB and full
 11-scenario reliability prediction median latency fell from 4.58 ms to 3.25 ms.
@@ -36,7 +46,7 @@ rejected; that experiment did not replace the 120-tree v0.6 champion. See
 
 ## Out-of-distribution ceiling
 
-API v0.9.0 retains the v0.6.1 safety ceiling that caps the ML score by the exact
+API v0.9.1 retains the v0.6.1 safety ceiling that caps the ML score by the exact
 seasonal and establishment EcoCrop suitability already computed for
 limiting-factor explanations. This is a one-sided safety constraint: the
 ensemble still determines underprediction but cannot claim suitability above
@@ -49,7 +59,7 @@ p90 moves from 0.00125 to 0.00137. Existing intervals remain conservative at
 89.9%/95.0% coverage. It also
 eliminates errors at the tested exact hard solar and temperature boundaries,
 where continuous random training samples do not land. See
-`evaluation/ood-validation-v0.9.md`.
+`evaluation/ood-validation-v0.9.1.md`.
 
 Version 0.5 adds four crop-relative features: temperature, water, pH, and solar
 membership within each crop's absolute and optimum ranges. The 120-tree Random
@@ -59,19 +69,20 @@ feature design, it improved held-out MAE on all five robustness seeds from
 reproducible protocol and per-seed results are in
 `evaluation/feature-validation-v0.5.md`.
 
-Version 0.9 refits the tree-disagreement-normalized split-conformal
-calibrator using only 224 validation crop profiles. On 26,856 held-out examples
-from 373 crop profiles, nominal 80% and 90% bands covered 80.00% and 90.21%; the
-mean 90% radius was 0.0129 suitability points. Across the seven locked
-training-density seeds, mean coverage was 80.36% and 90.33%. These are marginal
-EcoCrop-teacher fidelity bands, not per-species or observed-yield guarantees.
+Version 0.9.1 fits its active-case tree-disagreement-normalized split-conformal
+calibrator using 3,395 active examples from 224 validation crop profiles. On
+5,628 active held-out examples from the 373 test profiles, nominal 80% and 90%
+bands cover 80.6% and 90.9%; mean radii are 0.105 and 0.139 suitability points.
+Hard-zero deployed scores receive zero radius because the deterministic ceiling
+fixes their value. These are conditional EcoCrop-teacher fidelity bands, not
+per-species or observed-yield guarantees.
 
 The CUDA XGBoost candidate completed 500 rounds with a cosine learning-rate
 schedule from 0.08 to 0.005. It was not promoted because held-out-profile MAE
 was worse (0.0872). The committed diagnostics are
-`evaluation/training-curves-v0.9.png`,
-`evaluation/selected-feature-importance-v0.9.png`, and
-`evaluation/training-history-v0.9.csv`.
+`evaluation/training-curves-v0.9.1.png`,
+`evaluation/selected-feature-importance-v0.9.1.png`, and
+`evaluation/training-history-v0.9.1.csv`.
 
 ## Intended use
 
@@ -227,7 +238,7 @@ reuse a stale prediction. The cache is a bounded 2,048-entry LRU, and CI checks
 key sensitivity, revision invalidation, model isolation, expiry, and
 least-recently-used eviction.
 
-API v0.9.0 exposes its API+training-run revision through `/health`. The browser
+API v0.9.1 exposes its API+training-run revision through `/health`. The browser
 proxy reads it once per prediction request. If revision health is unavailable,
 model predictions continue but bypass the cache until provenance is verified.
 

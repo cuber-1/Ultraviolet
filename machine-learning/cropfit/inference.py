@@ -39,7 +39,14 @@ class CropFitPredictor:
         """Keep inference usable while an older 23-feature artifact is upgraded."""
         return align_model_features(row, int(self.model.n_features_in_))
 
-    def calibrated_error(self, tree_std: float) -> tuple[float, float]:
+    def calibrated_error(self, tree_std: float, active: bool = True) -> tuple[float, float]:
+        conditional = self.metadata.get("conditionalUncertaintyCalibration", {})
+        conditional_quantiles = conditional.get("activeNormalizedErrorQuantiles")
+        if conditional_quantiles:
+            if not active:
+                return 0.0, 0.0
+            scale = tree_std + float(self.metadata.get("uncertaintyCalibration", {}).get("treeStdFloor", 0.01))
+            return float(conditional_quantiles["p80"]) * scale, float(conditional_quantiles["p90"]) * scale
         calibration = self.metadata.get("uncertaintyCalibration", {})
         quantiles = calibration.get("normalizedErrorQuantiles")
         if quantiles:
@@ -155,7 +162,8 @@ class CropFitPredictor:
                 # The surrogate may not extrapolate a hard zero at exact/out-of-domain
                 # EcoCrop boundaries. Never let it exceed either deterministic ceiling.
                 score = min(float(predictions[position]), teacher[index]["suitability"], establishment[index]["suitability"])
-                error_p80, error_p90 = self.calibrated_error(float(uncertainty[position]))
+                active = teacher[index]["suitability"] > 0 and establishment[index]["suitability"] > 0
+                error_p80, error_p90 = self.calibrated_error(float(uncertainty[position]), active)
                 curve.append({
                     "month": str(month["month"]),
                     "monthIndex": index + 1,

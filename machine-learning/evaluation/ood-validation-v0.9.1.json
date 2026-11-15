@@ -1,0 +1,85 @@
+{
+  "model": "CropFit EcoCrop surrogate v0.9.1",
+  "target": "EcoCrop mechanistic screening teacher; not observed yield",
+  "heldOut": {
+    "examples": 26856,
+    "profiles": 373,
+    "rawSurrogate": {
+      "mae": 0.01452,
+      "p90AbsoluteError": 0.04074,
+      "maximumAbsoluteError": 3.33659
+    },
+    "seasonalCeiling": {
+      "mae": 0.00625,
+      "p90AbsoluteError": 0.00137,
+      "maximumAbsoluteError": 0.58139
+    },
+    "existingIntervalCoverageAfterCeiling": {
+      "p80": 0.9795,
+      "p90": 0.9912
+    },
+    "errorNeverIncreased": true
+  },
+  "boundaryStress": {
+    "solarAbsoluteMin": {
+      "examples": 1862,
+      "teacherScore": 0.0,
+      "rawSurrogate": {
+        "mae": 7.92847,
+        "p90AbsoluteError": 8.04268,
+        "maximumAbsoluteError": 8.19697
+      },
+      "seasonalCeiling": {
+        "mae": 0.0,
+        "p90AbsoluteError": 0.0,
+        "maximumAbsoluteError": 0.0
+      }
+    },
+    "solarAbsoluteMax": {
+      "examples": 1862,
+      "teacherScore": 0.0,
+      "rawSurrogate": {
+        "mae": 10.00503,
+        "p90AbsoluteError": 10.0812,
+        "maximumAbsoluteError": 10.16386
+      },
+      "seasonalCeiling": {
+        "mae": 0.0,
+        "p90AbsoluteError": 0.0,
+        "maximumAbsoluteError": 0.0
+      }
+    },
+    "temperatureAbsoluteMin": {
+      "examples": 1862,
+      "teacherScore": 0.0,
+      "rawSurrogate": {
+        "mae": 0.0,
+        "p90AbsoluteError": 0.0,
+        "maximumAbsoluteError": 0.0
+      },
+      "seasonalCeiling": {
+        "mae": 0.0,
+        "p90AbsoluteError": 0.0,
+        "maximumAbsoluteError": 0.0
+      }
+    },
+    "temperatureAbsoluteMax": {
+      "examples": 1862,
+      "teacherScore": 0.0,
+      "rawSurrogate": {
+        "mae": 0.0,
+        "p90AbsoluteError": 0.0,
+        "maximumAbsoluteError": 0.0
+      },
+      "seasonalCeiling": {
+        "mae": 0.0,
+        "p90AbsoluteError": 0.0,
+        "maximumAbsoluteError": 0.0
+      }
+    }
+  },
+  "gate": {
+    "passed": true,
+    "rule": "The seasonal ceiling must never increase held-out error, must improve MAE and p90, preserve at least nominal existing interval coverage, and eliminate all tested hard-boundary extrapolation errors."
+  }
+}

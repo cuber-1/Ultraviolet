@@ -37,7 +37,14 @@ def conformal_quantile(values: np.ndarray, coverage: float) -> float:
     return float(np.quantile(values, level, method="higher"))
 
 
-def production_gate(metrics: dict, held_out_profiles: int, coverage80: float, coverage90: float) -> dict:
+def production_gate(
+    metrics: dict,
+    held_out_profiles: int,
+    coverage80: float,
+    coverage90: float,
+    active_coverage80: float,
+    active_coverage90: float,
+) -> dict:
     checks = {
         "mae": float(metrics["mae"]) <= PRODUCTION_THRESHOLDS["maximumMae"],
         "p90AbsoluteError": float(metrics["p90AbsoluteError"]) <= PRODUCTION_THRESHOLDS["maximumP90AbsoluteError"],
@@ -45,6 +52,8 @@ def production_gate(metrics: dict, held_out_profiles: int, coverage80: float, co
         "heldOutProfiles": held_out_profiles >= PRODUCTION_THRESHOLDS["minimumHeldOutProfiles"],
         "coverage80": abs(coverage80 - .8) <= PRODUCTION_THRESHOLDS["maximumCoverageDeviation"],
         "coverage90": abs(coverage90 - .9) <= PRODUCTION_THRESHOLDS["maximumCoverageDeviation"],
+        "activeCoverage80": abs(active_coverage80 - .8) <= PRODUCTION_THRESHOLDS["maximumCoverageDeviation"],
+        "activeCoverage90": abs(active_coverage90 - .9) <= PRODUCTION_THRESHOLDS["maximumCoverageDeviation"],
     }
     return {
         "passed": all(checks.values()),
@@ -184,6 +193,10 @@ def train(
     normalized_validation_errors = validation_residuals / (validation_tree_std + TREE_STD_FLOOR)
     normalized_error_p80 = conformal_quantile(normalized_validation_errors, .8)
     normalized_error_p90 = conformal_quantile(normalized_validation_errors, .9)
+    active_validation = y[validation_indices] > 0
+    active_normalized_validation_errors = normalized_validation_errors[active_validation]
+    active_normalized_error_p80 = conformal_quantile(active_normalized_validation_errors, .8)
+    active_normalized_error_p90 = conformal_quantile(active_normalized_validation_errors, .9)
     residuals = np.abs(baseline_predictions - y[test_indices])
     boosted_residuals = np.abs(boosted_predictions - y[test_indices])
     test_tree_predictions = np.asarray([tree.predict(x[test_indices]) for tree in model.estimators_])
@@ -192,6 +205,11 @@ def train(
     test_p90 = normalized_error_p90 * (test_tree_std + TREE_STD_FLOOR)
     held_out_p80_coverage = float(np.mean(residuals <= test_p80))
     held_out_p90_coverage = float(np.mean(residuals <= test_p90))
+    active_test = y[test_indices] > 0
+    active_test_p80 = active_normalized_error_p80 * (test_tree_std[active_test] + TREE_STD_FLOOR)
+    active_test_p90 = active_normalized_error_p90 * (test_tree_std[active_test] + TREE_STD_FLOOR)
+    active_held_out_p80_coverage = float(np.mean(residuals[active_test] <= active_test_p80))
+    active_held_out_p90_coverage = float(np.mean(residuals[active_test] <= active_test_p90))
     created = datetime.now(timezone.utc)
     run_id = created.strftime("%Y%m%dT%H%M%SZ")
     metrics = {
@@ -200,9 +218,12 @@ def train(
         "p90AbsoluteError": round(float(np.quantile(residuals, .9)), 4),
     }
     held_out_profiles = int(len(set(groups[test_indices].tolist())))
-    promotion = production_gate(metrics, held_out_profiles, held_out_p80_coverage, held_out_p90_coverage)
+    promotion = production_gate(
+        metrics, held_out_profiles, held_out_p80_coverage, held_out_p90_coverage,
+        active_held_out_p80_coverage, active_held_out_p90_coverage,
+    )
     metadata = {
-        "model": "CropFit EcoCrop surrogate v0.9",
+        "model": "CropFit EcoCrop surrogate v0.9.1",
         "selectedModel": "extraTrees",
         "createdAt": created.isoformat(),
         "runId": run_id,
@@ -246,6 +267,29 @@ def train(
             "gate": {
                 "passed": abs(held_out_p80_coverage - .8) <= .02 and abs(held_out_p90_coverage - .9) <= .02,
                 "rule": "Held-out crop-profile coverage must be within 2 percentage points of both nominal levels.",
+            },
+        },
+        "conditionalUncertaintyCalibration": {
+            "condition": "deterministic seasonal and establishment suitability are both greater than zero",
+            "activeMethod": "tree-disagreement-normalized split conformal on active validation examples",
+            "inactivePolicy": "zero radius because the deterministic ceiling fixes the deployed score at zero",
+            "activeValidationExamples": int(np.sum(active_validation)),
+            "activeHeldOutExamples": int(np.sum(active_test)),
+            "activeNormalizedErrorQuantiles": {
+                "p80": round(active_normalized_error_p80, 6),
+                "p90": round(active_normalized_error_p90, 6),
+            },
+            "activeHeldOutCoverage": {
+                "p80": round(active_held_out_p80_coverage, 4),
+                "p90": round(active_held_out_p90_coverage, 4),
+            },
+            "activeHeldOutMeanRadius": {
+                "p80": round(float(np.mean(active_test_p80)), 4),
+                "p90": round(float(np.mean(active_test_p90)), 4),
+            },
+            "gate": {
+                "passed": abs(active_held_out_p80_coverage - .8) <= .02 and abs(active_held_out_p90_coverage - .9) <= .02,
+                "rule": "Active held-out coverage must be within 2 percentage points of both nominal levels.",
             },
         },
         "selectionEvidence": "Fitting 120 scenarios per training crop with 70 Extra Trees improved MAE and p90 error on all seven locked confirmation/final crop-profile splits while retaining the exact v0.8 validation/test rows and reducing artifact size; see evaluation/training-density-validation-v0.9.json.",

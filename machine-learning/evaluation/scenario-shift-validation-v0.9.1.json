@@ -1,0 +1,101 @@
+{
+  "name": "CropFit independent scenario-shift validation v0.9.1",
+  "target": "EcoCrop mechanistic screening teacher; not observed yield",
+  "protocol": {
+    "profiles": 373,
+    "scenariosPerProfile": 64,
+    "examples": 23872,
+    "generator": "independently seeded scipy LatinHypercube over the same physical support; not the training generator",
+    "heldOutPolicy": "Production-seed test crop profiles only"
+  },
+  "championV08": {
+    "examples": 23872,
+    "mae": 0.01782,
+    "p90AbsoluteError": 0.04881,
+    "maximumAbsoluteError": 3.96182,
+    "deployedMae": 0.00695,
+    "deployedP90AbsoluteError": 0.00284,
+    "deployedMaximumAbsoluteError": 1.34458,
+    "subgroups": {
+      "irrigated": {
+        "examples": 11936,
+        "mae": 0.01862,
+        "p90AbsoluteError": 0.05336
+      },
+      "rainfed": {
+        "examples": 11936,
+        "mae": 0.01702,
+        "p90AbsoluteError": 0.04479
+      },
+      "active": {
+        "examples": 5026,
+        "mae": 0.08459,
+        "p90AbsoluteError": 0.19918
+      },
+      "hardZero": {
+        "examples": 18846,
+        "mae": 1e-05,
+        "p90AbsoluteError": 0.0
+      }
+    }
+  },
+  "candidateV09": {
+    "examples": 23872,
+    "mae": 0.01471,
+    "p90AbsoluteError": 0.04045,
+    "maximumAbsoluteError": 2.24673,
+    "deployedMae": 0.00607,
+    "deployedP90AbsoluteError": 0.00064,
+    "deployedMaximumAbsoluteError": 0.84157,
+    "subgroups": {
+      "irrigated": {
+        "examples": 11936,
+        "mae": 0.01538,
+        "p90AbsoluteError": 0.04266
+      },
+      "rainfed": {
+        "examples": 11936,
+        "mae": 0.01404,
+        "p90AbsoluteError": 0.03656
+      },
+      "active": {
+        "examples": 5026,
+        "mae": 0.06983,
+        "p90AbsoluteError": 0.17452
+      },
+      "hardZero": {
+        "examples": 18846,
+        "mae": 1e-05,
+        "p90AbsoluteError": 0.0
+      }
+    }
+  },
+  "gains": {
+    "maePercent": 17.45,
+    "p90Percent": 17.13,
+    "deployedMaePercent": 12.66,
+    "deployedP90Percent": 77.46
+  },
+  "activeCoverage": {
+    "oldGlobalMethodOnShifted": {
+      "p80": 0.0784,
+      "meanRadius80": 0.0014,
+      "p90": 0.5505,
+      "meanRadius90": 0.0579
+    },
+    "conditionalMethodOnFrozenRandom": {
+      "p80": 0.806,
+      "p90": 0.9087
+    },
+    "conditionalMethodOnShifted": {
+      "p80": 0.8136,
+      "meanRadius80": 0.1049,
+      "p90": 0.9136,
+      "meanRadius90": 0.1387
+    }
+  },
+  "gate": {
+    "passed": true,
+    "rule": "On independent Latin-hypercube scenarios, all raw/deployed gains must be >=10%, irrigated/rainfed/active MAE must improve, and active conditional coverage must be within 2 points of nominal on both frozen-random and shifted tests."
+  }
+}

@@ -32,8 +32,17 @@ def held_out(model, metadata: dict, profiles: list, samples_per_crop: int, seed:
     tree_std = trees.std(axis=0)
     calibration = metadata["uncertaintyCalibration"]
     scale = tree_std + float(calibration["treeStdFloor"])
-    radius80 = np.ceil(float(calibration["normalizedErrorQuantiles"]["p80"]) * scale * 1000) / 1000
-    radius90 = np.ceil(float(calibration["normalizedErrorQuantiles"]["p90"]) * scale * 1000) / 1000
+    conditional = metadata.get("conditionalUncertaintyCalibration")
+    if conditional:
+        active = y[test] > 0
+        radius80 = np.zeros(len(test))
+        radius90 = np.zeros(len(test))
+        quantiles = conditional["activeNormalizedErrorQuantiles"]
+        radius80[active] = np.ceil(float(quantiles["p80"]) * scale[active] * 1000) / 1000
+        radius90[active] = np.ceil(float(quantiles["p90"]) * scale[active] * 1000) / 1000
+    else:
+        radius80 = np.ceil(float(calibration["normalizedErrorQuantiles"]["p80"]) * scale * 1000) / 1000
+        radius90 = np.ceil(float(calibration["normalizedErrorQuantiles"]["p90"]) * scale * 1000) / 1000
     return {
         "examples": len(test), "profiles": len(np.unique(groups[test])),
         "rawSurrogate": metrics(raw_errors),
@@ -135,8 +144,8 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--artifact", type=Path, default=root / "artifacts/cropfit.joblib")
     parser.add_argument("--profiles", type=Path, default=root / "data/raw/ecocrop.csv")
-    parser.add_argument("--output", type=Path, default=root / "evaluation/ood-validation-v0.9.json")
-    parser.add_argument("--plot", type=Path, default=root / "evaluation/ood-validation-v0.9.png")
+    parser.add_argument("--output", type=Path, default=root / "evaluation/ood-validation-v0.9.1.json")
+    parser.add_argument("--plot", type=Path, default=root / "evaluation/ood-validation-v0.9.1.png")
     parser.add_argument("--samples-per-crop", type=int, default=72)
     parser.add_argument("--seed", type=int, default=20261114)
     args = parser.parse_args()

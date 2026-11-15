@@ -7,7 +7,7 @@ revenue, or a buy/sell recommendation.
 
 ## Run the trained model
 
-On macOS or Linux, install the released v0.9 artifact, EcoCrop profiles, and
+On macOS or Linux, install the released v0.9.1 artifact, EcoCrop profiles, and
 inference dependencies without access to the Spark:
 
 ```bash
@@ -82,13 +82,21 @@ learning-rate schedule, error distribution, and feature importance to
 `machine-learning/runs/<run-id>/`. A candidate is only promoted when it improves held-out
 crop-profile error.
 
-CropFit v0.9 fits 120 scenarios per training crop with 70 Extra Trees while
+CropFit v0.9.1 fits 120 scenarios per training crop with 70 Extra Trees while
 retaining the exact v0.8 validation and test rows. Its promotion report compares
 the candidate with v0.8 on identical grouped splits, including locked
 confirmation/final seeds, conformal coverage, artifact size, and API-sized latency:
 
 ```bash
 npm run ml:evaluate:training-density
+```
+
+Its independent scenario-shift report uses a separately seeded Latin-hypercube
+generator and verifies active-case conditional coverage rather than allowing
+hard-zero cases to dominate the aggregate:
+
+```bash
+npm run ml:evaluate:scenario-shift
 ```
 
 Training refuses to replace the production artifact unless frozen MAE, p90,

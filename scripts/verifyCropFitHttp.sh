@@ -57,9 +57,9 @@ climate = [{"month": month, "temperatureC": 22, "precipitationMmDay": 3, "solarM
 payload = {"crop": "corn", "latitude": 29.76, "longitude": -95.37, "soilPh": 6.5, "irrigated": True, "climate": climate, "climateHistory": [climate] * 10}
 health = requests.get(f"{base}/health", timeout=10).json()
 assert health["status"] == "ok" and health["requestLimits"]["historyYearsMax"] == 20
-assert health["apiVersion"] == "0.9.0"
+assert health["apiVersion"] == "0.9.1"
 assert health["revision"].startswith(f'{health["apiVersion"]}:')
-assert health["model"] == "CropFit EcoCrop surrogate v0.9"
+assert health["model"] == "CropFit EcoCrop surrogate v0.9.1"
 assert health["metrics"]["mae"] == .0145
 atlas = health["evidence"]["historicalYieldAtlas"]
 assert atlas["name"] == "USDA county yield atlas v9"
@@ -93,6 +93,7 @@ assert prediction_body["expectedAbsoluteError"]["p80"] <= prediction_body["expec
 boundary = requests.post(f"{base}/predict", json={**payload, "climate": [{**item, "solarMjM2Day": 34} for item in climate]}, timeout=30)
 boundary.raise_for_status()
 assert boundary.json()["score"] == 0, "hard EcoCrop solar boundary was not enforced"
+assert boundary.json()["expectedAbsoluteError"] == {"p80": 0.0, "p90": 0.0}
 representatives = {
     "basil": "Ocimum basilicum",
     "kale": "Brassica oleracea var. acephala",
@@ -107,5 +108,5 @@ for crop, scientific_name in representatives.items():
     assert response.json()["profile"]["scientific_name"] == scientific_name
 invalid = requests.post(f"{base}/predict", json={**payload, "climate": climate[:11]}, timeout=10)
 assert invalid.status_code == 422
-print(f'CropFit HTTP verified: API {health["apiVersion"]}, model v0.9, atlas v9 geographically stable uncertainty, seasonal boundary ceiling, 2016-2025 climate window, 16-choice coverage, USDA evidence, input bounds')
+print(f'CropFit HTTP verified: API {health["apiVersion"]}, model v0.9.1, active-case calibration, atlas v9 geographically stable uncertainty, seasonal boundary ceiling, 2016-2025 climate window, 16-choice coverage, USDA evidence, input bounds')
 PY
