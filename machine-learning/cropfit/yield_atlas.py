@@ -861,7 +861,10 @@ def nearest_evidence(crop: str, latitude: float, longitude: float, path: Path, m
         return None
     records, tree = indexed
     transfer = atlas.get("spatialTransferValidation", {})
-    neighborhood = transfer.get("selectedNeighborhood", {"maxNeighbors": 1, "distancePower": 0.0, "distanceOffsetKm": SPATIAL_DISTANCE_OFFSET_KM})
+    neighborhood = transfer.get("selectedNeighborhoodByCrop", {}).get(
+        crop_key,
+        transfer.get("selectedNeighborhood", {"maxNeighbors": 1, "distancePower": 0.0, "distanceOffsetKm": SPATIAL_DISTANCE_OFFSET_KM}),
+    )
     max_neighbors = int(neighborhood["maxNeighbors"])
     production_blend = transfer.get("productionBlend", {})
     query_neighbors = max_neighbors + 1 if production_blend.get("gate", {}).get("passed") else max_neighbors

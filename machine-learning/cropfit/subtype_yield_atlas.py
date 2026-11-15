@@ -6,10 +6,11 @@ from collections import defaultdict
 from pathlib import Path
 
 import numpy as np
+from scipy.stats import spearmanr
 from sklearn.neighbors import BallTree
 
 from .crop_expansion_validation import candidate_rows, metric_summary
-from .yield_atlas import conformal_quantile, history_bucket, observed_prior_prediction
+from .yield_atlas import aggregate_neighbor_prior, conformal_quantile, history_bucket, metric_summary as point_summary, observed_prior_prediction
 
 
 YEARS = tuple(range(2010, 2026))
@@ -18,6 +19,7 @@ DEVELOPMENT_YEARS = (2018, 2019, 2020)
 STABILITY_YEARS = (2021, 2022)
 FINAL_YEARS = (2023, 2024, 2025)
 SCALE_CANDIDATES = (1.0, 1.05, 1.1, 1.15, 1.2, 1.25, 1.33, 1.4, 1.5)
+NEIGHBOR_CANDIDATES = tuple((count, power) for count in (1, 2, 3, 5, 8) for power in (0.0, .5, 1.0, 2.0))
 CROP_METADATA = {
     "silage corn": {"yieldUnit": "tons/acre", "usdaUnit": "TONS / ACRE"},
     "spring wheat": {"yieldUnit": "bu/acre", "usdaUnit": "BU / ACRE"},
@@ -58,23 +60,75 @@ def spatial_transfer_examples(rows: list[dict]) -> list[dict]:
             tree = BallTree(np.radians([[item["latitude"], item["longitude"]] for item in sources]), metric="haversine")
             distances, indices = tree.query(
                 np.radians([[item["latitude"], item["longitude"]] for item in targets]),
-                k=min(2, len(sources)),
+                k=min(max(count for count, _ in NEIGHBOR_CANDIDATES) + 1, len(sources)),
             )
             for target, target_distances, target_indices in zip(targets, distances, indices, strict=True):
                 neighbors = [
-                    (float(distance * 6371.0), sources[int(index)])
+                    {**sources[int(index)], "distanceKm": float(distance * 6371.0)}
                     for distance, index in zip(target_distances, target_indices, strict=True)
                     if sources[int(index)]["fips"] != target["fips"]
+                    and float(distance * 6371.0) <= 100
                 ]
-                if not neighbors or neighbors[0][0] > 100:
+                if not neighbors:
                     continue
-                distance, source = neighbors[0]
-                examples.append({
-                    **target, "prediction": source["prediction"], "historyCount": source["historyCount"],
-                    "distanceKm": distance,
-                    "absoluteError": abs(source["prediction"] - target["yieldPercentileWithinCropYear"]),
-                })
+                examples.append({**target, "neighbors": neighbors})
     return examples
+
+
+def apply_neighborhood(items: list[dict], max_neighbors: int, distance_power: float) -> list[dict]:
+    scored = []
+    for item in items:
+        prediction, neighbor_count, effective_history, weights = aggregate_neighbor_prior(
+            item["neighbors"], max_neighbors, distance_power,
+        )
+        scored.append({
+            **item, "prediction": prediction, "historyCount": effective_history,
+            "neighborCount": neighbor_count, "neighborWeights": weights,
+            "distanceKm": item["neighbors"][0]["distanceKm"],
+            "absoluteError": abs(prediction - item["yieldPercentileWithinCropYear"]),
+        })
+    return scored
+
+
+def signal_summary(items: list[dict], rounded: bool = True) -> dict:
+    return {
+        "observations": len(items),
+        **point_summary(
+            [item["yieldPercentileWithinCropYear"] for item in items],
+            [item["prediction"] for item in items],
+            rounded=rounded,
+        ),
+    }
+
+
+def point_comparison(nearest: list[dict], selected: list[dict], years: tuple[int, ...]) -> dict:
+    baseline = signal_summary([item for item in nearest if item["year"] in years])
+    candidate = signal_summary([item for item in selected if item["year"] in years])
+    return {
+        "nearestCounty": baseline, "selectedNeighborhood": candidate,
+        "spearmanGain": round(candidate["spearman"] - baseline["spearman"], 4),
+        "maeReduction": round(baseline["maePercentile"] - candidate["maePercentile"], 4),
+    }
+
+
+def paired_rank_gain_interval(nearest: list[dict], selected: list[dict], seed: int = 20261115) -> list[float]:
+    if [(item["year"], item["fips"]) for item in nearest] != [(item["year"], item["fips"]) for item in selected]:
+        raise ValueError("Paired neighborhood comparisons must contain identical county-years.")
+    actual = np.asarray([item["yieldPercentileWithinCropYear"] for item in selected])
+    baseline = np.asarray([item["prediction"] for item in nearest])
+    candidate = np.asarray([item["prediction"] for item in selected])
+    groups = np.asarray([item["fips"] for item in selected])
+    unique_groups = np.unique(groups)
+    random = np.random.default_rng(seed)
+    deltas = []
+    for _ in range(2000):
+        sampled = random.choice(unique_groups, size=len(unique_groups), replace=True)
+        indices = np.concatenate([np.flatnonzero(groups == group) for group in sampled])
+        deltas.append(
+            float(spearmanr(candidate[indices], actual[indices]).statistic)
+            - float(spearmanr(baseline[indices], actual[indices]).statistic)
+        )
+    return [round(float(value), 4) for value in np.quantile(deltas, [.025, .975])]
 
 
 def interval_metrics(items: list[dict], table: dict[tuple[str, str], dict], scales: dict[str, dict]) -> dict:
@@ -102,7 +156,36 @@ def interval_metrics(items: list[dict], table: dict[tuple[str, str], dict], scal
 
 def build(data: Path) -> tuple[dict, dict]:
     rows = subtype_rows(data)
-    examples = spatial_transfer_examples(rows)
+    raw_examples = spatial_transfer_examples(rows)
+    neighborhood_selection = []
+    selected_neighborhoods = {}
+    examples = []
+    for crop in CROP_METADATA:
+        crop_raw = [item for item in raw_examples if item["crop"] == crop]
+        development_raw = [item for item in crop_raw if item["year"] in DEVELOPMENT_YEARS]
+        candidates = []
+        candidate_scores = []
+        for max_neighbors, distance_power in NEIGHBOR_CANDIDATES:
+            scored = apply_neighborhood(development_raw, max_neighbors, distance_power)
+            candidates.append({
+                "maxNeighbors": max_neighbors, "distancePower": distance_power,
+                "development": signal_summary(scored),
+            })
+            candidate_scores.append({
+                "maxNeighbors": max_neighbors, "distancePower": distance_power,
+                "development": signal_summary(scored, rounded=False),
+            })
+        selected = max(candidate_scores, key=lambda item: (
+            item["development"]["spearman"], -item["development"]["maePercentile"],
+        ))
+        config = {
+            "maxNeighbors": selected["maxNeighbors"], "distancePower": selected["distancePower"],
+            "distanceOffsetKm": 5.0,
+        }
+        selected_neighborhoods[crop] = config
+        crop_examples = apply_neighborhood(crop_raw, config["maxNeighbors"], config["distancePower"])
+        examples.extend(crop_examples)
+        neighborhood_selection.append({"crop": crop, "candidates": candidates, "selected": config})
     calibration_examples = [item for item in examples if item["year"] in CALIBRATION_YEARS]
     grouped: dict[tuple[str, str], list[float]] = defaultdict(list)
     for item in calibration_examples:
@@ -134,39 +217,60 @@ def build(data: Path) -> tuple[dict, dict]:
     for crop in CROP_METADATA:
         crop_examples = [item for item in examples if item["crop"] == crop]
         final_examples = [item for item in crop_examples if item["year"] in FINAL_YEARS]
+        crop_raw = [item for item in raw_examples if item["crop"] == crop]
+        baseline_examples = apply_neighborhood(crop_raw, 1, 0.0)
+        baseline_final = [item for item in baseline_examples if item["year"] in FINAL_YEARS]
         published = sum(1 for row in rows if row["crop"] == crop and row["year"] in FINAL_YEARS)
         signal = metric_summary(final_examples, published)
+        baseline_signal = metric_summary(baseline_final, published)
+        gain_interval = paired_rank_gain_interval(baseline_final, final_examples)
+        point_validation = {
+            "development": point_comparison(baseline_examples, crop_examples, DEVELOPMENT_YEARS),
+            "stability": point_comparison(baseline_examples, crop_examples, STABILITY_YEARS),
+            "final": point_comparison(baseline_examples, crop_examples, FINAL_YEARS),
+        }
         item = {
             "crop": crop,
-            "signal": signal,
+            "nearestCountySignal": baseline_signal, "signal": signal,
+            "spearmanGain": round(signal["spearman"] - baseline_signal["spearman"], 4),
+            "spearmanGainBootstrap95": gain_interval,
+            "maeReduction": round(baseline_signal["maePercentile"] - signal["maePercentile"], 4),
+            "pointValidation": point_validation,
             "development": interval_metrics([item for item in crop_examples if item["year"] in DEVELOPMENT_YEARS], table, unit_scales),
             "stability": interval_metrics([item for item in crop_examples if item["year"] in STABILITY_YEARS], table, unit_scales),
             "final": interval_metrics(final_examples, table, unit_scales),
         }
         item["passed"] = (
-        item["signal"]["observations"] >= 100
-        and item["signal"]["spearman"] >= .5
-        and item["signal"]["bootstrap95"][0] > .3
-        and item["development"]["coverage80"] >= .78 and item["development"]["coverage90"] >= .88
-        and item["stability"]["coverage80"] >= .78 and item["stability"]["coverage90"] >= .88
-        and .75 <= item["final"]["coverage80"] <= .9
-        and .87 <= item["final"]["coverage90"] <= .96
-        and item["final"]["meanWidth90"] <= .8
+            item["signal"]["observations"] >= 100
+            and item["signal"]["spearman"] >= .5
+            and item["signal"]["bootstrap95"][0] > .3
+            and item["spearmanGainBootstrap95"][0] > 0
+            and all(
+                block["spearmanGain"] > 0 and block["maeReduction"] > 0
+                for block in item["pointValidation"].values()
+            )
+            and item["development"]["coverage80"] >= .78 and item["development"]["coverage90"] >= .88
+            and item["stability"]["coverage80"] >= .78 and item["stability"]["coverage90"] >= .88
+            and .75 <= item["final"]["coverage80"] <= .9
+            and .87 <= item["final"]["coverage90"] <= .96
+            and item["final"]["meanWidth90"] <= .8
         )
         per_crop.append(item)
     accepted_crops = [item["crop"] for item in per_crop if item["passed"]]
-    gate_passed = accepted_crops == ["spring wheat"]
+    gate_passed = accepted_crops == ["silage corn", "spring wheat"]
     report = {
         "name": "USDA crop-subtype yield atlas v1 validation",
         "calibrationYears": list(CALIBRATION_YEARS), "developmentYears": list(DEVELOPMENT_YEARS),
         "stabilityYears": list(STABILITY_YEARS), "finalTestYears": list(FINAL_YEARS),
         "calibrationExamples": len(calibration_examples),
         "calibrationGroups": [table[key] for key in sorted(table)],
+        "neighborhoodSelection": neighborhood_selection,
+        "selectedNeighborhoods": selected_neighborhoods,
         "scaleSelection": selection, "selectedScales": unit_scales, "perCrop": per_crop,
         "acceptedCrops": accepted_crops,
         "gate": {
             "passed": gate_passed,
-            "rule": "Leave-one-county-out transfer within 100 km needs final N >=100, Spearman >=0.50 with grouped-bootstrap lower >0.30; pre-final development/stability coverage >=78%/88%; locked 2023-2025 coverage 75-90%/87-96%; mean final 90% width <=0.80.",
+            "rule": "Select neighborhood size and distance power on 2018-2020 only. Leave-one-county-out transfer within 100 km then needs final N >=100, Spearman >=0.50 with grouped-bootstrap lower >0.30; paired-bootstrap rank-gain lower >0; positive rank gain and MAE reduction over one nearest county in development, stability, and locked final blocks; pre-final development/stability coverage >=78%/88%; locked 2023-2025 coverage 75-90%/87-96%; mean final 90% width <=0.80.",
         },
         "interpretation": "Nearby-county subtype ordering and uncertainty only; not parcel yield, revenue, or purchase returns.",
     }
@@ -201,19 +305,20 @@ def build(data: Path) -> tuple[dict, dict]:
                 "interval80": [round(max(0.0, expected - calibration["absoluteErrorP80"] * scales["scale80"]), 4), round(min(1.0, expected + calibration["absoluteErrorP80"] * scales["scale80"]), 4)],
                 "interval90": [round(max(0.0, expected - calibration["absoluteErrorP90"] * scales["scale90"]), 4), round(min(1.0, expected + calibration["absoluteErrorP90"] * scales["scale90"]), 4)],
                 "historyBucket": history_bucket(len(items)), "calibrationExamples": calibration["examples"],
-                "intervalMethod": "spatial-neighborhood-conformal", "neighborCount": 1,
+                "intervalMethod": "spatial-neighborhood-conformal",
+                "neighborCount": selected_neighborhoods[crop]["maxNeighbors"],
             },
             "history": [{"year": item["year"], "yieldPerAcre": item["yieldPerAcre"], "percentile": round(item["yieldPercentileWithinCropYear"], 4)} for item in items],
             "latest": {"year": latest["year"], "yieldPerAcre": latest["yieldPerAcre"]},
         })
     atlas = {
         "name": "USDA crop-subtype yield atlas v1", "evidenceGrade": "observed-subtype-county-calibrated",
-        "scope": "contiguous U.S. counties excluding California; non-durum spring wheat; 2010-2025",
+        "scope": "contiguous U.S. counties excluding California; silage corn and non-durum spring wheat; 2010-2025",
         "source": "USDA NASS Quick Stats published county yields", "crops": accepted_crops,
         "years": list(YEARS), "records": records, "validation": report,
         "spatialTransferValidation": {
-            "method": "Leave one reporting county out and use the nearest other county with earlier history within 100 km.",
-            "selectedNeighborhood": {"maxNeighbors": 1, "distancePower": 0.0, "distanceOffsetKm": 5.0},
+            "method": "Leave one reporting county out and aggregate the development-selected nearby counties with earlier history within 100 km.",
+            "selectedNeighborhoodByCrop": selected_neighborhoods,
             "groups": [{
                 **table[(crop, bucket)],
                 "absoluteErrorP80": round(table[(crop, bucket)]["absoluteErrorP80"] * unit_scales[crop]["scale80"], 4),
@@ -231,15 +336,16 @@ def markdown(report: dict, records: int) -> str:
     lines = [
         "# USDA crop-subtype yield atlas v1", "",
         report["gate"]["rule"], "",
-        "| Crop subtype | Locked N | Transfer ρ | 95% lower | 80% coverage | 90% coverage | Decision |",
+        "| Crop subtype | Locked N | Transfer ρ | Δρ vs nearest (95% CI) | 80% coverage | 90% coverage | Decision |",
         "|---|---:|---:|---:|---:|---:|---|",
     ]
     for item in report["perCrop"]:
         signal, final = item["signal"], item["final"]
-        lines.append(f'| {item["crop"]} | {signal["observations"]:,} | {signal["spearman"]:.3f} | {signal["bootstrap95"][0]:.3f} | {final["coverage80"]:.1%} | {final["coverage90"]:.1%} | {"PROMOTE" if item["passed"] else "REJECT"} |')
+        gain_interval = item["spearmanGainBootstrap95"]
+        lines.append(f'| {item["crop"]} | {signal["observations"]:,} | {signal["spearman"]:.3f} | +{item["spearmanGain"]:.3f} ({gain_interval[0]:+.3f} to {gain_interval[1]:+.3f}) | {final["coverage80"]:.1%} | {final["coverage90"]:.1%} | {"PROMOTE" if item["passed"] else "REJECT"} |')
     lines += [
         "", f'Promotion gate: **{"PASS" if report["gate"]["passed"] else "NOT PASSED"}**. Atlas records: **{records:,}**.', "",
-        "Scales were selected on 2018-2020 development and 2021-2022 stability blocks. The 2023-2025 outcomes remained locked until final evaluation. Silage corn retains an own-county persistence signal but fails the spatial-transfer rank floor and is not served as property evidence.", "",
+        "Neighborhoods were selected on 2018-2020 development only; interval scales also had to hold on 2021-2022 stability. The 2023-2025 outcomes remained locked until final evaluation.", "",
         "> " + report["interpretation"], "",
     ]
     return "\n".join(lines)
@@ -260,13 +366,17 @@ def plot(report: dict, output: Path) -> None:
     axes[0].set(xticks=x, xticklabels=crops, ylim=(70, 100), ylabel="locked outcome coverage (%)", title="2023-2025 calibrated reliability")
     axes[0].legend(); axes[0].grid(axis="y", alpha=.18)
     correlations = [item["signal"]["spearman"] for item in report["perCrop"]]
+    baselines = [item["nearestCountySignal"]["spearman"] for item in report["perCrop"]]
     lowers = [item["signal"]["bootstrap95"][0] for item in report["perCrop"]]
     uppers = [item["signal"]["bootstrap95"][1] for item in report["perCrop"]]
-    for position, correlation, lower, upper, color, item in zip(x, correlations, lowers, uppers, colors, report["perCrop"], strict=True):
-        axes[1].errorbar([position], [correlation], yerr=[[correlation - lower], [upper - correlation]], fmt="o", markersize=10, capsize=6, color=color)
-        axes[1].annotate("PROMOTE" if item["passed"] else "REJECT", (position, correlation), xytext=(0, 16), textcoords="offset points", ha="center", color=color, fontweight="bold", fontsize=9)
+    axes[1].scatter(x - .11, baselines, s=75, facecolors="white", edgecolors="#777", linewidths=2, label="one nearest county", zorder=3)
+    for position, baseline, correlation, lower, upper, color, item in zip(x, baselines, correlations, lowers, uppers, colors, report["perCrop"], strict=True):
+        axes[1].plot([position - .11, position + .11], [baseline, correlation], color=color, linewidth=2, alpha=.7)
+        axes[1].errorbar([position + .11], [correlation], yerr=[[correlation - lower], [upper - correlation]], fmt="o", markersize=10, capsize=6, color=color)
+        axes[1].annotate(f'+{item["spearmanGain"]:.3f}', (position + .11, correlation), xytext=(0, 16), textcoords="offset points", ha="center", color=color, fontweight="bold", fontsize=9)
+    axes[1].scatter([], [], s=75, color="#315d49", label="selected five-county prior")
     axes[1].axhline(.5, color="#d98352", linestyle="--", label="promotion floor")
-    axes[1].set(xticks=x, xticklabels=crops, ylim=(.25, .9), ylabel="Spearman rank correlation", title="Locked county ordering signal")
+    axes[1].set(xticks=x, xticklabels=crops, ylim=(.25, .9), ylabel="Spearman rank correlation", title="Locked gain from neighborhood aggregation")
     axes[1].legend(); axes[1].grid(axis="y", alpha=.18)
     figure.suptitle("CropFit subtype atlas · held-out spatial-transfer evidence", fontweight="bold")
     figure.text(.5, .01, report["interpretation"], ha="center", color="#555", fontsize=9)

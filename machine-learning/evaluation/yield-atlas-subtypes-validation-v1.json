@@ -28,46 +28,440 @@
     {
       "crop": "silage corn",
       "historyBucket": "1",
-      "examples": 402,
-      "absoluteErrorP80": 0.471,
-      "absoluteErrorP90": 0.5997
+      "examples": 299,
+      "absoluteErrorP80": 0.33,
+      "absoluteErrorP90": 0.43
     },
     {
       "crop": "silage corn",
       "historyBucket": "2-3",
-      "examples": 475,
-      "absoluteErrorP80": 0.3777,
-      "absoluteErrorP90": 0.4977
+      "examples": 574,
+      "absoluteErrorP80": 0.3618,
+      "absoluteErrorP90": 0.4697
     },
     {
       "crop": "silage corn",
       "historyBucket": "4+",
-      "examples": 279,
-      "absoluteErrorP80": 0.3325,
-      "absoluteErrorP90": 0.4441
+      "examples": 283,
+      "absoluteErrorP80": 0.3121,
+      "absoluteErrorP90": 0.3839
     },
     {
       "crop": "spring wheat",
       "historyBucket": "1",
-      "examples": 341,
-      "absoluteErrorP80": 0.3155,
-      "absoluteErrorP90": 0.4187
+      "examples": 250,
+      "absoluteErrorP80": 0.2557,
+      "absoluteErrorP90": 0.3596
     },
     {
       "crop": "spring wheat",
       "historyBucket": "2-3",
-      "examples": 436,
-      "absoluteErrorP80": 0.2666,
-      "absoluteErrorP90": 0.3933
+      "examples": 517,
+      "absoluteErrorP80": 0.2413,
+      "absoluteErrorP90": 0.3436
     },
     {
       "crop": "spring wheat",
       "historyBucket": "4+",
-      "examples": 414,
-      "absoluteErrorP80": 0.2497,
-      "absoluteErrorP90": 0.3491
+      "examples": 424,
+      "absoluteErrorP80": 0.2225,
+      "absoluteErrorP90": 0.2904
     }
   ],
+  "neighborhoodSelection": [
+    {
+      "crop": "silage corn",
+      "candidates": [
+        {
+          "maxNeighbors": 1,
+          "distancePower": 0.0,
+          "development": {
+            "observations": 536,
+            "spearman": 0.3728,
+            "maePercentile": 0.2322
+          }
+        },
+        {
+          "maxNeighbors": 1,
+          "distancePower": 0.5,
+          "development": {
+            "observations": 536,
+            "spearman": 0.3729,
+            "maePercentile": 0.2322
+          }
+        },
+        {
+          "maxNeighbors": 1,
+          "distancePower": 1.0,
+          "development": {
+            "observations": 536,
+            "spearman": 0.3728,
+            "maePercentile": 0.2322
+          }
+        },
+        {
+          "maxNeighbors": 1,
+          "distancePower": 2.0,
+          "development": {
+            "observations": 536,
+            "spearman": 0.3727,
+            "maePercentile": 0.2322
+          }
+        },
+        {
+          "maxNeighbors": 2,
+          "distancePower": 0.0,
+          "development": {
+            "observations": 536,
+            "spearman": 0.4086,
+            "maePercentile": 0.2211
+          }
+        },
+        {
+          "maxNeighbors": 2,
+          "distancePower": 0.5,
+          "development": {
+            "observations": 536,
+            "spearman": 0.4079,
+            "maePercentile": 0.2211
+          }
+        },
+        {
+          "maxNeighbors": 2,
+          "distancePower": 1.0,
+          "development": {
+            "observations": 536,
+            "spearman": 0.406,
+            "maePercentile": 0.2211
+          }
+        },
+        {
+          "maxNeighbors": 2,
+          "distancePower": 2.0,
+          "development": {
+            "observations": 536,
+            "spearman": 0.4025,
+            "maePercentile": 0.2215
+          }
+        },
+        {
+          "maxNeighbors": 3,
+          "distancePower": 0.0,
+          "development": {
+            "observations": 536,
+            "spearman": 0.4367,
+            "maePercentile": 0.2163
+          }
+        },
+        {
+          "maxNeighbors": 3,
+          "distancePower": 0.5,
+          "development": {
+            "observations": 536,
+            "spearman": 0.4375,
+            "maePercentile": 0.2162
+          }
+        },
+        {
+          "maxNeighbors": 3,
+          "distancePower": 1.0,
+          "development": {
+            "observations": 536,
+            "spearman": 0.4369,
+            "maePercentile": 0.2164
+          }
+        },
+        {
+          "maxNeighbors": 3,
+          "distancePower": 2.0,
+          "development": {
+            "observations": 536,
+            "spearman": 0.4321,
+            "maePercentile": 0.2168
+          }
+        },
+        {
+          "maxNeighbors": 5,
+          "distancePower": 0.0,
+          "development": {
+            "observations": 536,
+            "spearman": 0.4372,
+            "maePercentile": 0.2131
+          }
+        },
+        {
+          "maxNeighbors": 5,
+          "distancePower": 0.5,
+          "development": {
+            "observations": 536,
+            "spearman": 0.4414,
+            "maePercentile": 0.2129
+          }
+        },
+        {
+          "maxNeighbors": 5,
+          "distancePower": 1.0,
+          "development": {
+            "observations": 536,
+            "spearman": 0.4439,
+            "maePercentile": 0.2129
+          }
+        },
+        {
+          "maxNeighbors": 5,
+          "distancePower": 2.0,
+          "development": {
+            "observations": 536,
+            "spearman": 0.4428,
+            "maePercentile": 0.2132
+          }
+        },
+        {
+          "maxNeighbors": 8,
+          "distancePower": 0.0,
+          "development": {
+            "observations": 536,
+            "spearman": 0.4356,
+            "maePercentile": 0.2142
+          }
+        },
+        {
+          "maxNeighbors": 8,
+          "distancePower": 0.5,
+          "development": {
+            "observations": 536,
+            "spearman": 0.4389,
+            "maePercentile": 0.2135
+          }
+        },
+        {
+          "maxNeighbors": 8,
+          "distancePower": 1.0,
+          "development": {
+            "observations": 536,
+            "spearman": 0.4414,
+            "maePercentile": 0.2131
+          }
+        },
+        {
+          "maxNeighbors": 8,
+          "distancePower": 2.0,
+          "development": {
+            "observations": 536,
+            "spearman": 0.4415,
+            "maePercentile": 0.2131
+          }
+        }
+      ],
+      "selected": {
+        "maxNeighbors": 5,
+        "distancePower": 1.0,
+        "distanceOffsetKm": 5.0
+      }
+    },
+    {
+      "crop": "spring wheat",
+      "candidates": [
+        {
+          "maxNeighbors": 1,
+          "distancePower": 0.0,
+          "development": {
+            "observations": 440,
+            "spearman": 0.6004,
+            "maePercentile": 0.1709
+          }
+        },
+        {
+          "maxNeighbors": 1,
+          "distancePower": 0.5,
+          "development": {
+            "observations": 440,
+            "spearman": 0.6004,
+            "maePercentile": 0.1709
+          }
+        },
+        {
+          "maxNeighbors": 1,
+          "distancePower": 1.0,
+          "development": {
+            "observations": 440,
+            "spearman": 0.6004,
+            "maePercentile": 0.1709
+          }
+        },
+        {
+          "maxNeighbors": 1,
+          "distancePower": 2.0,
+          "development": {
+            "observations": 440,
+            "spearman": 0.6004,
+            "maePercentile": 0.1709
+          }
+        },
+        {
+          "maxNeighbors": 2,
+          "distancePower": 0.0,
+          "development": {
+            "observations": 440,
+            "spearman": 0.6122,
+            "maePercentile": 0.1717
+          }
+        },
+        {
+          "maxNeighbors": 2,
+          "distancePower": 0.5,
+          "development": {
+            "observations": 440,
+            "spearman": 0.6141,
+            "maePercentile": 0.1711
+          }
+        },
+        {
+          "maxNeighbors": 2,
+          "distancePower": 1.0,
+          "development": {
+            "observations": 440,
+            "spearman": 0.618,
+            "maePercentile": 0.1705
+          }
+        },
+        {
+          "maxNeighbors": 2,
+          "distancePower": 2.0,
+          "development": {
+            "observations": 440,
+            "spearman": 0.623,
+            "maePercentile": 0.1695
+          }
+        },
+        {
+          "maxNeighbors": 3,
+          "distancePower": 0.0,
+          "development": {
+            "observations": 440,
+            "spearman": 0.6492,
+            "maePercentile": 0.1663
+          }
+        },
+        {
+          "maxNeighbors": 3,
+          "distancePower": 0.5,
+          "development": {
+            "observations": 440,
+            "spearman": 0.65,
+            "maePercentile": 0.1661
+          }
+        },
+        {
+          "maxNeighbors": 3,
+          "distancePower": 1.0,
+          "development": {
+            "observations": 440,
+            "spearman": 0.6493,
+            "maePercentile": 0.1659
+          }
+        },
+        {
+          "maxNeighbors": 3,
+          "distancePower": 2.0,
+          "development": {
+            "observations": 440,
+            "spearman": 0.6482,
+            "maePercentile": 0.1655
+          }
+        },
+        {
+          "maxNeighbors": 5,
+          "distancePower": 0.0,
+          "development": {
+            "observations": 440,
+            "spearman": 0.6567,
+            "maePercentile": 0.1664
+          }
+        },
+        {
+          "maxNeighbors": 5,
+          "distancePower": 0.5,
+          "development": {
+            "observations": 440,
+            "spearman": 0.6583,
+            "maePercentile": 0.1657
+          }
+        },
+        {
+          "maxNeighbors": 5,
+          "distancePower": 1.0,
+          "development": {
+            "observations": 440,
+            "spearman": 0.6596,
+            "maePercentile": 0.165
+          }
+        },
+        {
+          "maxNeighbors": 5,
+          "distancePower": 2.0,
+          "development": {
+            "observations": 440,
+            "spearman": 0.6633,
+            "maePercentile": 0.1639
+          }
+        },
+        {
+          "maxNeighbors": 8,
+          "distancePower": 0.0,
+          "development": {
+            "observations": 440,
+            "spearman": 0.654,
+            "maePercentile": 0.1679
+          }
+        },
+        {
+          "maxNeighbors": 8,
+          "distancePower": 0.5,
+          "development": {
+            "observations": 440,
+            "spearman": 0.6554,
+            "maePercentile": 0.1671
+          }
+        },
+        {
+          "maxNeighbors": 8,
+          "distancePower": 1.0,
+          "development": {
+            "observations": 440,
+            "spearman": 0.6566,
+            "maePercentile": 0.1663
+          }
+        },
+        {
+          "maxNeighbors": 8,
+          "distancePower": 2.0,
+          "development": {
+            "observations": 440,
+            "spearman": 0.6588,
+            "maePercentile": 0.165
+          }
+        }
+      ],
+      "selected": {
+        "maxNeighbors": 5,
+        "distancePower": 2.0,
+        "distanceOffsetKm": 5.0
+      }
+    }
+  ],
+  "selectedNeighborhoods": {
+    "silage corn": {
+      "maxNeighbors": 5,
+      "distancePower": 1.0,
+      "distanceOffsetKm": 5.0
+    },
+    "spring wheat": {
+      "maxNeighbors": 5,
+      "distancePower": 2.0,
+      "distanceOffsetKm": 5.0
+    }
+  },
   "scaleSelection": [
     {
       "crop": "silage corn",
@@ -76,159 +470,159 @@
           "scale": 1.0,
           "development": {
             "observations": 536,
-            "coverage80": 0.7761,
-            "coverage90": 0.916,
-            "meanWidth80": 0.6359,
-            "meanWidth90": 0.7841
+            "coverage80": 0.7817,
+            "coverage90": 0.8787,
+            "meanWidth80": 0.6135,
+            "meanWidth90": 0.7363
           },
           "stability": {
             "observations": 490,
-            "coverage80": 0.849,
-            "coverage90": 0.9306,
-            "meanWidth80": 0.6298,
-            "meanWidth90": 0.7814
+            "coverage80": 0.8694,
+            "coverage90": 0.9367,
+            "meanWidth80": 0.6011,
+            "meanWidth90": 0.7178
           }
         },
         {
           "scale": 1.05,
           "development": {
             "observations": 536,
-            "coverage80": 0.7985,
-            "coverage90": 0.9291,
-            "meanWidth80": 0.6616,
-            "meanWidth90": 0.8092
+            "coverage80": 0.7966,
+            "coverage90": 0.9011,
+            "meanWidth80": 0.6396,
+            "meanWidth90": 0.7646
           },
           "stability": {
             "observations": 490,
-            "coverage80": 0.8592,
-            "coverage90": 0.9469,
-            "meanWidth80": 0.6552,
-            "meanWidth90": 0.8077
+            "coverage80": 0.8918,
+            "coverage90": 0.9531,
+            "meanWidth80": 0.6268,
+            "meanWidth90": 0.7447
           }
         },
         {
           "scale": 1.1,
           "development": {
             "observations": 536,
-            "coverage80": 0.819,
-            "coverage90": 0.9403,
-            "meanWidth80": 0.6863,
-            "meanWidth90": 0.8325
+            "coverage80": 0.8172,
+            "coverage90": 0.9179,
+            "meanWidth80": 0.6651,
+            "meanWidth90": 0.7912
           },
           "stability": {
             "observations": 490,
-            "coverage80": 0.8837,
-            "coverage90": 0.9653,
-            "meanWidth80": 0.6802,
-            "meanWidth90": 0.8313
+            "coverage80": 0.9082,
+            "coverage90": 0.9714,
+            "meanWidth80": 0.6519,
+            "meanWidth90": 0.7702
           }
         },
         {
           "scale": 1.15,
           "development": {
             "observations": 536,
-            "coverage80": 0.8545,
-            "coverage90": 0.9459,
-            "meanWidth80": 0.7099,
-            "meanWidth90": 0.8537
+            "coverage80": 0.8377,
+            "coverage90": 0.9366,
+            "meanWidth80": 0.6901,
+            "meanWidth90": 0.8163
           },
           "stability": {
             "observations": 490,
-            "coverage80": 0.8898,
-            "coverage90": 0.9816,
-            "meanWidth80": 0.7043,
-            "meanWidth90": 0.8529
+            "coverage80": 0.9245,
+            "coverage90": 0.9776,
+            "meanWidth80": 0.6761,
+            "meanWidth90": 0.7943
           }
         },
         {
           "scale": 1.2,
           "development": {
             "observations": 536,
-            "coverage80": 0.875,
-            "coverage90": 0.9534,
-            "meanWidth80": 0.7323,
-            "meanWidth90": 0.873
+            "coverage80": 0.8601,
+            "coverage90": 0.9478,
+            "meanWidth80": 0.7143,
+            "meanWidth90": 0.8399
           },
           "stability": {
             "observations": 490,
-            "coverage80": 0.898,
+            "coverage80": 0.9306,
             "coverage90": 0.9837,
-            "meanWidth80": 0.7274,
-            "meanWidth90": 0.8727
+            "meanWidth80": 0.6994,
+            "meanWidth90": 0.8171
           }
         },
         {
           "scale": 1.25,
           "development": {
             "observations": 536,
-            "coverage80": 0.8881,
-            "coverage90": 0.9664,
-            "meanWidth80": 0.7539,
-            "meanWidth90": 0.8907
+            "coverage80": 0.8806,
+            "coverage90": 0.959,
+            "meanWidth80": 0.7379,
+            "meanWidth90": 0.8619
           },
           "stability": {
             "observations": 490,
-            "coverage80": 0.9061,
-            "coverage90": 0.9857,
-            "meanWidth80": 0.7493,
-            "meanWidth90": 0.8903
+            "coverage80": 0.9367,
+            "coverage90": 0.9918,
+            "meanWidth80": 0.7219,
+            "meanWidth90": 0.8385
           }
         },
         {
           "scale": 1.33,
           "development": {
             "observations": 536,
-            "coverage80": 0.9216,
-            "coverage90": 0.9739,
-            "meanWidth80": 0.7866,
-            "meanWidth90": 0.9155
+            "coverage80": 0.9049,
+            "coverage90": 0.9701,
+            "meanWidth80": 0.7736,
+            "meanWidth90": 0.8932
           },
           "stability": {
             "observations": 490,
-            "coverage80": 0.9347,
-            "coverage90": 0.9918,
-            "meanWidth80": 0.7826,
-            "meanWidth90": 0.9156
+            "coverage80": 0.9571,
+            "coverage90": 0.9959,
+            "meanWidth80": 0.7563,
+            "meanWidth90": 0.8692
           }
         },
         {
           "scale": 1.4,
           "development": {
             "observations": 536,
-            "coverage80": 0.9291,
+            "coverage80": 0.931,
             "coverage90": 0.9739,
-            "meanWidth80": 0.8126,
-            "meanWidth90": 0.9347
+            "meanWidth80": 0.8027,
+            "meanWidth90": 0.9165
           },
           "stability": {
             "observations": 490,
-            "coverage80": 0.9469,
-            "coverage90": 0.9918,
-            "meanWidth80": 0.8099,
-            "meanWidth90": 0.9339
+            "coverage80": 0.9735,
+            "coverage90": 0.9959,
+            "meanWidth80": 0.7843,
+            "meanWidth90": 0.8927
           }
         },
         {
           "scale": 1.5,
           "development": {
             "observations": 536,
-            "coverage80": 0.944,
-            "coverage90": 0.9795,
-            "meanWidth80": 0.8468,
-            "meanWidth90": 0.9565
+            "coverage80": 0.9478,
+            "coverage90": 0.9813,
+            "meanWidth80": 0.8409,
+            "meanWidth90": 0.9435
           },
           "stability": {
             "observations": 490,
-            "coverage80": 0.9673,
+            "coverage80": 0.9878,
             "coverage90": 1.0,
-            "meanWidth80": 0.8446,
-            "meanWidth90": 0.9554
+            "meanWidth80": 0.8214,
+            "meanWidth90": 0.9209
           }
         }
       ],
       "selected": {
-        "scale80": 1.05,
-        "scale90": 1.0
+        "scale80": 1.0,
+        "scale90": 1.05
       }
     },
     {
@@ -238,176 +632,176 @@
           "scale": 1.0,
           "development": {
             "observations": 440,
-            "coverage80": 0.7727,
-            "coverage90": 0.8727,
-            "meanWidth80": 0.4735,
-            "meanWidth90": 0.6301
+            "coverage80": 0.7341,
+            "coverage90": 0.825,
+            "meanWidth80": 0.4293,
+            "meanWidth90": 0.5463
           },
           "stability": {
             "observations": 333,
-            "coverage80": 0.8018,
-            "coverage90": 0.9219,
-            "meanWidth80": 0.4708,
-            "meanWidth90": 0.6271
+            "coverage80": 0.7868,
+            "coverage90": 0.8889,
+            "meanWidth80": 0.4266,
+            "meanWidth90": 0.5438
           }
         },
         {
           "scale": 1.05,
           "development": {
             "observations": 440,
-            "coverage80": 0.7909,
-            "coverage90": 0.8818,
-            "meanWidth80": 0.4943,
-            "meanWidth90": 0.6551
+            "coverage80": 0.75,
+            "coverage90": 0.8523,
+            "meanWidth80": 0.4487,
+            "meanWidth90": 0.5701
           },
           "stability": {
             "observations": 333,
-            "coverage80": 0.8168,
-            "coverage90": 0.9279,
-            "meanWidth80": 0.4918,
-            "meanWidth90": 0.652
+            "coverage80": 0.8138,
+            "coverage90": 0.9039,
+            "meanWidth80": 0.446,
+            "meanWidth90": 0.5675
           }
         },
         {
           "scale": 1.1,
           "development": {
             "observations": 440,
-            "coverage80": 0.8045,
-            "coverage90": 0.9091,
-            "meanWidth80": 0.5148,
-            "meanWidth90": 0.6792
+            "coverage80": 0.7682,
+            "coverage90": 0.8727,
+            "meanWidth80": 0.4679,
+            "meanWidth90": 0.5934
           },
           "stability": {
             "observations": 333,
-            "coverage80": 0.8438,
-            "coverage90": 0.9279,
-            "meanWidth80": 0.5126,
-            "meanWidth90": 0.6762
+            "coverage80": 0.8288,
+            "coverage90": 0.9189,
+            "meanWidth80": 0.4654,
+            "meanWidth90": 0.5907
           }
         },
         {
           "scale": 1.15,
           "development": {
             "observations": 440,
-            "coverage80": 0.8182,
-            "coverage90": 0.9159,
-            "meanWidth80": 0.535,
-            "meanWidth90": 0.7021
+            "coverage80": 0.7841,
+            "coverage90": 0.8864,
+            "meanWidth80": 0.487,
+            "meanWidth90": 0.616
           },
           "stability": {
             "observations": 333,
-            "coverage80": 0.8589,
-            "coverage90": 0.9309,
-            "meanWidth80": 0.533,
-            "meanWidth90": 0.6997
+            "coverage80": 0.8408,
+            "coverage90": 0.9249,
+            "meanWidth80": 0.4846,
+            "meanWidth90": 0.6133
           }
         },
         {
           "scale": 1.2,
           "development": {
             "observations": 440,
-            "coverage80": 0.8364,
-            "coverage90": 0.925,
-            "meanWidth80": 0.555,
-            "meanWidth90": 0.7245
+            "coverage80": 0.8068,
+            "coverage90": 0.8977,
+            "meanWidth80": 0.5058,
+            "meanWidth90": 0.6381
           },
           "stability": {
             "observations": 333,
-            "coverage80": 0.8709,
-            "coverage90": 0.9309,
-            "meanWidth80": 0.5529,
-            "meanWidth90": 0.722
+            "coverage80": 0.8468,
+            "coverage90": 0.9399,
+            "meanWidth80": 0.5036,
+            "meanWidth90": 0.6351
           }
         },
         {
           "scale": 1.25,
           "development": {
             "observations": 440,
-            "coverage80": 0.8455,
-            "coverage90": 0.9295,
-            "meanWidth80": 0.5747,
-            "meanWidth90": 0.7456
+            "coverage80": 0.8114,
+            "coverage90": 0.9136,
+            "meanWidth80": 0.5244,
+            "meanWidth90": 0.6596
           },
           "stability": {
             "observations": 333,
-            "coverage80": 0.8949,
-            "coverage90": 0.9369,
-            "meanWidth80": 0.5725,
-            "meanWidth90": 0.7435
+            "coverage80": 0.8649,
+            "coverage90": 0.9399,
+            "meanWidth80": 0.5222,
+            "meanWidth90": 0.6563
           }
         },
         {
           "scale": 1.33,
           "development": {
             "observations": 440,
-            "coverage80": 0.8591,
-            "coverage90": 0.9386,
-            "meanWidth80": 0.6049,
-            "meanWidth90": 0.7776
+            "coverage80": 0.8409,
+            "coverage90": 0.9364,
+            "meanWidth80": 0.5537,
+            "meanWidth90": 0.6921
           },
           "stability": {
             "observations": 333,
-            "coverage80": 0.9129,
-            "coverage90": 0.958,
-            "meanWidth80": 0.6025,
-            "meanWidth90": 0.7762
+            "coverage80": 0.8919,
+            "coverage90": 0.961,
+            "meanWidth80": 0.5516,
+            "meanWidth90": 0.6889
           }
         },
         {
           "scale": 1.4,
           "development": {
             "observations": 440,
-            "coverage80": 0.8727,
-            "coverage90": 0.9455,
-            "meanWidth80": 0.6303,
-            "meanWidth90": 0.8036
+            "coverage80": 0.8591,
+            "coverage90": 0.9409,
+            "meanWidth80": 0.5789,
+            "meanWidth90": 0.7189
           },
           "stability": {
             "observations": 333,
-            "coverage80": 0.9219,
-            "coverage90": 0.967,
-            "meanWidth80": 0.6281,
-            "meanWidth90": 0.803
+            "coverage80": 0.9159,
+            "coverage90": 0.97,
+            "meanWidth80": 0.5768,
+            "meanWidth90": 0.7162
           }
         },
         {
           "scale": 1.5,
           "development": {
             "observations": 440,
-            "coverage80": 0.8909,
-            "coverage90": 0.9545,
-            "meanWidth80": 0.6656,
-            "meanWidth90": 0.8374
+            "coverage80": 0.8841,
+            "coverage90": 0.9523,
+            "meanWidth80": 0.6137,
+            "meanWidth90": 0.7552
           },
           "stability": {
             "observations": 333,
-            "coverage80": 0.9279,
+            "coverage80": 0.9219,
             "coverage90": 0.976,
-            "meanWidth80": 0.6635,
-            "meanWidth90": 0.8365
+            "meanWidth80": 0.6115,
+            "meanWidth90": 0.7526
           }
         }
       ],
       "selected": {
-        "scale80": 1.05,
-        "scale90": 1.05
+        "scale80": 1.15,
+        "scale90": 1.15
       }
     }
   ],
   "selectedScales": {
     "silage corn": {
-      "scale80": 1.05,
-      "scale90": 1.0
+      "scale80": 1.0,
+      "scale90": 1.05
     },
     "spring wheat": {
-      "scale80": 1.05,
-      "scale90": 1.05
+      "scale80": 1.15,
+      "scale90": 1.15
     }
   },
   "perCrop": [
     {
       "crop": "silage corn",
-      "signal": {
+      "nearestCountySignal": {
         "published": 585,
         "observations": 585,
         "coverage": 1.0,
@@ -418,32 +812,93 @@
         ],
         "maePercentile": 0.2184
       },
+      "signal": {
+        "published": 585,
+        "observations": 585,
+        "coverage": 1.0,
+        "spearman": 0.503,
+        "bootstrap95": [
+          0.4215,
+          0.5768
+        ],
+        "maePercentile": 0.2035
+      },
+      "spearmanGain": 0.069,
+      "spearmanGainBootstrap95": [
+        0.0139,
+        0.1257
+      ],
+      "maeReduction": 0.0149,
+      "pointValidation": {
+        "development": {
+          "nearestCounty": {
+            "observations": 536,
+            "spearman": 0.3728,
+            "maePercentile": 0.2322
+          },
+          "selectedNeighborhood": {
+            "observations": 536,
+            "spearman": 0.4439,
+            "maePercentile": 0.2129
+          },
+          "spearmanGain": 0.0711,
+          "maeReduction": 0.0193
+        },
+        "stability": {
+          "nearestCounty": {
+            "observations": 490,
+            "spearman": 0.5538,
+            "maePercentile": 0.193
+          },
+          "selectedNeighborhood": {
+            "observations": 490,
+            "spearman": 0.6746,
+            "maePercentile": 0.1698
+          },
+          "spearmanGain": 0.1208,
+          "maeReduction": 0.0232
+        },
+        "final": {
+          "nearestCounty": {
+            "observations": 585,
+            "spearman": 0.434,
+            "maePercentile": 0.2184
+          },
+          "selectedNeighborhood": {
+            "observations": 585,
+            "spearman": 0.503,
+            "maePercentile": 0.2035
+          },
+          "spearmanGain": 0.069,
+          "maeReduction": 0.0149
+        }
+      },
       "development": {
         "observations": 536,
-        "coverage80": 0.7985,
-        "coverage90": 0.916,
-        "meanWidth80": 0.6616,
-        "meanWidth90": 0.7841
+        "coverage80": 0.7817,
+        "coverage90": 0.9011,
+        "meanWidth80": 0.6135,
+        "meanWidth90": 0.7646
       },
       "stability": {
         "observations": 490,
-        "coverage80": 0.8592,
-        "coverage90": 0.9306,
-        "meanWidth80": 0.6552,
-        "meanWidth90": 0.7814
+        "coverage80": 0.8694,
+        "coverage90": 0.9531,
+        "meanWidth80": 0.6011,
+        "meanWidth90": 0.7447
       },
       "final": {
         "observations": 585,
-        "coverage80": 0.8034,
-        "coverage90": 0.8991,
-        "meanWidth80": 0.6499,
-        "meanWidth90": 0.7747
+        "coverage80": 0.7863,
+        "coverage90": 0.9009,
+        "meanWidth80": 0.6038,
+        "meanWidth90": 0.7443
       },
-      "passed": false
+      "passed": true
     },
     {
       "crop": "spring wheat",
-      "signal": {
+      "nearestCountySignal": {
         "published": 258,
         "observations": 257,
         "coverage": 0.9961,
@@ -454,36 +909,98 @@
         ],
         "maePercentile": 0.1697
       },
+      "signal": {
+        "published": 258,
+        "observations": 257,
+        "coverage": 0.9961,
+        "spearman": 0.7097,
+        "bootstrap95": [
+          0.6149,
+          0.7858
+        ],
+        "maePercentile": 0.1539
+      },
+      "spearmanGain": 0.1159,
+      "spearmanGainBootstrap95": [
+        0.0474,
+        0.1943
+      ],
+      "maeReduction": 0.0158,
+      "pointValidation": {
+        "development": {
+          "nearestCounty": {
+            "observations": 440,
+            "spearman": 0.6004,
+            "maePercentile": 0.1709
+          },
+          "selectedNeighborhood": {
+            "observations": 440,
+            "spearman": 0.6633,
+            "maePercentile": 0.1639
+          },
+          "spearmanGain": 0.0629,
+          "maeReduction": 0.007
+        },
+        "stability": {
+          "nearestCounty": {
+            "observations": 333,
+            "spearman": 0.6767,
+            "maePercentile": 0.1613
+          },
+          "selectedNeighborhood": {
+            "observations": 333,
+            "spearman": 0.7535,
+            "maePercentile": 0.1483
+          },
+          "spearmanGain": 0.0768,
+          "maeReduction": 0.013
+        },
+        "final": {
+          "nearestCounty": {
+            "observations": 257,
+            "spearman": 0.5938,
+            "maePercentile": 0.1697
+          },
+          "selectedNeighborhood": {
+            "observations": 257,
+            "spearman": 0.7097,
+            "maePercentile": 0.1539
+          },
+          "spearmanGain": 0.1159,
+          "maeReduction": 0.0158
+        }
+      },
       "development": {
         "observations": 440,
-        "coverage80": 0.7909,
-        "coverage90": 0.8818,
-        "meanWidth80": 0.4943,
-        "meanWidth90": 0.6551
+        "coverage80": 0.7841,
+        "coverage90": 0.8864,
+        "meanWidth80": 0.487,
+        "meanWidth90": 0.616
       },
       "stability": {
         "observations": 333,
-        "coverage80": 0.8168,
-        "coverage90": 0.9279,
-        "meanWidth80": 0.4918,
-        "meanWidth90": 0.652
+        "coverage80": 0.8408,
+        "coverage90": 0.9249,
+        "meanWidth80": 0.4846,
+        "meanWidth90": 0.6133
       },
       "final": {
         "observations": 257,
-        "coverage80": 0.8093,
-        "coverage90": 0.8833,
-        "meanWidth80": 0.4894,
-        "meanWidth90": 0.6527
+        "coverage80": 0.8366,
+        "coverage90": 0.9027,
+        "meanWidth80": 0.486,
+        "meanWidth90": 0.6132
       },
       "passed": true
     }
   ],
   "acceptedCrops": [
+    "silage corn",
     "spring wheat"
   ],
   "gate": {
     "passed": true,
-    "rule": "Leave-one-county-out transfer within 100 km needs final N >=100, Spearman >=0.50 with grouped-bootstrap lower >0.30; pre-final development/stability coverage >=78%/88%; locked 2023-2025 coverage 75-90%/87-96%; mean final 90% width <=0.80."
+    "rule": "Select neighborhood size and distance power on 2018-2020 only. Leave-one-county-out transfer within 100 km then needs final N >=100, Spearman >=0.50 with grouped-bootstrap lower >0.30; paired-bootstrap rank-gain lower >0; positive rank gain and MAE reduction over one nearest county in development, stability, and locked final blocks; pre-final development/stability coverage >=78%/88%; locked 2023-2025 coverage 75-90%/87-96%; mean final 90% width <=0.80."
   },
   "interpretation": "Nearby-county subtype ordering and uncertainty only; not parcel yield, revenue, or purchase returns."
 }

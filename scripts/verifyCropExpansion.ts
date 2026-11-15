@@ -58,15 +58,24 @@ const subtypeAtlas = JSON.parse(readFileSync(
 )) as {
   crops: string[];
   records: Array<{ crop: string; yieldUnit: string; history: Array<{ yieldPerAcre: number }> }>;
-  validation: { acceptedCrops: string[]; gate: { passed: boolean }; perCrop: Array<{ crop: string; passed: boolean; signal: { observations: number; spearman: number; bootstrap95: [number, number] }; development: { coverage80: number; coverage90: number }; stability: { coverage80: number; coverage90: number }; final: { coverage80: number; coverage90: number; meanWidth90: number } }> };
+  spatialTransferValidation?: { selectedNeighborhoodByCrop?: Record<string, { maxNeighbors: number; distancePower: number; distanceOffsetKm: number }> };
+  validation: { acceptedCrops: string[]; gate: { passed: boolean }; selectedNeighborhoods: Record<string, { maxNeighbors: number; distancePower: number; distanceOffsetKm: number }>; perCrop: Array<{ crop: string; passed: boolean; spearmanGain: number; spearmanGainBootstrap95: [number, number]; maeReduction: number; pointValidation: Record<'development' | 'stability' | 'final', { spearmanGain: number; maeReduction: number }>; signal: { observations: number; spearman: number; bootstrap95: [number, number] }; development: { coverage80: number; coverage90: number }; stability: { coverage80: number; coverage90: number }; final: { coverage80: number; coverage90: number; meanWidth90: number } }> };
 };
-if (JSON.stringify(subtypeAtlas.crops) !== JSON.stringify(['spring wheat'])
-  || JSON.stringify(subtypeAtlas.validation.acceptedCrops) !== JSON.stringify(['spring wheat'])
-  || !subtypeAtlas.validation.gate.passed || subtypeAtlas.records.length !== 297) {
+const expectedNeighborhoods = {
+  'silage corn': { maxNeighbors: 5, distancePower: 1, distanceOffsetKm: 5 },
+  'spring wheat': { maxNeighbors: 5, distancePower: 2, distanceOffsetKm: 5 },
+};
+if (JSON.stringify(subtypeAtlas.crops) !== JSON.stringify(['silage corn', 'spring wheat'])
+  || JSON.stringify(subtypeAtlas.validation.acceptedCrops) !== JSON.stringify(['silage corn', 'spring wheat'])
+  || JSON.stringify(subtypeAtlas.validation.selectedNeighborhoods) !== JSON.stringify(expectedNeighborhoods)
+  || JSON.stringify(subtypeAtlas.spatialTransferValidation?.selectedNeighborhoodByCrop) !== JSON.stringify(expectedNeighborhoods)
+  || !subtypeAtlas.validation.gate.passed || subtypeAtlas.records.length !== 721) {
   throw new Error('Crop-subtype production atlas identity or promotion gate changed unexpectedly.');
 }
 for (const item of subtypeAtlas.validation.perCrop) {
   const passes = item.signal.observations >= 100 && item.signal.spearman >= .5 && item.signal.bootstrap95[0] > .3
+    && item.spearmanGainBootstrap95[0] > 0
+    && Object.values(item.pointValidation).every((block) => block.spearmanGain > 0 && block.maeReduction > 0)
     && item.development.coverage80 >= .78 && item.development.coverage90 >= .88
     && item.stability.coverage80 >= .78 && item.stability.coverage90 >= .88
     && item.final.coverage80 >= .75 && item.final.coverage80 <= .9
@@ -75,9 +84,9 @@ for (const item of subtypeAtlas.validation.perCrop) {
     throw new Error(`Crop-subtype held-out contract failed: ${item.crop}`);
   }
 }
-if (subtypeAtlas.records.some((record) => record.yieldUnit !== 'bu/acre'
+if (subtypeAtlas.records.some((record) => !['bu/acre', 'tons/acre'].includes(record.yieldUnit)
   || record.history.some((item) => !Number.isFinite(item.yieldPerAcre)))) {
   throw new Error('Crop-subtype atlas lost explicit, finite yield units.');
 }
 
-console.log('Crop expansion policy verified: spring wheat passes locked spatial transfer; silage corn remains isolated after failing the transfer rank floor');
+console.log('Crop expansion policy verified: development-selected five-county priors improve locked spring-wheat and silage-corn transfer');

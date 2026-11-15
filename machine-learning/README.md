@@ -32,7 +32,7 @@ artifact instead, use the full setup below. Because the repository is private,
 the installer uses an authenticated GitHub CLI session (`gh auth login`) or a
 `GITHUB_TOKEN`.
 
-Runtime API v0.10.0 keeps the validated v0.9.1 estimator and hardens every direct
+Runtime API v0.11.0 keeps the validated v0.9.1 estimator and hardens every direct
 and HTTP prediction path with the same finite coordinate, soil-pH, boolean,
 climate-shape, and 20-year history limits. Startup validates the artifact's
 internal model/metadata contract. `GET /health` returns the artifact SHA-256 and
@@ -146,9 +146,10 @@ This reproduces the production-seed comparison, a frozen five-seed robustness
 sweep, their machine-readable report, and two presentation charts under
 `machine-learning/evaluation/`.
 
-For grain corn, soybeans, winter wheat, and non-durum spring wheat,
+For grain corn, soybeans, winter wheat, silage corn, and non-durum spring wheat,
 the response may also include
-`observedYieldEvidence`: the nearest USDA reporting county within 100 km, its
+`observedYieldEvidence`: nearby USDA reporting counties within 100 km, the
+nearest county's
 2010–2025 within-crop/year percentile history, and an observed county prior
 with calibrated 80% and 90% uncertainty intervals. Atlas v9 uses the globally
 selected 15% regional share only in Census regions where it improves both
@@ -248,14 +249,16 @@ different nearby county before property lookup:
 npm run ml:build:crop-subtype-atlas
 ```
 
-It leaves each target county out, uses the nearest reporting county within
-100 km, calibrates on 2011–2017 errors, and selects safety scales on 2018–2022.
-On locked 2023–2025 outcomes, spring wheat reaches Spearman 0.594 (95% lower
-0.467) and 80.9% / 88.3% coverage. Silage corn falls to Spearman 0.434 and is
-rejected despite calibrated coverage. The 297-record production artifact is
-therefore spring-wheat-only and explicitly uses `bu/acre`; silage remains
-agroclimatic-only. Generic grain-corn and winter-wheat queries remain on atlas
-v9. See
+It leaves each target county out and selects neighborhood aggregation using
+2018–2020 only. Both crops select five counties: inverse-distance power 1 for
+silage and power 2 for spring wheat. On locked 2023–2025 outcomes, spring-wheat
+Spearman improves from 0.594 to 0.710 and MAE falls from 0.170 to 0.154; silage
+improves from 0.434 to 0.503 and MAE from 0.218 to 0.204. Grouped-bootstrap
+lower bounds are 0.615 and 0.422; paired gain intervals are +0.047 to +0.194
+and +0.014 to +0.126. Calibrated 80% / 90% coverage is 83.7% / 90.3% for
+spring wheat and 78.6% / 90.1% for silage. The 721-record artifact
+keeps `bu/acre` and `tons/acre` explicit. Generic grain-corn and winter-wheat
+queries remain on atlas v9. See
 `evaluation/yield-atlas-subtypes-validation-v1.md`.
 
 ## Test recency weighting and atlas lookup

@@ -46,7 +46,7 @@ rejected; that experiment did not replace the 120-tree v0.6 champion. See
 
 ## Out-of-distribution ceiling
 
-API v0.10.0 retains the v0.6.1 safety ceiling that caps the ML score by the exact
+API v0.11.0 retains the v0.6.1 safety ceiling that caps the ML score by the exact
 seasonal and establishment EcoCrop suitability already computed for
 limiting-factor explanations. This is a one-sided safety constraint: the
 ensemble still determines underprediction but cannot claim suitability above
@@ -198,16 +198,18 @@ Spearman at least 0.50, a grouped-bootstrap lower bound above 0.30, and at least
 observations and Spearman 0.762 (95% interval 0.670–0.830); silage corn passes
 with 576 observations and 0.551 (0.469–0.617). Dry peas and durum wheat fail the
 recent sample floor despite positive rank signal. The accepted subtypes remain
-outside atlas v9. A leave-one-county-out transfer gate promotes spring wheat
-only: locked 2023–2025 Spearman is 0.594 (95% lower 0.467), with 80.9% / 88.3%
-interval coverage. Silage corn drops to 0.434 under spatial transfer and remains
-agroclimatic-only. The separate 297-record atlas uses explicit `bu/acre` units.
-See
+outside atlas v9. A development-selected five-county aggregation passes the
+leave-one-county-out transfer gate for both. On locked 2023–2025 outcomes,
+spring-wheat Spearman improves from 0.594 to 0.710 and silage from 0.434 to
+0.503, while both reduce MAE. Grouped-bootstrap lower bounds are 0.615 and
+0.422, and paired rank-gain intervals stay above zero (+0.047 to +0.194 and
++0.014 to +0.126). Calibrated coverage is 83.7% / 90.3% and 78.6% / 90.1%.
+The separate 721-record atlas preserves explicit `bu/acre` and `tons/acre` units. See
 `evaluation/yield-atlas-subtypes-validation-v1.md`.
 
 ## Inference request safety
 
-API v0.10.0 bounds caller-supplied climate to 12 or 24 ordered months and at
+API v0.11.0 bounds caller-supplied climate to 12 or 24 ordered months and at
 most 20 complete history years. Temperature, precipitation, and solar inputs
 must be finite and remain within documented physical limits. Invalid caller
 data returns HTTP 422 instead of being mislabeled as a model/upstream failure;
@@ -241,7 +243,7 @@ reuse a stale prediction. The cache is a bounded 2,048-entry LRU, and CI checks
 key sensitivity, revision invalidation, model isolation, expiry, and
 least-recently-used eviction.
 
-API v0.10.0 exposes its API+training-run+artifact-hash revision and the full
+API v0.11.0 exposes its API+training-run+artifact-hash revision and the full
 artifact SHA-256 through `/health`. The browser proxy reads the revision once
 per prediction request. Startup rejects artifacts missing the fitted ensemble,
 model identity, or a consistent feature contract. Direct and HTTP inference

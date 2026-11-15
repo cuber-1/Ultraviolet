@@ -229,12 +229,18 @@ def verify(artifact: Path, profiles: Path) -> None:
     subtype_atlas = artifact.parents[1] / "evaluation/yield-atlas-subtypes-v1.json"
     if subtype_atlas.exists():
         subtype_report = load_atlas(str(subtype_atlas.resolve()))
-        assert subtype_report["crops"] == ["spring wheat"]
+        assert subtype_report["crops"] == ["silage corn", "spring wheat"]
         assert subtype_report["validation"]["gate"]["passed"]
         spring = nearest_evidence("spring wheat", 46.8, -100.8, subtype_atlas)
+        silage = nearest_evidence("silage corn", 43.0, -89.0, subtype_atlas)
         assert spring and spring["yieldUnit"] == "bu/acre" and spring["history"][0]["yieldPerAcre"] > 0
+        assert silage and silage["yieldUnit"] == "tons/acre" and silage["history"][0]["yieldPerAcre"] > 0
         assert spring["observedYieldPrior"]["intervalMethod"] == "spatial-neighborhood-conformal"
-        assert nearest_evidence("silage corn", 43.0, -89.0, subtype_atlas) is None
+        assert silage["observedYieldPrior"]["intervalMethod"] == "spatial-neighborhood-conformal"
+        assert spring["observedYieldPrior"]["neighborCount"] == 5
+        assert silage["observedYieldPrior"]["neighborCount"] == 5
+        assert abs(sum(item["weight"] for item in spring["regionalNeighbors"]) - 1) < .0001
+        assert abs(sum(item["weight"] for item in silage["regionalNeighbors"]) - 1) < .0001
 
     ranking_validation = artifact.parents[1] / "evaluation/ranking-validation-v1.json"
     if ranking_validation.exists():
