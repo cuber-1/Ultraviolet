@@ -11,6 +11,7 @@ import { shadowVector, simulate, type AreaSelection, type Obstruction } from '..
 import { geometryBounds, geometryRequiredRadius, insideMetricGeometry, metricPointToLonLat, roofWktToMetricGeometry } from '../services/roofGeometry';
 import './AgriculturePage.css';
 import './AgricultureEnhancements.css';
+import MapsLink from '../components/MapsLink';
 
 const Roof3DVisualizer = lazy(() => import('../components/Roof3DVisualizer'));
 
@@ -141,7 +142,7 @@ export function SiteWorkspace({ result, onClose, initialDate = '2026-04-15', ini
       </section>
 
       <aside className="simulation-panel">
-        <div className="site-title"><span className="mono">SITE / {costar ? `COSTAR ${costar.propertyId}` : 'UNMATCHED'}</span><h1>{buildingName}</h1><p><MapPin size={13} /> {costar?.address || `${result.lat.toFixed(5)}, ${result.lon.toFixed(5)}`}</p><div className="site-chips"><span>{formatArea(result.property?.roofAreaSqft ?? null)} roof</span><span>Vexcel {(result.score * 100).toFixed(1)}%</span>{costar && <span>{costar.matchDistanceM} m match</span>}</div></div>
+        <div className="site-title"><span className="mono">SITE / {costar ? `COSTAR ${costar.propertyId}` : 'UNMATCHED'}</span><h1>{buildingName}</h1><p><MapPin size={13} /> <MapsLink lat={result.lat} lon={result.lon} address={costar?.address || `${result.lat.toFixed(5)}, ${result.lon.toFixed(5)}`} /></p><div className="site-chips"><span>{formatArea(result.property?.roofAreaSqft ?? null)} roof</span><span>Vexcel {(result.score * 100).toFixed(1)}%</span>{costar && <span>{costar.matchDistanceM} m match</span>}</div></div>
 
         {costar ? <section className="costar-card"><header><div><span className="mono">COSTAR</span><strong>{costar.propertyType}{costar.buildingClass ? ` · Class ${costar.buildingClass}` : ''}</strong></div>{costar.photoUrl && <img src={costar.photoUrl} alt="" />}</header><dl><div><dt>Building area</dt><dd>{formatArea(costar.grossBuildingAreaSqft)}</dd></div><div><dt>Stories</dt><dd>{costar.stories ?? '—'}</dd></div><div><dt>Built</dt><dd>{costar.yearBuilt ?? '—'}</dd></div><div><dt>Rating</dt><dd>{costar.buildingRating ? `${costar.buildingRating} / 5` : '—'}</dd></div></dl>{costar.apartment && <div className="costar-strip"><span>{costar.apartment.availableUnits} of {costar.apartment.units ?? '—'} units available</span>{costar.apartment.minRent && <span>${costar.apartment.minRent.toLocaleString()}–${costar.apartment.maxRent?.toLocaleString()} rent</span>}</div>}<div className="listing-line"><i className={costar.listing?.active ? 'active' : ''} /><span>{costar.listing ? `${costar.listing.statuses.join(', ')} · ${costar.listing.types.join(', ')}` : 'No commercial listing record'}</span><span>{costar.matterport.length} tours</span></div></section> : <div className="costar-missing"><span className="mono">COSTAR</span><p>No property is within 125 m. Aerial and sunlight views are still available.</p></div>}
 

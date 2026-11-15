@@ -9,6 +9,7 @@ import { roofTitle, useAddresses } from '../../services/addresses';
 import { addFavorite, loadFavorites, removeFavorite, type Favorite } from '../../services/favorites';
 import type { AgentComparison, SearchResult } from '../../services/vexcel';
 import './ResultsApp.css';
+import MapsLink from '../../components/MapsLink';
 
 type View = 'deck' | 'saved' | 'insights' | 'agent';
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
@@ -168,7 +169,7 @@ function Deck({ roofs, index, total, criteria, crops, cropNames, savedIds, onInd
       <div className="ra-info">
         <span className="ra-count">Roof {roof.rank} of {total}{savedIds.has(roof.result.id) ? ' · saved' : ''}</span>
         <h1>{roof.name}</h1>
-        <p className="ra-address">{roof.address}</p>
+        <p className="ra-address"><MapsLink lat={roof.result.lat} lon={roof.result.lon} address={roof.address} /></p>
         <div className="ra-stats">
           <div className="ra-food"><strong>{roof.food ? `≈${formatLbs(roof.food.lbsPerYear)}` : '—'}<small> lbs</small></strong><span>food a year (est.)</span></div>
           <div><strong>{roof.sunlit === null ? '—' : `${fmt(roof.sunlit)}`}<small> ft²</small></strong><span>{meets ? 'in full sun, meets your area' : `in ${criteria.targetHours}h+ sun`}</span></div>

@@ -17,6 +17,7 @@ import {
 } from '../services/cropPlan';
 import { findModelRun, getRun, mlOnline, saveRun, savedTime } from '../services/runs';
 import { roofTitle, useAddresses } from '../services/addresses';
+import MapsLink from '../components/MapsLink';
 import './PlanPage.css';
 
 const TOP_N = 5;
@@ -308,7 +309,7 @@ function UrbanResults({ outcome, onOpen }: { outcome: UrbanOutcome; onOpen: (id:
               <img src={result.imageryUrl} alt="" loading="lazy" />
               <div className="roof-body">
                 <strong>{title}</strong>
-                <span className="roof-address"><MapPin size={12} /> {result.costar?.address || `${result.lat.toFixed(4)}, ${result.lon.toFixed(4)}`}</span>
+                <span className="roof-address"><MapPin size={12} /> <MapsLink lat={result.lat} lon={result.lon} address={result.costar?.address || `${result.lat.toFixed(4)}, ${result.lon.toFixed(4)}`} /></span>
                 <div className="roof-meter"><div style={{ width: `${ratio * 100}%` }} className={meets ? 'meets' : ''} /></div>
                 <span className="roof-metric">{shared === null ? 'Sunlight not assessed · missing roof geometry' : <><b>{sqft(shared)}</b> gets {criteria.targetHours} h on both dates{meets ? ' · meets your area' : ` · ${Math.round(ratio * 100)}% of target`}</>}</span>
                 {explanations.get(result.id) && <p className="roof-why">{explanations.get(result.id)}</p>}
