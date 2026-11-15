@@ -275,6 +275,15 @@ Every supported crop and every final-test year improved both rank and MAE, so
 the predeclared production gate passed. See
 `evaluation/recency-validation-v2.md`.
 
+A follow-up screened a clipped county-rank trend using 2018–2020 only. A
+crop-gated eight-year candidate improved development Spearman by 0.0009 and
+MAE by 0.0006, with wheat held exactly at the champion. The parameters and gate
+were committed before opening later outcomes. It then regressed confirmation
+rank/MAE by −0.0010/+0.0002 and locked 2023–2025 by −0.0009/+0.0001; the final
+grouped-bootstrap rank-delta interval was −0.0013 to −0.0005. The candidate was
+rejected and atlas v11 remains production. See
+`evaluation/trend-development-v1.md` and `evaluation/trend-validation-v1.md`.
+
 Rebuilding the full forward-year atlas with the promoted prior improved pooled
 Spearman from 0.7871 to 0.7914. On identical 2019–2025 rows, 16-year-history
 Spearman improved from 0.8405 to 0.8465 and MAE from 0.1199 to 0.1168. Fresh

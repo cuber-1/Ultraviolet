@@ -1,0 +1,257 @@
+{
+  "name": "USDA county-prior crop-gated trend validation v1",
+  "target": "next-year county yield percentile within crop and year",
+  "champion": "v11 shrunken three-year-half-life recency prior",
+  "candidate": "champion plus 30% of a clipped eight-year OLS county-rank trend for corn and soybean; wheat unchanged",
+  "protocol": {
+    "selectionEvidence": "Parameters and crop gates were selected only on 2018\u20132020 development in trend-development-v1.json.",
+    "lookbackYears": 8,
+    "trendWeight": 0.3,
+    "enabledCrops": [
+      "corn",
+      "soybean"
+    ],
+    "confirmationYears": [
+      2021,
+      2022
+    ],
+    "finalYears": [
+      2023,
+      2024,
+      2025
+    ],
+    "declaredGate": "Confirmation and final pooled rank and MAE must improve; every crop and year must be non-regressing in both metrics; enabled crops must strictly improve both; wheat must remain exact; final grouped-bootstrap rank-delta lower bound must exceed zero."
+  },
+  "confirmation": {
+    "observations": 7338,
+    "baseline": {
+      "observations": 7338,
+      "spearman": 0.8513,
+      "maePercentile": 0.115
+    },
+    "recency": {
+      "observations": 7338,
+      "spearman": 0.8503,
+      "maePercentile": 0.1152
+    },
+    "spearmanDelta": -0.001,
+    "maeDelta": 0.0002,
+    "perCrop": [
+      {
+        "crop": "corn",
+        "observations": 2952,
+        "baseline": {
+          "observations": 2952,
+          "spearman": 0.8389,
+          "maePercentile": 0.1198
+        },
+        "recency": {
+          "observations": 2952,
+          "spearman": 0.8367,
+          "maePercentile": 0.1202
+        },
+        "spearmanDelta": -0.0022,
+        "maeDelta": 0.0004
+      },
+      {
+        "crop": "soybean",
+        "observations": 2675,
+        "baseline": {
+          "observations": 2675,
+          "spearman": 0.8568,
+          "maePercentile": 0.1141
+        },
+        "recency": {
+          "observations": 2675,
+          "spearman": 0.8565,
+          "maePercentile": 0.1141
+        },
+        "spearmanDelta": -0.0003,
+        "maeDelta": 0.0
+      },
+      {
+        "crop": "wheat",
+        "observations": 1711,
+        "baseline": {
+          "observations": 1711,
+          "spearman": 0.8629,
+          "maePercentile": 0.1083
+        },
+        "recency": {
+          "observations": 1711,
+          "spearman": 0.8629,
+          "maePercentile": 0.1083
+        },
+        "spearmanDelta": 0.0,
+        "maeDelta": 0.0
+      }
+    ],
+    "perYear": [
+      {
+        "year": 2021,
+        "observations": 3639,
+        "baseline": {
+          "observations": 3639,
+          "spearman": 0.8548,
+          "maePercentile": 0.1143
+        },
+        "recency": {
+          "observations": 3639,
+          "spearman": 0.8532,
+          "maePercentile": 0.1148
+        },
+        "spearmanDelta": -0.0016,
+        "maeDelta": 0.0005
+      },
+      {
+        "year": 2022,
+        "observations": 3699,
+        "baseline": {
+          "observations": 3699,
+          "spearman": 0.8488,
+          "maePercentile": 0.1157
+        },
+        "recency": {
+          "observations": 3699,
+          "spearman": 0.8485,
+          "maePercentile": 0.1157
+        },
+        "spearmanDelta": -0.0003,
+        "maeDelta": 0.0
+      }
+    ]
+  },
+  "final": {
+    "observations": 8889,
+    "baseline": {
+      "observations": 8889,
+      "spearman": 0.8352,
+      "maePercentile": 0.1209
+    },
+    "recency": {
+      "observations": 8889,
+      "spearman": 0.8343,
+      "maePercentile": 0.121
+    },
+    "spearmanDelta": -0.0009,
+    "maeDelta": 0.0001,
+    "perCrop": [
+      {
+        "crop": "corn",
+        "observations": 3889,
+        "baseline": {
+          "observations": 3889,
+          "spearman": 0.8445,
+          "maePercentile": 0.1191
+        },
+        "recency": {
+          "observations": 3889,
+          "spearman": 0.8432,
+          "maePercentile": 0.1193
+        },
+        "spearmanDelta": -0.0013,
+        "maeDelta": 0.0002
+      },
+      {
+        "crop": "soybean",
+        "observations": 3454,
+        "baseline": {
+          "observations": 3454,
+          "spearman": 0.8286,
+          "maePercentile": 0.1222
+        },
+        "recency": {
+          "observations": 3454,
+          "spearman": 0.8275,
+          "maePercentile": 0.1222
+        },
+        "spearmanDelta": -0.0011,
+        "maeDelta": 0.0
+      },
+      {
+        "crop": "wheat",
+        "observations": 1546,
+        "baseline": {
+          "observations": 1546,
+          "spearman": 0.8288,
+          "maePercentile": 0.1225
+        },
+        "recency": {
+          "observations": 1546,
+          "spearman": 0.8288,
+          "maePercentile": 0.1225
+        },
+        "spearmanDelta": 0.0,
+        "maeDelta": 0.0
+      }
+    ],
+    "perYear": [
+      {
+        "year": 2023,
+        "observations": 3484,
+        "baseline": {
+          "observations": 3484,
+          "spearman": 0.8527,
+          "maePercentile": 0.116
+        },
+        "recency": {
+          "observations": 3484,
+          "spearman": 0.8538,
+          "maePercentile": 0.1152
+        },
+        "spearmanDelta": 0.0011,
+        "maeDelta": -0.0008
+      },
+      {
+        "year": 2024,
+        "observations": 2433,
+        "baseline": {
+          "observations": 2433,
+          "spearman": 0.812,
+          "maePercentile": 0.1278
+        },
+        "recency": {
+          "observations": 2433,
+          "spearman": 0.809,
+          "maePercentile": 0.1289
+        },
+        "spearmanDelta": -0.003,
+        "maeDelta": 0.0011
+      },
+      {
+        "year": 2025,
+        "observations": 2972,
+        "baseline": {
+          "observations": 2972,
+          "spearman": 0.8342,
+          "maePercentile": 0.1209
+        },
+        "recency": {
+          "observations": 2972,
+          "spearman": 0.8328,
+          "maePercentile": 0.1212
+        },
+        "spearmanDelta": -0.0014,
+        "maeDelta": 0.0003
+      }
+    ],
+    "spearmanDeltaBootstrap95": [
+      -0.0013,
+      -0.0005
+    ]
+  },
+  "gate": {
+    "passed": false,
+    "checks": {
+      "confirmationPooled": false,
+      "confirmationSlices": false,
+      "confirmationEnabledCrops": false,
+      "finalPooled": false,
+      "finalRankBootstrap": false,
+      "finalSlices": false,
+      "finalEnabledCrops": false,
+      "disabledWheatExact": true
+    }
+  },
+  "interpretation": "Observed county-rank ordering only; not parcel yield, revenue, or property value."
+}

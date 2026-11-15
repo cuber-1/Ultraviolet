@@ -314,6 +314,16 @@ def verify(artifact: Path, profiles: Path) -> None:
         assert shrinkage_report["selectedCropRegionalScales"] == calibration["selectedCropRegionalScales"]
         assert shrinkage_report["candidate"] == calibration["productionBlendRadii"]
 
+    trend_validation = artifact.parents[1] / "evaluation/trend-validation-v1.json"
+    if trend_validation.exists():
+        trend_report = json.loads(trend_validation.read_text())
+        assert not trend_report["gate"]["passed"]
+        assert trend_report["protocol"]["enabledCrops"] == ["corn", "soybean"]
+        assert trend_report["confirmation"]["spearmanDelta"] < 0
+        assert trend_report["confirmation"]["maeDelta"] > 0
+        assert trend_report["final"]["spearmanDeltaBootstrap95"][1] < 0
+        assert next(item for item in trend_report["final"]["perCrop"] if item["crop"] == "wheat")["spearmanDelta"] == 0
+
     if atlas.exists():
         assert evidence["observedYieldPrior"]["expectedPercentile"] != evidence["regionalNeighbors"][0]["expectedPercentile"]
         assert abs(sum(item["weight"] for item in evidence["regionalNeighbors"]) - 1) < .0001

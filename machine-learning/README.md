@@ -293,6 +293,11 @@ npm run ml:develop:trend
 npm run ml:evaluate:trend
 ```
 
+The fixed candidate passed development but was rejected after later years were
+opened: confirmation rank/MAE changed by −0.0010/+0.0002 and locked 2023–2025
+by −0.0009/+0.0001. Its grouped-bootstrap rank interval was entirely negative.
+Atlas v11 therefore remains unchanged; see `evaluation/trend-validation-v1.md`.
+
 The builder uses the filtered USDA Quick Stats and Census county files from the
 national observed-validation download. It writes atlas v11, a forward-year
 validation report, and a presentation PNG under `evaluation/`. Atlas v11 uses
