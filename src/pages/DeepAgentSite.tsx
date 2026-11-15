@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, CalendarDays, Cpu, LayoutGrid, MapPin, Sun } from 'lucide-react';
+import { ArrowLeft, Box, CalendarDays, Cpu, ExternalLink, LayoutGrid, MapPin, Sun } from 'lucide-react';
 import { SiteWorkspace } from './AgriculturePage';
 import RoofPreview3D from '../components/RoofPreview3D';
 import { CLASSES, ComponentBars, CropTimeline, PlantingCurveChart, classify, CROP_COLORS } from '../components/charts/DeepAgentCharts';
@@ -9,7 +9,7 @@ import { roofTitle, useAddresses } from '../services/addresses';
 import './DeepAgentSite.css';
 
 export type SiteCrop = { id: string; name: string };
-type Tab = 'overview' | 'sun' | 'model' | 'calendar';
+type Tab = 'overview' | 'sun' | 'model' | 'calendar' | 'tour';
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 const fmt = (value: number) => new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(value);
 const shortDate = (date: string) => new Date(`${date}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
@@ -37,6 +37,7 @@ export default function DeepAgentSite({ result, rank, total, simulation, predict
   const tabs: Array<{ key: Tab; label: string; icon: typeof Sun }> = [
     { key: 'overview', label: 'Overview', icon: LayoutGrid }, { key: 'sun', label: 'Sun coverage', icon: Sun },
     { key: 'model', label: 'ML model', icon: Cpu }, { key: 'calendar', label: 'Calendar', icon: CalendarDays },
+    ...(result.costar?.matterport.length ? [{ key: 'tour' as Tab, label: '3D tour', icon: Box }] : []),
   ];
 
   return <div className="das">
@@ -85,6 +86,8 @@ export default function DeepAgentSite({ result, rank, total, simulation, predict
       </div>
       <SiteWorkspace embedded initialSurfaceMode="clean" result={result} onClose={onClose} initialDate={criteria.dates[0]} initialTargetHours={criteria.targetHours} targetAreaSqft={criteria.targetAreaSqft} />
     </main>}
+
+    {tab === 'tour' && result.costar && <TourTab name={name} tours={result.costar.matterport} roofSqft={result.property?.roofAreaSqft ?? null} sunlit={sunlit} />}
 
     {tab === 'model' && <ModelTab predictions={predictions} crops={crops} preferredMonth={preferredMonth} mlModel={mlModel} />}
 
@@ -154,5 +157,25 @@ function ModelTab({ predictions, crops, preferredMonth, mlModel }: { predictions
         <p className="muted">Agroclimatic screening from climate, soil pH, irrigation, and FAO crop requirements. Not a yield forecast or purchase recommendation. Roof shading is handled separately by the sun simulator.</p>
       </div>
     </div>
+  </main>;
+}
+
+/** Matterport scans of the building (from CoStar): walk the inside before visiting the roof. */
+function TourTab({ name, tours, roofSqft, sunlit }: { name: string; tours: Array<{ modelId: string; caption: string }>; roofSqft: number | null; sunlit: number | null }) {
+  const unique = useMemo(() => [...new Map(tours.map((tour) => [tour.modelId, tour])).values()], [tours]);
+  const [active, setActive] = useState(unique[0]?.modelId ?? '');
+  const current = unique.find((tour) => tour.modelId === active) ?? unique[0];
+  if (!current) return null;
+  return <main className="das-body das-tour">
+    <div className="das-card wide das-tour-head">
+      <div>
+        <span className="das-label">Matterport 3D scan · via CoStar</span>
+        <h2>Walk {name} before you visit.</h2>
+        <p>Vexcel measured the roof from above{roofSqft ? ` (${fmt(roofSqft)} ft²` : ''}{sunlit !== null ? `, ${fmt(sunlit)} ft² in full sun)` : roofSqft ? ')' : ''}. The scan shows the inside: check for stairs or a roof hatch, freight access and loading doors for soil and water, and the space you would lease below the farm.</p>
+      </div>
+      <a className="das-tour-open" href={`https://my.matterport.com/show/?m=${current.modelId}`} target="_blank" rel="noreferrer">Open full screen <ExternalLink size={14} /></a>
+    </div>
+    {unique.length > 1 && <div className="das-tour-chips">{unique.map((tour) => <button key={tour.modelId} className={tour.modelId === current.modelId ? 'active' : ''} onClick={() => setActive(tour.modelId)}>{tour.caption || tour.modelId}</button>)}</div>}
+    <iframe key={current.modelId} className="das-tour-frame" title={`Matterport tour: ${current.caption}`} src={`https://my.matterport.com/show/?m=${current.modelId}&play=1&qs=1&brand=0&help=0`} allow="xr-spatial-tracking; fullscreen" allowFullScreen />
   </main>;
 }
