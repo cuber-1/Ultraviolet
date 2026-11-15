@@ -46,7 +46,7 @@ rejected; that experiment did not replace the 120-tree v0.6 champion. See
 
 ## Out-of-distribution ceiling
 
-API v0.14.0 retains the v0.6.1 safety ceiling that caps the ML score by the exact
+API v0.15.0 retains the v0.6.1 safety ceiling that caps the ML score by the exact
 seasonal and establishment EcoCrop suitability already computed for
 limiting-factor explanations. This is a one-sided safety constraint: the
 ensemble still determines underprediction but cannot claim suitability above
@@ -200,26 +200,30 @@ with 576 observations and 0.551 (0.469–0.617). Dry peas and durum wheat fail t
 recent sample floor despite positive rank signal. The accepted subtypes remain
 outside atlas v9. A development-selected five-county aggregation passes the
 leave-one-county-out transfer gate for both. On locked 2023–2025 outcomes,
-spring-wheat Spearman improves from 0.594 to 0.710 and silage from 0.434 to
-0.511, while both reduce MAE. Silage weights neighbors by history count because
+spring-wheat Spearman improves from 0.594 to 0.710 and silage from 0.444 to
+0.522, while both reduce MAE. Silage weights neighbors by history count because
 that development-selected candidate also improves rank and MAE in stability and
 final blocks versus the previous distance-only method. Its incremental final
-rank interval is -0.010 to +0.027, so the ablation gain is not conclusive.
-Grouped-bootstrap lower bounds are 0.615 and 0.428, and paired rank-gain
+rank interval is -0.009 to +0.029, so the ablation gain is not conclusive.
+Silage uses a 25% recency blend after it improves both development and stability
+against the generic 80% blend. Locked rank improves from 0.511 to 0.522 and MAE
+from 0.203 to 0.201, with paired rank-gain interval +0.001 to +0.023. Spring
+wheat retains 80% recency because its candidates do not clear the +0.005
+development floor. Grouped-bootstrap lower bounds are 0.615 and 0.442, and paired rank-gain
 intervals against one nearest county stay above zero (+0.047 to +0.194 and
-+0.018 to +0.139). Development selects neighbor-disagreement scaling for
++0.020 to +0.141). Development selects neighbor-disagreement scaling for
 spring wheat only after an 8.0% mean-width reduction clears a predeclared 1%
 floor. On locked outcomes, its mean 90% width falls from 0.665 to 0.617 while
 coverage remains 85.2% / 92.6%; Western coverage is 81.9% / 89.4% with width
-0.608 instead of 0.702. Silage retains α=0 and reaches 80.7% / 90.1% while
-narrowing mean 90% width from 0.761 to 0.746. The separate
+0.608 instead of 0.702. Silage retains α=0 and reaches 82.2% / 89.9% with
+mean 90% width 0.750. The separate
 690-record atlas preserves explicit `bu/acre` and `tons/acre` units and excludes
 crop-region pairs without at least 50 examples in every validation block. See
 `evaluation/yield-atlas-subtypes-validation-v1.md`.
 
 ## Inference request safety
 
-API v0.14.0 bounds caller-supplied climate to 12 or 24 ordered months and at
+API v0.15.0 bounds caller-supplied climate to 12 or 24 ordered months and at
 most 20 complete history years. Temperature, precipitation, and solar inputs
 must be finite and remain within documented physical limits. Invalid caller
 data returns HTTP 422 instead of being mislabeled as a model/upstream failure;
@@ -253,7 +257,7 @@ reuse a stale prediction. The cache is a bounded 2,048-entry LRU, and CI checks
 key sensitivity, revision invalidation, model isolation, expiry, and
 least-recently-used eviction.
 
-API v0.14.0 exposes its API+training-run+artifact-hash revision and the full
+API v0.15.0 exposes its API+training-run+artifact-hash revision and the full
 artifact SHA-256 through `/health`. The browser proxy reads the revision once
 per prediction request. Startup rejects artifacts missing the fitted ensemble,
 model identity, or a consistent feature contract. Direct and HTTP inference

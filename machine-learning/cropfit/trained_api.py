@@ -17,7 +17,7 @@ ROOT = Path(__file__).resolve().parents[1]
 YIELD_ATLAS = ROOT / "evaluation/yield-atlas-v9.json"
 SUBTYPE_YIELD_ATLAS = ROOT / "evaluation/yield-atlas-subtypes-v1.json"
 SUBTYPE_CROPS = {"silage corn", "spring wheat"}
-app = FastAPI(title="Ultraviolet CropFit", version="0.14.0")
+app = FastAPI(title="Ultraviolet CropFit", version="0.15.0")
 
 ClimateSeries = Annotated[list[dict], Field(min_length=12, max_length=24)]
 ClimateYear = Annotated[list[dict], Field(min_length=12, max_length=12)]
@@ -80,6 +80,8 @@ def observed_evidence() -> dict:
             "available": True, "name": subtype_atlas["name"], "records": len(subtype_atlas["records"]),
             "crops": subtype_atlas["crops"], "years": subtype_atlas["years"],
             "validation": subtype_atlas["validation"],
+            "predictionMethod": subtype_atlas.get("predictionMethod"),
+            "spatialTransferValidation": subtype_atlas.get("spatialTransferValidation"),
         }
     return evidence
 

@@ -239,6 +239,21 @@ def verify(artifact: Path, profiles: Path) -> None:
         subtype_report = load_atlas(str(subtype_atlas.resolve()))
         assert subtype_report["crops"] == ["silage corn", "spring wheat"]
         assert subtype_report["validation"]["gate"]["passed"]
+        assert subtype_report["validation"]["selectedRecencyWeights"] == {
+            "silage corn": .25, "spring wheat": .8,
+        }
+        assert subtype_report["predictionMethod"] == {
+            "name": "crop-specific shrunken exponential recency prior",
+            "forecastYear": 2026, "halfLifeYears": 3.0, "defaultRecencyWeight": .8,
+            "recencyWeightByCrop": {"silage corn": .25, "spring wheat": .8},
+        }
+        silage_validation = next(
+            item for item in subtype_report["validation"]["perCrop"]
+            if item["crop"] == "silage corn"
+        )
+        assert silage_validation["temporalComparison"]["final"]["spearmanGain"] > 0
+        assert silage_validation["temporalComparison"]["final"]["maeReduction"] > 0
+        assert silage_validation["temporalComparison"]["finalSpearmanGainBootstrap95"][0] > 0
         spring = nearest_evidence("spring wheat", 46.8, -100.8, subtype_atlas)
         silage = nearest_evidence("silage corn", 43.0, -89.0, subtype_atlas)
         assert spring and spring["yieldUnit"] == "bu/acre" and spring["history"][0]["yieldPerAcre"] > 0

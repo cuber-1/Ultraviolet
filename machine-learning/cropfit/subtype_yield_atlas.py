@@ -21,6 +21,9 @@ FINAL_YEARS = (2023, 2024, 2025)
 SCALE_CANDIDATES = (1.0, 1.05, 1.1, 1.15, 1.2, 1.25, 1.33, 1.4, 1.5)
 DISAGREEMENT_ALPHA_CANDIDATES = (0.0, .5, 1.0, 2.0, 3.0, 5.0, 8.0, 10.0)
 MIN_DEVELOPMENT_WIDTH_REDUCTION = .01
+DEFAULT_RECENCY_WEIGHT = .8
+RECENCY_WEIGHT_CANDIDATES = (0.0, .25, .5, .8, 1.0)
+MIN_DEVELOPMENT_TEMPORAL_SPEARMAN_GAIN = .005
 NEIGHBOR_CANDIDATES = tuple(
     (count, distance_power, history_power)
     for count in (1, 2, 3, 5, 8)
@@ -57,9 +60,13 @@ def spatial_transfer_examples(rows: list[dict]) -> list[dict]:
                 earlier = [item for item in items if item["year"] < year]
                 if earlier:
                     latest = earlier[-1]
+                    long_history_prediction = observed_prior_prediction(earlier, year, recency_weight=0.0)
+                    recency_prediction = observed_prior_prediction(earlier, year, recency_weight=1.0)
                     sources.append({
                         "fips": fips, "latitude": latest["latitude"], "longitude": latest["longitude"],
                         "prediction": observed_prior_prediction(earlier, year), "historyCount": len(earlier),
+                        "longHistoryPrediction": long_history_prediction,
+                        "recencyPrediction": recency_prediction,
                     })
             targets = [row for row in rows if row["crop"] == crop and row["year"] == year]
             if len(sources) < 2 or not targets:
@@ -80,6 +87,19 @@ def spatial_transfer_examples(rows: list[dict]) -> list[dict]:
                     continue
                 examples.append({**target, "neighbors": neighbors})
     return examples
+
+
+def apply_recency_weight(items: list[dict], recency_weight: float) -> list[dict]:
+    return [{
+        **item,
+        "neighbors": [{
+            **neighbor,
+            "prediction": (
+                (1 - recency_weight) * neighbor["longHistoryPrediction"]
+                + recency_weight * neighbor["recencyPrediction"]
+            ),
+        } for neighbor in item["neighbors"]],
+    } for item in items]
 
 
 def apply_neighborhood(
@@ -131,6 +151,16 @@ def candidate_comparison(baseline: list[dict], selected: list[dict], years: tupl
     selected_summary = signal_summary([item for item in selected if item["year"] in years])
     return {
         "distanceOnly": baseline_summary, "selected": selected_summary,
+        "spearmanGain": round(selected_summary["spearman"] - baseline_summary["spearman"], 4),
+        "maeReduction": round(baseline_summary["maePercentile"] - selected_summary["maePercentile"], 4),
+    }
+
+
+def temporal_point_comparison(baseline: list[dict], selected: list[dict], years: tuple[int, ...]) -> dict:
+    baseline_summary = signal_summary([item for item in baseline if item["year"] in years])
+    selected_summary = signal_summary([item for item in selected if item["year"] in years])
+    return {
+        "genericRecencyBaseline": baseline_summary, "selectedTemporalBlend": selected_summary,
         "spearmanGain": round(selected_summary["spearman"] - baseline_summary["spearman"], 4),
         "maeReduction": round(baseline_summary["maePercentile"] - selected_summary["maePercentile"], 4),
     }
@@ -253,6 +283,8 @@ def build(data: Path) -> tuple[dict, dict]:
     neighborhood_selection = []
     selected_neighborhoods = {}
     distance_only_neighborhoods = {}
+    selected_recency_weights = {}
+    temporal_selection = []
     examples = []
     for crop in CROP_METADATA:
         crop_raw = [item for item in raw_examples if item["crop"] == crop]
@@ -285,13 +317,63 @@ def build(data: Path) -> tuple[dict, dict]:
             "historyPower": 0.0, "distanceOffsetKm": 5.0,
         }
         selected_neighborhoods[crop] = config
-        crop_examples = apply_neighborhood(
-            crop_raw, config["maxNeighbors"], config["distancePower"], config["historyPower"],
+        temporal_candidates = []
+        temporal_scores = []
+        for recency_weight in RECENCY_WEIGHT_CANDIDATES:
+            weighted_raw = apply_recency_weight(crop_raw, recency_weight)
+            weighted_examples = apply_neighborhood(
+                weighted_raw, config["maxNeighbors"], config["distancePower"], config["historyPower"],
+            )
+            development = signal_summary(
+                [item for item in weighted_examples if item["year"] in DEVELOPMENT_YEARS], rounded=False,
+            )
+            stability = signal_summary(
+                [item for item in weighted_examples if item["year"] in STABILITY_YEARS], rounded=False,
+            )
+            temporal_scores.append({
+                "recencyWeight": recency_weight, "development": development,
+                "stability": stability, "examples": weighted_examples,
+            })
+            temporal_candidates.append({
+                "recencyWeight": recency_weight,
+                "development": signal_summary([item for item in weighted_examples if item["year"] in DEVELOPMENT_YEARS]),
+                "stability": signal_summary([item for item in weighted_examples if item["year"] in STABILITY_YEARS]),
+            })
+        temporal_baseline = next(
+            item for item in temporal_scores if item["recencyWeight"] == DEFAULT_RECENCY_WEIGHT
         )
+        promotable_temporal = [
+            item for item in temporal_scores
+            if item["development"]["spearman"] - temporal_baseline["development"]["spearman"]
+            >= MIN_DEVELOPMENT_TEMPORAL_SPEARMAN_GAIN
+            and item["development"]["maePercentile"] < temporal_baseline["development"]["maePercentile"]
+            and item["stability"]["spearman"] >= temporal_baseline["stability"]["spearman"]
+            and item["stability"]["maePercentile"] <= temporal_baseline["stability"]["maePercentile"]
+        ]
+        selected_temporal = max(
+            promotable_temporal,
+            key=lambda item: (item["development"]["spearman"], -item["development"]["maePercentile"]),
+            default=temporal_baseline,
+        )
+        selected_recency_weights[crop] = selected_temporal["recencyWeight"]
+        crop_examples = selected_temporal["examples"]
         examples.extend(crop_examples)
         neighborhood_selection.append({
             "crop": crop, "candidates": candidates,
             "distanceOnlyBaseline": distance_only_neighborhoods[crop], "selected": config,
+        })
+        temporal_selection.append({
+            "crop": crop, "baseline": DEFAULT_RECENCY_WEIGHT,
+            "candidates": temporal_candidates, "selected": selected_temporal["recencyWeight"],
+            "minimumDevelopmentSpearmanGain": MIN_DEVELOPMENT_TEMPORAL_SPEARMAN_GAIN,
+            "developmentSpearmanGain": round(
+                selected_temporal["development"]["spearman"]
+                - temporal_baseline["development"]["spearman"], 4,
+            ),
+            "developmentMaeReduction": round(
+                temporal_baseline["development"]["maePercentile"]
+                - selected_temporal["development"]["maePercentile"], 4,
+            ),
         })
     calibration_examples = [item for item in examples if item["year"] in CALIBRATION_YEARS]
     supported_regions: dict[str, list[str]] = {}
@@ -361,7 +443,14 @@ def build(data: Path) -> tuple[dict, dict]:
     for crop in CROP_METADATA:
         crop_examples = [item for item in examples if item["crop"] == crop]
         final_examples = [item for item in crop_examples if item["year"] in FINAL_YEARS]
-        crop_raw = [item for item in raw_examples if item["crop"] == crop]
+        default_crop_raw = [item for item in raw_examples if item["crop"] == crop]
+        crop_raw = apply_recency_weight(default_crop_raw, selected_recency_weights[crop])
+        default_temporal_examples = apply_neighborhood(
+            default_crop_raw,
+            selected_neighborhoods[crop]["maxNeighbors"],
+            selected_neighborhoods[crop]["distancePower"],
+            selected_neighborhoods[crop]["historyPower"],
+        )
         baseline_examples = apply_neighborhood(crop_raw, 1, 0.0)
         baseline_final = [item for item in baseline_examples if item["year"] in FINAL_YEARS]
         distance_only = distance_only_neighborhoods[crop]
@@ -383,6 +472,16 @@ def build(data: Path) -> tuple[dict, dict]:
             "final": candidate_comparison(distance_only_examples, crop_examples, FINAL_YEARS),
             "finalSpearmanGainBootstrap95": paired_rank_gain_interval(
                 [item for item in distance_only_examples if item["year"] in FINAL_YEARS], final_examples,
+            ),
+        }
+        temporal_comparison = {
+            "baselineRecencyWeight": DEFAULT_RECENCY_WEIGHT,
+            "selectedRecencyWeight": selected_recency_weights[crop],
+            "development": temporal_point_comparison(default_temporal_examples, crop_examples, DEVELOPMENT_YEARS),
+            "stability": temporal_point_comparison(default_temporal_examples, crop_examples, STABILITY_YEARS),
+            "final": temporal_point_comparison(default_temporal_examples, crop_examples, FINAL_YEARS),
+            "finalSpearmanGainBootstrap95": paired_rank_gain_interval(
+                [item for item in default_temporal_examples if item["year"] in FINAL_YEARS], final_examples,
             ),
         }
         per_region = []
@@ -407,6 +506,7 @@ def build(data: Path) -> tuple[dict, dict]:
             "maeReduction": round(baseline_signal["maePercentile"] - signal["maePercentile"], 4),
             "pointValidation": point_validation,
             "historyReliabilityComparison": history_reliability_comparison,
+            "temporalComparison": temporal_comparison,
             "disagreementCalibrationComparison": {
                 "baselineAlpha": 0.0, "selectedAlpha": selected_disagreement_alphas[crop],
                 "finalBaseline": disagreement_baseline_final, "finalSelected": selected_final,
@@ -428,6 +528,19 @@ def build(data: Path) -> tuple[dict, dict]:
             and all(
                 block["spearmanGain"] >= 0 and block["maeReduction"] >= 0
                 for key, block in item["historyReliabilityComparison"].items() if key != "finalSpearmanGainBootstrap95"
+            )
+            and (
+                item["temporalComparison"]["selectedRecencyWeight"] == DEFAULT_RECENCY_WEIGHT
+                or (
+                    item["temporalComparison"]["development"]["spearmanGain"]
+                    >= MIN_DEVELOPMENT_TEMPORAL_SPEARMAN_GAIN
+                    and all(
+                        block["spearmanGain"] >= 0 and block["maeReduction"] >= 0
+                        for key, block in item["temporalComparison"].items()
+                        if key not in {"baselineRecencyWeight", "selectedRecencyWeight", "finalSpearmanGainBootstrap95"}
+                    )
+                    and item["temporalComparison"]["finalSpearmanGainBootstrap95"][0] >= 0
+                )
             )
             and (
                 item["disagreementCalibrationComparison"]["selectedAlpha"] == 0
@@ -454,7 +567,18 @@ def build(data: Path) -> tuple[dict, dict]:
         or item["developmentWidthReduction"] >= item["minimumDevelopmentWidthReduction"]
         for item in disagreement_scale_selection
     )
-    gate_passed = accepted_crops == ["silage corn", "spring wheat"] and disagreement_gate
+    temporal_gate = all(
+        item["selected"] == DEFAULT_RECENCY_WEIGHT
+        or (
+            item["developmentSpearmanGain"] >= item["minimumDevelopmentSpearmanGain"]
+            and item["developmentMaeReduction"] > 0
+        )
+        for item in temporal_selection
+    )
+    gate_passed = (
+        accepted_crops == ["silage corn", "spring wheat"]
+        and disagreement_gate and temporal_gate
+    )
     report = {
         "name": "USDA crop-subtype yield atlas v1 validation",
         "calibrationYears": list(CALIBRATION_YEARS), "developmentYears": list(DEVELOPMENT_YEARS),
@@ -464,6 +588,8 @@ def build(data: Path) -> tuple[dict, dict]:
         "neighborhoodSelection": neighborhood_selection,
         "selectedNeighborhoods": selected_neighborhoods,
         "distanceOnlyNeighborhoods": distance_only_neighborhoods,
+        "temporalSelection": temporal_selection,
+        "selectedRecencyWeights": selected_recency_weights,
         "scaleSelection": selection, "selectedScales": unit_scales, "perCrop": per_crop,
         "disagreementScaleSelection": disagreement_scale_selection,
         "selectedDisagreementAlphas": selected_disagreement_alphas,
@@ -473,7 +599,7 @@ def build(data: Path) -> tuple[dict, dict]:
         "acceptedCrops": accepted_crops,
         "gate": {
             "passed": gate_passed,
-            "rule": "Select neighborhood size, distance power, and history-reliability power on 2018-2020 only. Select neighbor-disagreement scaling only when it reduces development mean 90% width by at least 1%; stability still sets coverage scales. Leave-one-county-out transfer within 100 km then needs final N >=100, Spearman >=0.50 with grouped-bootstrap lower >0.30; paired-bootstrap rank-gain lower >0; positive rank gain and MAE reduction over one nearest county in development, stability, and locked final blocks; no rank or MAE regression versus the best development-selected distance-only candidate in any block. Regional interval multipliers selected on development/stability must reach 80%/90%; locked pooled coverage must be 75-90%/87-96%, and every region needs final N >=50, 80% coverage >=70%, 90% coverage 85-98%, and mean 90% width <=0.90.",
+            "rule": "Select neighborhood size, distance power, and history-reliability power on 2018-2020 only. Promote a crop-specific temporal blend only after at least +0.005 development Spearman with lower MAE and no rank or MAE regression in 2021-2022 stability. Select neighbor-disagreement scaling only when it reduces development mean 90% width by at least 1%; stability still sets coverage scales. Leave-one-county-out transfer within 100 km then needs final N >=100, Spearman >=0.50 with grouped-bootstrap lower >0.30; paired-bootstrap rank-gain lower >0; positive rank gain and MAE reduction over one nearest county in development, stability, and locked final blocks; no rank or MAE regression versus the best development-selected distance-only candidate in any block. Regional interval multipliers selected on development/stability must reach 80%/90%; locked pooled coverage must be 75-90%/87-96%, and every region needs final N >=50, 80% coverage >=70%, 90% coverage 85-98%, and mean 90% width <=0.90.",
         },
         "interpretation": "Nearby-county subtype ordering and uncertainty only; not parcel yield, revenue, or purchase returns.",
     }
@@ -493,7 +619,9 @@ def build(data: Path) -> tuple[dict, dict]:
             continue
         values = np.asarray([item["yieldPerAcre"] for item in items])
         percentiles = np.asarray([item["yieldPercentileWithinCropYear"] for item in items])
-        expected = observed_prior_prediction(items, 2026)
+        expected = observed_prior_prediction(
+            items, 2026, recency_weight=selected_recency_weights[crop],
+        )
         calibration = table[(crop, history_bucket(len(items)))]
         scales = unit_scales[crop]
         region_scales = selected_regional_scales[crop][STATE_TO_CENSUS_REGION[latest["state"]]]
@@ -531,6 +659,7 @@ def build(data: Path) -> tuple[dict, dict]:
             "method": "Leave one reporting county out and aggregate the development-selected nearby counties with earlier history within 100 km.",
             "selectedNeighborhoodByCrop": selected_neighborhoods,
             "distanceOnlyNeighborhoodByCrop": distance_only_neighborhoods,
+            "selectedRecencyWeightsByCrop": selected_recency_weights,
             "selectedDisagreementAlphasByCrop": selected_disagreement_alphas,
             "selectedRegionalScalesByCrop": selected_regional_scales,
             "supportedRegionsByCrop": supported_regions,
@@ -541,7 +670,11 @@ def build(data: Path) -> tuple[dict, dict]:
             } for crop in accepted_crops for bucket in ("1", "2-3", "4+")],
             "gate": report["gate"],
         },
-        "predictionMethod": {"name": "shrunken exponential recency prior", "forecastYear": 2026, "halfLifeYears": 3.0, "recencyWeight": .8, "longHistoryWeight": .2},
+        "predictionMethod": {
+            "name": "crop-specific shrunken exponential recency prior", "forecastYear": 2026,
+            "halfLifeYears": 3.0, "defaultRecencyWeight": DEFAULT_RECENCY_WEIGHT,
+            "recencyWeightByCrop": selected_recency_weights,
+        },
         "disclaimer": "Observed subtype-specific county prior with split-conformal uncertainty; not a parcel yield forecast, causal estimate, or purchase recommendation.",
     }
     return atlas, report
@@ -572,6 +705,22 @@ def markdown(report: dict, records: int) -> str:
         lines.append(
             f'| {item["crop"]} | {report["selectedNeighborhoods"][item["crop"]]["historyPower"]:.1f} | '
             f'{comparison["final"]["spearmanGain"]:+.4f} | {interval[0]:+.4f} to {interval[1]:+.4f} | '
+            f'{comparison["final"]["maeReduction"]:+.4f} |'
+        )
+    lines += [
+        "", "## Crop-specific temporal memory", "",
+        "The generic 80% recency blend is replaced only after a meaningful development rank gain, lower development MAE, and rank/MAE confirmation in stability years.", "",
+        "| Crop subtype | Recency weight | Development Δρ | Stability Δρ | Locked Δρ (95% CI) | Locked MAE reduction |",
+        "|---|---:|---:|---:|---:|---:|",
+    ]
+    for item in report["perCrop"]:
+        comparison = item["temporalComparison"]
+        interval = comparison["finalSpearmanGainBootstrap95"]
+        lines.append(
+            f'| {item["crop"]} | {comparison["selectedRecencyWeight"]:.2f} | '
+            f'{comparison["development"]["spearmanGain"]:+.4f} | '
+            f'{comparison["stability"]["spearmanGain"]:+.4f} | '
+            f'{comparison["final"]["spearmanGain"]:+.4f} ({interval[0]:+.4f} to {interval[1]:+.4f}) | '
             f'{comparison["final"]["maeReduction"]:+.4f} |'
         )
     lines += [
@@ -654,14 +803,24 @@ def plot(report: dict, output: Path) -> None:
     axes[1].tick_params(axis="x", labelsize=8)
     axes[1].legend(); axes[1].grid(axis="y", alpha=.18)
     correlations = [item["signal"]["spearman"] for item in report["perCrop"]]
-    baselines = [item["nearestCountySignal"]["spearman"] for item in report["perCrop"]]
+    nearest_baselines = [item["nearestCountySignal"]["spearman"] for item in report["perCrop"]]
+    temporal_baselines = [
+        item["temporalComparison"]["final"]["genericRecencyBaseline"]["spearman"]
+        for item in report["perCrop"]
+    ]
     lowers = [item["signal"]["bootstrap95"][0] for item in report["perCrop"]]
     uppers = [item["signal"]["bootstrap95"][1] for item in report["perCrop"]]
-    axes[2].scatter(x - .11, baselines, s=75, facecolors="white", edgecolors="#777", linewidths=2, label="one nearest county", zorder=3)
-    for position, baseline, correlation, lower, upper, color, item in zip(x, baselines, correlations, lowers, uppers, colors, report["perCrop"], strict=True):
-        axes[2].plot([position - .11, position + .11], [baseline, correlation], color=color, linewidth=2, alpha=.7)
-        axes[2].errorbar([position + .11], [correlation], yerr=[[correlation - lower], [upper - correlation]], fmt="o", markersize=10, capsize=6, color=color)
-        axes[2].annotate(f'+{item["spearmanGain"]:.3f}', (position + .11, correlation), xytext=(0, 16), textcoords="offset points", ha="center", color=color, fontweight="bold", fontsize=9)
+    axes[2].scatter(x - .16, nearest_baselines, s=75, facecolors="white", edgecolors="#777", linewidths=2, label="one nearest county", zorder=3)
+    axes[2].scatter(x, temporal_baselines, s=70, marker="D", facecolors="white", edgecolors="#d98352", linewidths=2, label="generic 80% recency", zorder=3)
+    for position, nearest, temporal, correlation, lower, upper, color, item in zip(x, nearest_baselines, temporal_baselines, correlations, lowers, uppers, colors, report["perCrop"], strict=True):
+        axes[2].plot([position - .16, position + .16], [nearest, correlation], color=color, linewidth=2, alpha=.7)
+        if item["temporalComparison"]["selectedRecencyWeight"] != DEFAULT_RECENCY_WEIGHT:
+            axes[2].plot([position, position + .16], [temporal, correlation], color="#d98352", linewidth=2, linestyle="--")
+        axes[2].errorbar([position + .16], [correlation], yerr=[[correlation - lower], [upper - correlation]], fmt="o", markersize=10, capsize=6, color=color)
+        label = f'+{item["spearmanGain"]:.3f}'
+        if item["temporalComparison"]["selectedRecencyWeight"] != DEFAULT_RECENCY_WEIGHT:
+            label += f'\ntemporal +{item["temporalComparison"]["final"]["spearmanGain"]:.3f}'
+        axes[2].annotate(label, (position + .16, correlation), xytext=(0, 16), textcoords="offset points", ha="center", color=color, fontweight="bold", fontsize=9)
     axes[2].scatter([], [], s=75, color="#315d49", label="selected five-county prior")
     axes[2].axhline(.5, color="#d98352", linestyle="--", label="promotion floor")
     axes[2].set(xticks=x, xticklabels=crops, ylim=(.25, .9), ylabel="Spearman rank correlation", title="Locked gain from neighborhood aggregation")

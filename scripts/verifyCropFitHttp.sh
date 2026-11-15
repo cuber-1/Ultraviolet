@@ -57,7 +57,7 @@ climate = [{"month": month, "temperatureC": 22, "precipitationMmDay": 3, "solarM
 payload = {"crop": "corn", "latitude": 29.76, "longitude": -95.37, "soilPh": 6.5, "irrigated": True, "climate": climate, "climateHistory": [climate] * 10}
 health = requests.get(f"{base}/health", timeout=10).json()
 assert health["status"] == "ok" and health["requestLimits"]["historyYearsMax"] == 20
-assert health["apiVersion"] == "0.14.0"
+assert health["apiVersion"] == "0.15.0"
 assert health["revision"].startswith(f'{health["apiVersion"]}:')
 assert health["model"] == "CropFit EcoCrop surrogate v0.9.1"
 assert len(health["artifactSha256"]) == 64
@@ -86,9 +86,14 @@ assert subtype_atlas["name"] == "USDA crop-subtype yield atlas v1"
 assert subtype_atlas["records"] == 690 and subtype_atlas["crops"] == ["silage corn", "spring wheat"]
 assert subtype_atlas["validation"]["gate"]["passed"]
 assert subtype_atlas["validation"]["selectedNeighborhoods"]["silage corn"] == {"maxNeighbors": 5, "distancePower": 2.0, "historyPower": 1.0, "distanceOffsetKm": 5.0}
+assert subtype_atlas["validation"]["selectedRecencyWeights"] == {"silage corn": .25, "spring wheat": .8}
+assert subtype_atlas["predictionMethod"]["recencyWeightByCrop"] == {"silage corn": .25, "spring wheat": .8}
 assert subtype_atlas["validation"]["selectedDisagreementAlphas"] == {"silage corn": 0.0, "spring wheat": 5.0}
 silage_validation = next(item for item in subtype_atlas["validation"]["perCrop"] if item["crop"] == "silage corn")
 assert all(silage_validation["historyReliabilityComparison"][block]["spearmanGain"] > 0 for block in ("development", "stability", "final"))
+assert silage_validation["temporalComparison"]["final"]["spearmanGain"] > 0
+assert silage_validation["temporalComparison"]["final"]["maeReduction"] > 0
+assert silage_validation["temporalComparison"]["finalSpearmanGainBootstrap95"][0] > 0
 assert subtype_atlas["validation"]["selectedRegionalScales"]["spring wheat"]["West"] == {"scale80": 1.15, "scale90": 1.05}
 assert subtype_atlas["validation"]["supportedRegionsByCrop"]["silage corn"] == ["Midwest", "Northeast"]
 assert health["climateHistory"] == {"source": "NASA POWER Agroclimatology", "startYear": 2016, "endYear": 2025, "years": 10}
