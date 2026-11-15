@@ -10,3 +10,6 @@ machine-learning/artifacts/
 machine-learning/runs/
 machine-learning/__pycache__/
 machine-learning/cropfit/__pycache__/
+deploy-data/
+.vercel
+api/handler.mjs

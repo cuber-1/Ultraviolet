@@ -39,7 +39,8 @@
     "test:cropfit:http": "./scripts/verifyCropFitHttp.sh",
     "test:simulation": "node --experimental-strip-types scripts/verifySunSimulation.ts",
     "hardware:bridge": "node hardware/bridge/serial-bridge.mjs",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "deploy": "node scripts/build-vercel-api.mjs && vercel deploy --prod"
   },
   "dependencies": {
     "@langchain/anthropic": "^1.6.5",

@@ -596,7 +596,7 @@ export function vexcelApiPlugin(root: string) {
       if (!url.pathname.startsWith('/api/vexcel/')) return next();
       const key = configuredKey(root);
       if (!key) return json(res, 503, { error: 'Vexcel access is not configured on this server.' });
-      if (url.pathname === '/api/vexcel/status') return json(res, 200, { configured: true, search: 'live', agent: landLensAgentStatus(), photon: photonStatus(), ml: mlModelStatus() });
+      if (url.pathname === '/api/vexcel/status') return json(res, 200, { configured: true, search: 'live', costar: { properties: costar.properties.length, listings: costar.listingsByProperty.size }, agent: landLensAgentStatus(), photon: photonStatus(), ml: mlModelStatus() });
       if (url.pathname === '/api/vexcel/watch' && req.method === 'POST') {
         if (!photonStatus().configured) return json(res, 503, { error: 'Photon is not configured. Add PHOTON_API_KEY, PHOTON_PROJECT_ID, and PHOTON_AGENT_USER_ID on the server.' });
         const input = await body(req);
