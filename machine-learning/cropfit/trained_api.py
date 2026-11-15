@@ -15,7 +15,9 @@ from .yield_atlas import load_atlas, nearest_evidence
 
 ROOT = Path(__file__).resolve().parents[1]
 YIELD_ATLAS = ROOT / "evaluation/yield-atlas-v9.json"
-app = FastAPI(title="Ultraviolet CropFit", version="0.9.2")
+SUBTYPE_YIELD_ATLAS = ROOT / "evaluation/yield-atlas-subtypes-v1.json"
+SUBTYPE_CROPS = {"spring wheat"}
+app = FastAPI(title="Ultraviolet CropFit", version="0.10.0")
 
 ClimateSeries = Annotated[list[dict], Field(min_length=12, max_length=24)]
 ClimateYear = Annotated[list[dict], Field(min_length=12, max_length=12)]
@@ -72,6 +74,13 @@ def observed_evidence() -> dict:
             "uncertaintyValidation": atlas.get("uncertaintyValidation"),
             "spatialTransferValidation": atlas.get("spatialTransferValidation"),
         }
+    if SUBTYPE_YIELD_ATLAS.exists():
+        subtype_atlas = load_atlas(str(SUBTYPE_YIELD_ATLAS.resolve()))
+        evidence["cropSubtypeYieldAtlas"] = {
+            "available": True, "name": subtype_atlas["name"], "records": len(subtype_atlas["records"]),
+            "crops": subtype_atlas["crops"], "years": subtype_atlas["years"],
+            "validation": subtype_atlas["validation"],
+        }
     return evidence
 
 
@@ -98,7 +107,9 @@ def health():
 def predict(value: PredictionRequest):
     try:
         result = predictor().predict(value.crop, value.latitude, value.longitude, value.soilPh, value.irrigated, value.climate, value.climateHistory)
-        result["observedYieldEvidence"] = nearest_evidence(value.crop, value.latitude, value.longitude, YIELD_ATLAS) if YIELD_ATLAS.exists() else None
+        crop_key = value.crop.strip().lower()
+        atlas = SUBTYPE_YIELD_ATLAS if crop_key in SUBTYPE_CROPS else YIELD_ATLAS
+        result["observedYieldEvidence"] = nearest_evidence(value.crop, value.latitude, value.longitude, atlas) if atlas.exists() else None
         return result
     except KeyError as error:
         raise HTTPException(status_code=404, detail=str(error)) from error

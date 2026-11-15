@@ -13,7 +13,8 @@
 > remain excluded in strict mode.
 > Optional: `ML_SOIL_PH` (default 6.5), `ML_IRRIGATED` (default true).
 
-For corn, soybean, and wheat, CropFit API v0.9.2 also returns optional
+For grain corn, soybean, winter wheat, and non-durum spring wheat,
+CropFit API v0.10.0 also returns optional
 `observedYieldEvidence` from the nearest USDA reporting county within 100 km.
 Atlas v9 includes 2010–2025 history plus a calibrated observed-yield percentile
 prior with 80% and 90% uncertainty intervals. The prior blends 80% exponential
@@ -26,7 +27,12 @@ history depth, then selects the smallest regional safety scales that meet
 nominal coverage in both 2018–2020 and 2021–2022. This preserves 84.4% / 92.9%
 later coverage while narrowing the mean 90% band 4.3% relative to transfer
 radii. It does not modify the underlying
-EcoCrop suitability and is not a parcel yield forecast.
+EcoCrop suitability and is not a parcel yield forecast. Exact `spring wheat`
+requests use a separate 297-record subtype atlas whose leave-one-county-out
+spatial transfer and calibration were selected before the locked 2023–2025
+block. Its yield history carries explicit `bu/acre` units. Silage corn failed
+the spatial-transfer rank floor and returns no observed-yield evidence. Generic
+`corn` and `wheat` retain their original atlas-v9 definitions.
 Nearest-county retrieval uses a cached exact haversine spatial index; it returns
 the same county as brute force while avoiding a full atlas scan per request.
 Caller-supplied climate accepts 12 or 24 ordered monthly records and at most 20
@@ -72,7 +78,7 @@ results "Crop calendar · model offline". The UI and Deep Agent keep working.
 Failed health probes are not cached, so a recovered primary is redetected as
 CropFit on the next request rather than receiving the generic API payload.
 
-CropFit API v0.9.2 with the v0.9.1 production model artifact is the supported
+CropFit API v0.10.0 with the v0.9.1 production model artifact is the supported
 runtime; the generic contract below is for any other model you want to plug in.
 
 ## `GET /health`

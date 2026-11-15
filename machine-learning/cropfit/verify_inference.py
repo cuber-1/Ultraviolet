@@ -131,6 +131,8 @@ def verify(artifact: Path, profiles: Path) -> None:
         "melon": "Cucumis melo",
         "onion": "Allium cepa",
         "sunflower": "Helianthus annuus",
+        "silage corn": "Zea mays",
+        "spring wheat": "Triticum aestivum",
     }
     for name, scientific_name in onboarding_profiles.items():
         assert resolve_profile(name, predictor.profiles).scientific_name == scientific_name
@@ -223,6 +225,16 @@ def verify(artifact: Path, profiles: Path) -> None:
                 key=lambda record: haversine_km(latitude, longitude, record["latitude"], record["longitude"]),
             )
             assert indexed and indexed["fips"] == brute["fips"], f"spatial index changed nearest county for {crop}"
+
+    subtype_atlas = artifact.parents[1] / "evaluation/yield-atlas-subtypes-v1.json"
+    if subtype_atlas.exists():
+        subtype_report = load_atlas(str(subtype_atlas.resolve()))
+        assert subtype_report["crops"] == ["spring wheat"]
+        assert subtype_report["validation"]["gate"]["passed"]
+        spring = nearest_evidence("spring wheat", 46.8, -100.8, subtype_atlas)
+        assert spring and spring["yieldUnit"] == "bu/acre" and spring["history"][0]["yieldPerAcre"] > 0
+        assert spring["observedYieldPrior"]["intervalMethod"] == "spatial-neighborhood-conformal"
+        assert nearest_evidence("silage corn", 43.0, -89.0, subtype_atlas) is None
 
     ranking_validation = artifact.parents[1] / "evaluation/ranking-validation-v1.json"
     if ranking_validation.exists():

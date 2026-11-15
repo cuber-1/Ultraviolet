@@ -1,0 +1,489 @@
+{
+  "name": "USDA crop-subtype yield atlas v1 validation",
+  "calibrationYears": [
+    2011,
+    2012,
+    2013,
+    2014,
+    2015,
+    2016,
+    2017
+  ],
+  "developmentYears": [
+    2018,
+    2019,
+    2020
+  ],
+  "stabilityYears": [
+    2021,
+    2022
+  ],
+  "finalTestYears": [
+    2023,
+    2024,
+    2025
+  ],
+  "calibrationExamples": 2347,
+  "calibrationGroups": [
+    {
+      "crop": "silage corn",
+      "historyBucket": "1",
+      "examples": 402,
+      "absoluteErrorP80": 0.471,
+      "absoluteErrorP90": 0.5997
+    },
+    {
+      "crop": "silage corn",
+      "historyBucket": "2-3",
+      "examples": 475,
+      "absoluteErrorP80": 0.3777,
+      "absoluteErrorP90": 0.4977
+    },
+    {
+      "crop": "silage corn",
+      "historyBucket": "4+",
+      "examples": 279,
+      "absoluteErrorP80": 0.3325,
+      "absoluteErrorP90": 0.4441
+    },
+    {
+      "crop": "spring wheat",
+      "historyBucket": "1",
+      "examples": 341,
+      "absoluteErrorP80": 0.3155,
+      "absoluteErrorP90": 0.4187
+    },
+    {
+      "crop": "spring wheat",
+      "historyBucket": "2-3",
+      "examples": 436,
+      "absoluteErrorP80": 0.2666,
+      "absoluteErrorP90": 0.3933
+    },
+    {
+      "crop": "spring wheat",
+      "historyBucket": "4+",
+      "examples": 414,
+      "absoluteErrorP80": 0.2497,
+      "absoluteErrorP90": 0.3491
+    }
+  ],
+  "scaleSelection": [
+    {
+      "crop": "silage corn",
+      "candidates": [
+        {
+          "scale": 1.0,
+          "development": {
+            "observations": 536,
+            "coverage80": 0.7761,
+            "coverage90": 0.916,
+            "meanWidth80": 0.6359,
+            "meanWidth90": 0.7841
+          },
+          "stability": {
+            "observations": 490,
+            "coverage80": 0.849,
+            "coverage90": 0.9306,
+            "meanWidth80": 0.6298,
+            "meanWidth90": 0.7814
+          }
+        },
+        {
+          "scale": 1.05,
+          "development": {
+            "observations": 536,
+            "coverage80": 0.7985,
+            "coverage90": 0.9291,
+            "meanWidth80": 0.6616,
+            "meanWidth90": 0.8092
+          },
+          "stability": {
+            "observations": 490,
+            "coverage80": 0.8592,
+            "coverage90": 0.9469,
+            "meanWidth80": 0.6552,
+            "meanWidth90": 0.8077
+          }
+        },
+        {
+          "scale": 1.1,
+          "development": {
+            "observations": 536,
+            "coverage80": 0.819,
+            "coverage90": 0.9403,
+            "meanWidth80": 0.6863,
+            "meanWidth90": 0.8325
+          },
+          "stability": {
+            "observations": 490,
+            "coverage80": 0.8837,
+            "coverage90": 0.9653,
+            "meanWidth80": 0.6802,
+            "meanWidth90": 0.8313
+          }
+        },
+        {
+          "scale": 1.15,
+          "development": {
+            "observations": 536,
+            "coverage80": 0.8545,
+            "coverage90": 0.9459,
+            "meanWidth80": 0.7099,
+            "meanWidth90": 0.8537
+          },
+          "stability": {
+            "observations": 490,
+            "coverage80": 0.8898,
+            "coverage90": 0.9816,
+            "meanWidth80": 0.7043,
+            "meanWidth90": 0.8529
+          }
+        },
+        {
+          "scale": 1.2,
+          "development": {
+            "observations": 536,
+            "coverage80": 0.875,
+            "coverage90": 0.9534,
+            "meanWidth80": 0.7323,
+            "meanWidth90": 0.873
+          },
+          "stability": {
+            "observations": 490,
+            "coverage80": 0.898,
+            "coverage90": 0.9837,
+            "meanWidth80": 0.7274,
+            "meanWidth90": 0.8727
+          }
+        },
+        {
+          "scale": 1.25,
+          "development": {
+            "observations": 536,
+            "coverage80": 0.8881,
+            "coverage90": 0.9664,
+            "meanWidth80": 0.7539,
+            "meanWidth90": 0.8907
+          },
+          "stability": {
+            "observations": 490,
+            "coverage80": 0.9061,
+            "coverage90": 0.9857,
+            "meanWidth80": 0.7493,
+            "meanWidth90": 0.8903
+          }
+        },
+        {
+          "scale": 1.33,
+          "development": {
+            "observations": 536,
+            "coverage80": 0.9216,
+            "coverage90": 0.9739,
+            "meanWidth80": 0.7866,
+            "meanWidth90": 0.9155
+          },
+          "stability": {
+            "observations": 490,
+            "coverage80": 0.9347,
+            "coverage90": 0.9918,
+            "meanWidth80": 0.7826,
+            "meanWidth90": 0.9156
+          }
+        },
+        {
+          "scale": 1.4,
+          "development": {
+            "observations": 536,
+            "coverage80": 0.9291,
+            "coverage90": 0.9739,
+            "meanWidth80": 0.8126,
+            "meanWidth90": 0.9347
+          },
+          "stability": {
+            "observations": 490,
+            "coverage80": 0.9469,
+            "coverage90": 0.9918,
+            "meanWidth80": 0.8099,
+            "meanWidth90": 0.9339
+          }
+        },
+        {
+          "scale": 1.5,
+          "development": {
+            "observations": 536,
+            "coverage80": 0.944,
+            "coverage90": 0.9795,
+            "meanWidth80": 0.8468,
+            "meanWidth90": 0.9565
+          },
+          "stability": {
+            "observations": 490,
+            "coverage80": 0.9673,
+            "coverage90": 1.0,
+            "meanWidth80": 0.8446,
+            "meanWidth90": 0.9554
+          }
+        }
+      ],
+      "selected": {
+        "scale80": 1.05,
+        "scale90": 1.0
+      }
+    },
+    {
+      "crop": "spring wheat",
+      "candidates": [
+        {
+          "scale": 1.0,
+          "development": {
+            "observations": 440,
+            "coverage80": 0.7727,
+            "coverage90": 0.8727,
+            "meanWidth80": 0.4735,
+            "meanWidth90": 0.6301
+          },
+          "stability": {
+            "observations": 333,
+            "coverage80": 0.8018,
+            "coverage90": 0.9219,
+            "meanWidth80": 0.4708,
+            "meanWidth90": 0.6271
+          }
+        },
+        {
+          "scale": 1.05,
+          "development": {
+            "observations": 440,
+            "coverage80": 0.7909,
+            "coverage90": 0.8818,
+            "meanWidth80": 0.4943,
+            "meanWidth90": 0.6551
+          },
+          "stability": {
+            "observations": 333,
+            "coverage80": 0.8168,
+            "coverage90": 0.9279,
+            "meanWidth80": 0.4918,
+            "meanWidth90": 0.652
+          }
+        },
+        {
+          "scale": 1.1,
+          "development": {
+            "observations": 440,
+            "coverage80": 0.8045,
+            "coverage90": 0.9091,
+            "meanWidth80": 0.5148,
+            "meanWidth90": 0.6792
+          },
+          "stability": {
+            "observations": 333,
+            "coverage80": 0.8438,
+            "coverage90": 0.9279,
+            "meanWidth80": 0.5126,
+            "meanWidth90": 0.6762
+          }
+        },
+        {
+          "scale": 1.15,
+          "development": {
+            "observations": 440,
+            "coverage80": 0.8182,
+            "coverage90": 0.9159,
+            "meanWidth80": 0.535,
+            "meanWidth90": 0.7021
+          },
+          "stability": {
+            "observations": 333,
+            "coverage80": 0.8589,
+            "coverage90": 0.9309,
+            "meanWidth80": 0.533,
+            "meanWidth90": 0.6997
+          }
+        },
+        {
+          "scale": 1.2,
+          "development": {
+            "observations": 440,
+            "coverage80": 0.8364,
+            "coverage90": 0.925,
+            "meanWidth80": 0.555,
+            "meanWidth90": 0.7245
+          },
+          "stability": {
+            "observations": 333,
+            "coverage80": 0.8709,
+            "coverage90": 0.9309,
+            "meanWidth80": 0.5529,
+            "meanWidth90": 0.722
+          }
+        },
+        {
+          "scale": 1.25,
+          "development": {
+            "observations": 440,
+            "coverage80": 0.8455,
+            "coverage90": 0.9295,
+            "meanWidth80": 0.5747,
+            "meanWidth90": 0.7456
+          },
+          "stability": {
+            "observations": 333,
+            "coverage80": 0.8949,
+            "coverage90": 0.9369,
+            "meanWidth80": 0.5725,
+            "meanWidth90": 0.7435
+          }
+        },
+        {
+          "scale": 1.33,
+          "development": {
+            "observations": 440,
+            "coverage80": 0.8591,
+            "coverage90": 0.9386,
+            "meanWidth80": 0.6049,
+            "meanWidth90": 0.7776
+          },
+          "stability": {
+            "observations": 333,
+            "coverage80": 0.9129,
+            "coverage90": 0.958,
+            "meanWidth80": 0.6025,
+            "meanWidth90": 0.7762
+          }
+        },
+        {
+          "scale": 1.4,
+          "development": {
+            "observations": 440,
+            "coverage80": 0.8727,
+            "coverage90": 0.9455,
+            "meanWidth80": 0.6303,
+            "meanWidth90": 0.8036
+          },
+          "stability": {
+            "observations": 333,
+            "coverage80": 0.9219,
+            "coverage90": 0.967,
+            "meanWidth80": 0.6281,
+            "meanWidth90": 0.803
+          }
+        },
+        {
+          "scale": 1.5,
+          "development": {
+            "observations": 440,
+            "coverage80": 0.8909,
+            "coverage90": 0.9545,
+            "meanWidth80": 0.6656,
+            "meanWidth90": 0.8374
+          },
+          "stability": {
+            "observations": 333,
+            "coverage80": 0.9279,
+            "coverage90": 0.976,
+            "meanWidth80": 0.6635,
+            "meanWidth90": 0.8365
+          }
+        }
+      ],
+      "selected": {
+        "scale80": 1.05,
+        "scale90": 1.05
+      }
+    }
+  ],
+  "selectedScales": {
+    "silage corn": {
+      "scale80": 1.05,
+      "scale90": 1.0
+    },
+    "spring wheat": {
+      "scale80": 1.05,
+      "scale90": 1.05
+    }
+  },
+  "perCrop": [
+    {
+      "crop": "silage corn",
+      "signal": {
+        "published": 585,
+        "observations": 585,
+        "coverage": 1.0,
+        "spearman": 0.434,
+        "bootstrap95": [
+          0.3482,
+          0.5144
+        ],
+        "maePercentile": 0.2184
+      },
+      "development": {
+        "observations": 536,
+        "coverage80": 0.7985,
+        "coverage90": 0.916,
+        "meanWidth80": 0.6616,
+        "meanWidth90": 0.7841
+      },
+      "stability": {
+        "observations": 490,
+        "coverage80": 0.8592,
+        "coverage90": 0.9306,
+        "meanWidth80": 0.6552,
+        "meanWidth90": 0.7814
+      },
+      "final": {
+        "observations": 585,
+        "coverage80": 0.8034,
+        "coverage90": 0.8991,
+        "meanWidth80": 0.6499,
+        "meanWidth90": 0.7747
+      },
+      "passed": false
+    },
+    {
+      "crop": "spring wheat",
+      "signal": {
+        "published": 258,
+        "observations": 257,
+        "coverage": 0.9961,
+        "spearman": 0.5938,
+        "bootstrap95": [
+          0.4666,
+          0.6962
+        ],
+        "maePercentile": 0.1697
+      },
+      "development": {
+        "observations": 440,
+        "coverage80": 0.7909,
+        "coverage90": 0.8818,
+        "meanWidth80": 0.4943,
+        "meanWidth90": 0.6551
+      },
+      "stability": {
+        "observations": 333,
+        "coverage80": 0.8168,
+        "coverage90": 0.9279,
+        "meanWidth80": 0.4918,
+        "meanWidth90": 0.652
+      },
+      "final": {
+        "observations": 257,
+        "coverage80": 0.8093,
+        "coverage90": 0.8833,
+        "meanWidth80": 0.4894,
+        "meanWidth90": 0.6527
+      },
+      "passed": true
+    }
+  ],
+  "acceptedCrops": [
+    "spring wheat"
+  ],
+  "gate": {
+    "passed": true,
+    "rule": "Leave-one-county-out transfer within 100 km needs final N >=100, Spearman >=0.50 with grouped-bootstrap lower >0.30; pre-final development/stability coverage >=78%/88%; locked 2023-2025 coverage 75-90%/87-96%; mean final 90% width <=0.80."
+  },
+  "interpretation": "Nearby-county subtype ordering and uncertainty only; not parcel yield, revenue, or purchase returns."
+}

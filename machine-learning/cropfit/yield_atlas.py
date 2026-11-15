@@ -925,8 +925,16 @@ def nearest_evidence(crop: str, latitude: float, longitude: float, path: Path, m
         "distanceKm": round(item["distanceKm"], 1), "expectedPercentile": item["record"]["observedYieldPrior"]["expectedPercentile"],
         "weight": round(weight, 6),
     } for item, weight in zip(neighbors, weights, strict=True)]
+    normalized_record = dict(record)
+    if "meanYieldPerAcre" not in normalized_record and "meanYieldBushelsPerAcre" in normalized_record:
+        normalized_record["meanYieldPerAcre"] = normalized_record["meanYieldBushelsPerAcre"]
+        normalized_record["yieldUnit"] = "bu/acre"
+    normalized_record["history"] = [{
+        **item,
+        "yieldPerAcre": item.get("yieldPerAcre", item.get("yieldBushelsPerAcre")),
+    } for item in normalized_record.get("history", [])]
     return {
-        **record, "observedYieldPrior": prior, "regionalNeighbors": regional_neighbors,
+        **normalized_record, "observedYieldPrior": prior, "regionalNeighbors": regional_neighbors,
         "distanceKm": round(distance, 1), "evidenceGrade": atlas["evidenceGrade"],
         "source": atlas["source"], "disclaimer": atlas["disclaimer"],
     }

@@ -32,7 +32,7 @@ artifact instead, use the full setup below. Because the repository is private,
 the installer uses an authenticated GitHub CLI session (`gh auth login`) or a
 `GITHUB_TOKEN`.
 
-Runtime API v0.9.2 keeps the validated v0.9.1 estimator and hardens every direct
+Runtime API v0.10.0 keeps the validated v0.9.1 estimator and hardens every direct
 and HTTP prediction path with the same finite coordinate, soil-pH, boolean,
 climate-shape, and 20-year history limits. Startup validates the artifact's
 internal model/metadata contract. `GET /health` returns the artifact SHA-256 and
@@ -146,7 +146,8 @@ This reproduces the production-seed comparison, a frozen five-seed robustness
 sweep, their machine-readable report, and two presentation charts under
 `machine-learning/evaluation/`.
 
-For corn, soybeans, and wheat, the response may also include
+For grain corn, soybeans, winter wheat, and non-durum spring wheat,
+the response may also include
 `observedYieldEvidence`: the nearest USDA reporting county within 100 km, its
 2010–2025 within-crop/year percentile history, and an observed county prior
 with calibrated 80% and 90% uncertainty intervals. Atlas v9 uses the globally
@@ -240,9 +241,22 @@ Spring wheat passes with 257 final observations, Spearman 0.762, and a
 and a 0.469–0.617 interval. Dry peas and durum wheat have promising rank signal
 but fail the final sample floor; beans, potatoes, and both sunflower definitions
 also remain rejected. Grain/silage corn and winter/spring/durum wheat are never
-pooled. This screen does not add the passing subtypes to atlas v9: production
-coverage remains grain corn, soybeans, and winter wheat pending a separately
-validated subtype lookup. See `evaluation/crop-expansion-validation-v2.md`.
+pooled. A second gate then tests whether those county signals transfer to a
+different nearby county before property lookup:
+
+```bash
+npm run ml:build:crop-subtype-atlas
+```
+
+It leaves each target county out, uses the nearest reporting county within
+100 km, calibrates on 2011–2017 errors, and selects safety scales on 2018–2022.
+On locked 2023–2025 outcomes, spring wheat reaches Spearman 0.594 (95% lower
+0.467) and 80.9% / 88.3% coverage. Silage corn falls to Spearman 0.434 and is
+rejected despite calibrated coverage. The 297-record production artifact is
+therefore spring-wheat-only and explicitly uses `bu/acre`; silage remains
+agroclimatic-only. Generic grain-corn and winter-wheat queries remain on atlas
+v9. See
+`evaluation/yield-atlas-subtypes-validation-v1.md`.
 
 ## Test recency weighting and atlas lookup
 
