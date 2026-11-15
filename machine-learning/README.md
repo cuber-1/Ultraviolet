@@ -144,6 +144,21 @@ development seeds only. No design advanced to reserved validation:
 npm run ml:develop:density-capacity
 ```
 
+A structurally matched log-linear candidate has now advanced from development
+only. It learns four positive elasticities from the temperature, water, pH,
+and solar membership features with ordinary least squares in log space, and
+returns a structural zero if any membership is zero. Across three development
+seeds it reduced MAE and p90 by more than 99.99%, kept maximum error below
+0.000006, serialized to 0.4 KB, and preserved direct split-conformal coverage.
+This near-exact fit is expected because the declared mechanistic teacher is
+log-linear in those memberships; it is not observed-yield accuracy. Fresh
+confirmation, final, and Latin-hypercube seeds remain sealed behind the
+committed promotion protocol in `cropfit/log_linear_validation.py`.
+
+```bash
+npm run ml:develop:log-linear
+```
+
 Training refuses to replace the production artifact unless frozen MAE, p90,
 R², held-out-profile-count, and conformal-coverage thresholds all pass. The
 artifact and metadata are written atomically, so interruption cannot leave a

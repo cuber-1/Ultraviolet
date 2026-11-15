@@ -68,6 +68,18 @@ screens. Poisson variants cleared 0/3 and produced deployed maximum errors as
 high as 8.75 points; upper quantiles regressed raw error by 35–120%. See
 `evaluation/density-capacity-development-v0.12.md`.
 
+A new v0.12 log-linear candidate has advanced from development without opening
+fresh validation. It learns positive elasticities over the four range-fit
+memberships using ordinary least squares in log space and returns zero when
+any membership is zero. On three development seeds, MAE and p90 fall by more
+than 99.99%, maximum error stays below 0.000006, direct active split-conformal
+coverage remains nominal, the serialized model is 0.4 KB versus 64.1 MB, and
+batch latency is below 0.001×. The improvement is mechanistically explainable:
+the declared EcoCrop teacher is log-linear in these memberships. It does not
+imply comparable real-world yield accuracy. Fresh confirmation, final, and
+Latin-hypercube seeds remain sealed behind the committed protocol. See
+`evaluation/log-linear-development-v0.12.md`.
+
 Version 0.9 increases generated fitting coverage from 72 to 120 scenarios per
 training crop while preserving the exact v0.8 validation and held-out rows. The
 denser fitting data lets the ensemble shrink from 120 to 70 trees. Across two

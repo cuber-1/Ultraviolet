@@ -1,0 +1,207 @@
+{
+  "name": "CropFit log-linear development screen v0.12",
+  "protocol": {
+    "target": "EcoCrop mechanistic screening teacher; not observed yield",
+    "champion": "v0.11.0, six features, 40 Extra Trees",
+    "candidate": "ordinary least squares in log space over four range-membership features; structural zero when any membership is zero",
+    "candidateFeatures": [
+      "temperature_range_fit",
+      "water_range_fit",
+      "ph_range_fit",
+      "solar_range_fit"
+    ],
+    "selection": "One structurally matched log-linear model was evaluated on development seeds only; no capacity or coefficient was selected on reserved rows.",
+    "developmentSeeds": [
+      20270501,
+      20270502,
+      20270503
+    ],
+    "reservedSeedsOpened": false,
+    "reservedValidation": {
+      "confirmationSeeds": [
+        20270510,
+        20270511,
+        20270512,
+        20270513,
+        20270514
+      ],
+      "finalSeeds": [
+        20270515,
+        20270516,
+        20270517,
+        20270518,
+        20270519
+      ],
+      "shiftSeed": 20270520
+    },
+    "advanceRule": "Advance only if every development seed improves MAE and p90 by >99%, improves deployed maximum error, keeps maximum raw error <=0.001, learns coefficients stable within 0.001, preserves active 80%/90% coverage within two points with exact inactive zeros, serializes below 50 KB, and is faster than v0.11."
+  },
+  "results": [
+    {
+      "seed": 20270501,
+      "testExamples": 26856,
+      "championV011": {
+        "mae": 0.00944207,
+        "p90AbsoluteError": 0.02458911,
+        "maximumAbsoluteError": 2.50406508,
+        "deployedMaximumAbsoluteError": 0.47787828,
+        "fitSeconds": 0.386,
+        "apiBatchLatencyMs": 14.101
+      },
+      "logLinearCandidate": {
+        "mae": 2.8e-07,
+        "p90AbsoluteError": 1.2e-06,
+        "maximumAbsoluteError": 5.69e-06,
+        "deployedMaximumAbsoluteError": 5.19e-06,
+        "fitSeconds": 0.0402,
+        "apiBatchLatencyMs": 0.01,
+        "coefficients": {
+          "temperature_range_fit": 0.42,
+          "water_range_fit": 0.26,
+          "ph_range_fit": 0.18,
+          "solar_range_fit": 0.14
+        },
+        "intercept": 4.60517019,
+        "calibration": {
+          "method": "active absolute-residual split conformal",
+          "validationExamples": 3369,
+          "testExamples": 5523,
+          "absoluteErrorQuantiles": {
+            "p80": 2.33e-06,
+            "p90": 3.08e-06
+          },
+          "coverage80": 0.7999,
+          "coverage90": 0.903,
+          "inactiveExact": true
+        }
+      },
+      "gains": {
+        "maePercent": 99.997,
+        "p90Percent": 99.9951
+      }
+    },
+    {
+      "seed": 20270502,
+      "testExamples": 26856,
+      "championV011": {
+        "mae": 0.01007784,
+        "p90AbsoluteError": 0.02539067,
+        "maximumAbsoluteError": 3.39079564,
+        "deployedMaximumAbsoluteError": 0.45273361,
+        "fitSeconds": 0.4363,
+        "apiBatchLatencyMs": 14.174
+      },
+      "logLinearCandidate": {
+        "mae": 2.9e-07,
+        "p90AbsoluteError": 1.2e-06,
+        "maximumAbsoluteError": 5.53e-06,
+        "deployedMaximumAbsoluteError": 5.53e-06,
+        "fitSeconds": 0.0164,
+        "apiBatchLatencyMs": 0.01,
+        "coefficients": {
+          "temperature_range_fit": 0.42,
+          "water_range_fit": 0.26,
+          "ph_range_fit": 0.18,
+          "solar_range_fit": 0.14
+        },
+        "intercept": 4.60517019,
+        "calibration": {
+          "method": "active absolute-residual split conformal",
+          "validationExamples": 3409,
+          "testExamples": 5551,
+          "absoluteErrorQuantiles": {
+            "p80": 2.34e-06,
+            "p90": 3.02e-06
+          },
+          "coverage80": 0.7963,
+          "coverage90": 0.8912,
+          "inactiveExact": true
+        }
+      },
+      "gains": {
+        "maePercent": 99.9971,
+        "p90Percent": 99.9953
+      }
+    },
+    {
+      "seed": 20270503,
+      "testExamples": 26856,
+      "championV011": {
+        "mae": 0.01004627,
+        "p90AbsoluteError": 0.02468915,
+        "maximumAbsoluteError": 1.36717477,
+        "deployedMaximumAbsoluteError": 0.4184762,
+        "fitSeconds": 0.3685,
+        "apiBatchLatencyMs": 13.354
+      },
+      "logLinearCandidate": {
+        "mae": 2.9e-07,
+        "p90AbsoluteError": 1.19e-06,
+        "maximumAbsoluteError": 5.51e-06,
+        "deployedMaximumAbsoluteError": 5.26e-06,
+        "fitSeconds": 0.049,
+        "apiBatchLatencyMs": 0.01,
+        "coefficients": {
+          "temperature_range_fit": 0.42,
+          "water_range_fit": 0.26,
+          "ph_range_fit": 0.18,
+          "solar_range_fit": 0.14
+        },
+        "intercept": 4.60517019,
+        "calibration": {
+          "method": "active absolute-residual split conformal",
+          "validationExamples": 3348,
+          "testExamples": 5523,
+          "absoluteErrorQuantiles": {
+            "p80": 2.4e-06,
+            "p90": 3.15e-06
+          },
+          "coverage80": 0.8041,
+          "coverage90": 0.9071,
+          "inactiveExact": true
+        }
+      },
+      "gains": {
+        "maePercent": 99.9971,
+        "p90Percent": 99.9952
+      }
+    }
+  ],
+  "summary": {
+    "meanMaeImprovementPercent": 99.9971,
+    "meanP90ImprovementPercent": 99.9952,
+    "meanApiBatchLatencyRatio": 0.0007,
+    "championSerializedSizeBytes": 64071035,
+    "candidateSerializedSizeBytes": 362,
+    "coefficientRange": {
+      "temperature_range_fit": [
+        0.42,
+        0.42
+      ],
+      "water_range_fit": [
+        0.26,
+        0.26
+      ],
+      "ph_range_fit": [
+        0.18,
+        0.18
+      ],
+      "solar_range_fit": [
+        0.14,
+        0.14
+      ]
+    }
+  },
+  "gate": {
+    "passed": true,
+    "checks": {
+      "allSeedsImproveMaeAndP90": true,
+      "allSeedsImproveDeployedTail": true,
+      "maximumErrorBelow0_001": true,
+      "coefficientSpreadBelow0_001": true,
+      "activeCoverage": true,
+      "sizeBelow50KB": true,
+      "latencyBelowChampion": true
+    }
+  }
+}
