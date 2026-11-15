@@ -202,6 +202,17 @@ def conformal_quantile(values: list[float], probability: float) -> float:
     return float(ordered[rank - 1])
 
 
+def metric_summary(actual: list[float] | np.ndarray, predicted: list[float] | np.ndarray, rounded: bool = True) -> dict:
+    actual_values = np.asarray(actual, dtype=float)
+    predicted_values = np.asarray(predicted, dtype=float)
+    spearman = float(spearmanr(predicted_values, actual_values).statistic)
+    mae = float(np.mean(np.abs(predicted_values - actual_values)))
+    return {
+        "spearman": round(spearman, 4) if rounded else spearman,
+        "maePercentile": round(mae, 4) if rounded else mae,
+    }
+
+
 def uncertainty_calibration(rows: list[dict]) -> tuple[dict, dict[tuple[str, str], dict]]:
     examples, _ = forward_examples(rows, YEARS, YEARS[0])
     calibration = [item for item in examples if item["year"] <= CALIBRATION_END_YEAR]
@@ -312,16 +323,14 @@ def spatial_transfer_validation(rows: list[dict]) -> tuple[dict, dict[tuple[str,
                     "ownHistoryCount": own["historyCount"] if own else None,
                 })
 
-    def basic_summary(items: list[dict], prediction_key: str = "prediction") -> dict:
+    def basic_summary(items: list[dict], prediction_key: str = "prediction", rounded: bool = True) -> dict:
         actual = np.asarray([item["yieldPercentileWithinCropYear"] for item in items])
         predicted = np.asarray([item[prediction_key] for item in items])
-        return {
-            "observations": len(items), "spearman": round(float(spearmanr(predicted, actual).statistic), 4),
-            "maePercentile": round(float(np.mean(np.abs(predicted - actual))), 4),
-        }
+        return {"observations": len(items), **metric_summary(actual, predicted, rounded)}
 
     development = [item for item in examples if item["year"] in (2018, 2019, 2020)]
     candidate_selection = []
+    candidate_selection_scores = []
     for max_neighbors, distance_power in SPATIAL_NEIGHBOR_CANDIDATES:
         candidate = []
         for item in development:
@@ -331,7 +340,11 @@ def spatial_transfer_validation(rows: list[dict]) -> tuple[dict, dict[tuple[str,
             "maxNeighbors": max_neighbors, "distancePower": distance_power,
             **basic_summary(candidate),
         })
-    selected = max(candidate_selection, key=lambda item: (item["spearman"], -item["maePercentile"]))
+        candidate_selection_scores.append({
+            "maxNeighbors": max_neighbors, "distancePower": distance_power,
+            **basic_summary(candidate, rounded=False),
+        })
+    selected = max(candidate_selection_scores, key=lambda item: (item["spearman"], -item["maePercentile"]))
     for item in examples:
         prediction, neighbor_count, effective_history, weights = aggregate_neighbor_prior(
             item["neighbors"], selected["maxNeighbors"], selected["distancePower"],
@@ -352,6 +365,7 @@ def spatial_transfer_validation(rows: list[dict]) -> tuple[dict, dict[tuple[str,
     production_examples = [item for item in examples if item["ownPrediction"] is not None]
     production_development = [item for item in production_examples if item["year"] in (2018, 2019, 2020)]
     production_candidates = []
+    production_candidate_scores = []
     for regional_weight in PRODUCTION_REGIONAL_WEIGHT_CANDIDATES:
         candidates = [{
             **item, "productionPrediction": (1 - regional_weight) * item["ownPrediction"] + regional_weight * item["prediction"],
@@ -360,19 +374,32 @@ def spatial_transfer_validation(rows: list[dict]) -> tuple[dict, dict[tuple[str,
             "regionalWeight": regional_weight,
             **basic_summary([{**item, "prediction": item["productionPrediction"]} for item in candidates]),
         })
-    production_selected = min(production_candidates, key=lambda item: (item["maePercentile"], -item["spearman"]))
+        production_candidate_scores.append({
+            "regionalWeight": regional_weight,
+            **basic_summary([{
+                **item, "prediction": item["productionPrediction"],
+            } for item in candidates], rounded=False),
+        })
+    production_selected = min(production_candidate_scores, key=lambda item: (item["maePercentile"], -item["spearman"]))
     production_region_checks = []
     production_selected_by_region = {}
     for region in CENSUS_REGIONS:
         group_items = [item for item in production_development if STATE_TO_CENSUS_REGION[item["state"]] == region]
         baseline = basic_summary(group_items, "ownPrediction")
+        baseline_score = basic_summary(group_items, "ownPrediction", rounded=False)
         regional_weight = production_selected["regionalWeight"]
         candidate_items = [{
             **item,
             "productionPrediction": (1 - regional_weight) * item["ownPrediction"] + regional_weight * item["prediction"],
         } for item in group_items]
         candidate = basic_summary([{**item, "prediction": item["productionPrediction"]} for item in candidate_items])
-        enabled = candidate["spearman"] > baseline["spearman"] and candidate["maePercentile"] < baseline["maePercentile"]
+        candidate_score = basic_summary([{
+            **item, "prediction": item["productionPrediction"],
+        } for item in candidate_items], rounded=False)
+        enabled = (
+            candidate_score["spearman"] > baseline_score["spearman"]
+            and candidate_score["maePercentile"] < baseline_score["maePercentile"]
+        )
         production_selected_by_region[region] = regional_weight if enabled else 0.0
         production_region_checks.append({
             "region": region, "observations": len(group_items), "ownCountyPrior": baseline,

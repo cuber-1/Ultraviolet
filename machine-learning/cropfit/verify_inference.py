@@ -11,7 +11,7 @@ from pydantic import ValidationError
 from .features import FEATURE_NAMES
 from .inference import CLIMATE_HISTORY_END_YEAR, CLIMATE_HISTORY_START_YEAR, CLIMATE_HISTORY_YEARS, MONTHS, CropFitPredictor
 from .profiles import resolve_profile
-from .yield_atlas import haversine_km, load_atlas, nearest_evidence
+from .yield_atlas import haversine_km, load_atlas, metric_summary, nearest_evidence
 
 
 def climate(temperature: float) -> list[dict]:
@@ -24,6 +24,14 @@ def climate(temperature: float) -> list[dict]:
 
 
 def verify(artifact: Path, profiles: Path) -> None:
+    actual = [0.0, 1.0]
+    candidate_a = [0.10004, 0.89996]
+    candidate_b = [0.10003, 0.89997]
+    assert metric_summary(actual, candidate_a) == metric_summary(actual, candidate_b)
+    assert metric_summary(actual, candidate_b, rounded=False)["maePercentile"] < metric_summary(
+        actual, candidate_a, rounded=False,
+    )["maePercentile"]
+
     assert (CLIMATE_HISTORY_START_YEAR, CLIMATE_HISTORY_END_YEAR, len(CLIMATE_HISTORY_YEARS)) == (2016, 2025, 10)
     predictor = CropFitPredictor(artifact, profiles)
     assert predictor.model.n_features_in_ == len(FEATURE_NAMES), "artifact and feature code disagree"
