@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 import argparse
+import io
 import json
 import math
+import tarfile
+import tempfile
 from pathlib import Path
 from unittest.mock import patch
 
@@ -10,6 +13,7 @@ from fastapi import HTTPException
 from pydantic import ValidationError
 
 from .features import FEATURE_NAMES, feature_row, teacher_scores
+from .bundle_validation import EXPECTED_MEMBERS, validate_bundle
 from .inference import CLIMATE_HISTORY_END_YEAR, CLIMATE_HISTORY_START_YEAR, CLIMATE_HISTORY_YEARS, MAX_CLIMATE_HISTORY_YEARS, MONTHS, CropFitPredictor, align_model_features, sha256_file
 from .profiles import resolve_profile
 from .yield_atlas import haversine_km, load_atlas, metric_summary, nearest_evidence
@@ -25,6 +29,39 @@ def climate(temperature: float) -> list[dict]:
 
 
 def verify(artifact: Path, profiles: Path) -> None:
+    with tempfile.TemporaryDirectory() as bundle_directory:
+        bundle_root = Path(bundle_directory)
+
+        def archive(name: str, members: list[tuple[str, str]]) -> Path:
+            path = bundle_root / name
+            with tarfile.open(path, "w:gz") as bundle:
+                for member_name, kind in members:
+                    member = tarfile.TarInfo(member_name)
+                    if kind == "file":
+                        payload = b"test"
+                        member.size = len(payload)
+                        bundle.addfile(member, io.BytesIO(payload))
+                    else:
+                        member.type = tarfile.SYMTYPE
+                        member.linkname = "cropfit.joblib"
+                        bundle.addfile(member)
+            return path
+
+        valid_members = [(name, "file") for name in sorted(EXPECTED_MEMBERS)]
+        validate_bundle(archive("valid.tar.gz", valid_members))
+        invalid_archives = (
+            archive("duplicate.tar.gz", valid_members + [valid_members[0]]),
+            archive("symlink.tar.gz", [(name, "link" if index == 0 else "file") for index, (name, _) in enumerate(valid_members)]),
+            archive("traversal.tar.gz", valid_members[:-1] + [("../ecocrop.csv", "file")]),
+        )
+        for invalid_archive in invalid_archives:
+            try:
+                validate_bundle(invalid_archive)
+            except ValueError:
+                pass
+            else:
+                raise AssertionError(f"unsafe CropFit bundle was accepted: {invalid_archive.name}")
+
     actual = [0.0, 1.0]
     candidate_a = [0.10004, 0.89996]
     candidate_b = [0.10003, 0.89997]

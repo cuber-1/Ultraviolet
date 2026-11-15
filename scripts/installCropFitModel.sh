@@ -5,7 +5,14 @@ release_url="https://github.com/cuber-1/Ultraviolet/releases/download/cropfit-v0
 expected_sha256="31bbd8142cd1cf809d707e5b12d5deb1c3545a86fc6c81a35cc2eb5008bea67f"
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 bundle_tmp="$(mktemp -d)"
-trap 'rm -rf "${bundle_tmp}"' EXIT
+artifact_next="${repo_root}/machine-learning/artifacts/.cropfit.joblib.next.$$"
+metadata_next="${repo_root}/machine-learning/artifacts/.cropfit.metadata.json.next.$$"
+profiles_next="${repo_root}/machine-learning/data/raw/.ecocrop.csv.next.$$"
+cleanup() {
+  rm -rf "${bundle_tmp}"
+  rm -f "${artifact_next}" "${metadata_next}" "${profiles_next}"
+}
+trap cleanup EXIT
 python_bin="${CROPFIT_PYTHON:-python3}"
 
 if ! command -v "${python_bin}" >/dev/null 2>&1; then
@@ -44,10 +51,26 @@ if [[ "${actual_sha256}" != "${expected_sha256}" ]]; then
   exit 1
 fi
 
-tar -xzf "${bundle_tmp}/cropfit.tar.gz" -C "${repo_root}"
+staging_root="${bundle_tmp}/staging"
+mkdir -p "${staging_root}"
+PYTHONPATH="${repo_root}/machine-learning" "${python_bin}" -m cropfit.bundle_validation "${bundle_tmp}/cropfit.tar.gz"
+tar -xzf "${bundle_tmp}/cropfit.tar.gz" -C "${staging_root}"
 "${python_bin}" -m venv "${repo_root}/machine-learning/.venv"
 "${repo_root}/machine-learning/.venv/bin/python" -m pip install --upgrade pip
 "${repo_root}/machine-learning/.venv/bin/python" -m pip install -r "${repo_root}/machine-learning/requirements-inference.txt"
+
+echo "Verifying staged CropFit model before installation..."
+PYTHONPATH="${repo_root}/machine-learning" "${repo_root}/machine-learning/.venv/bin/python" -m cropfit.verify_inference \
+  --artifact "${staging_root}/machine-learning/artifacts/cropfit.joblib" \
+  --profiles "${staging_root}/machine-learning/data/raw/ecocrop.csv"
+
+install -m 0644 "${staging_root}/machine-learning/artifacts/cropfit.joblib" "${artifact_next}"
+install -m 0644 "${staging_root}/machine-learning/artifacts/cropfit.metadata.json" "${metadata_next}"
+install -m 0644 "${staging_root}/machine-learning/data/raw/ecocrop.csv" "${profiles_next}"
+mv -f "${metadata_next}" "${repo_root}/machine-learning/artifacts/cropfit.metadata.json"
+mv -f "${profiles_next}" "${repo_root}/machine-learning/data/raw/ecocrop.csv"
+mv -f "${artifact_next}" "${repo_root}/machine-learning/artifacts/cropfit.joblib"
+
 PYTHONPATH="${repo_root}/machine-learning" "${repo_root}/machine-learning/.venv/bin/python" -m cropfit.verify_inference
 
 echo "CropFit v0.9.1 is installed and verified."

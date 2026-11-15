@@ -22,8 +22,11 @@ automatic backup, set the Spark URL as `ML_MODEL_URL` and the local URL as
 `ML_MODEL_FALLBACK_URL`.
 
 The installer requires Python 3.10+, checksum-verifies the release bundle,
-installs pinned inference dependencies, and runs offline inference verification
-before reporting success. Override its interpreter with
+rejects unexpected archive members, installs pinned inference dependencies, and
+runs offline inference verification against a staging copy before promoting the
+artifact, metadata, and EcoCrop profiles with atomic file replacements. It
+verifies the promoted files again before reporting success. Override its
+interpreter with
 `CROPFIT_PYTHON=/path/to/python3.12` when needed. To train a fresh
 artifact instead, use the full setup below. Because the repository is private,
 the installer uses an authenticated GitHub CLI session (`gh auth login`) or a
